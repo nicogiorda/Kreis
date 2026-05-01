@@ -847,6 +847,17 @@ img {
   transform: translate(-50%, -50%);
 }
 
+.campus-video-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
 .campus-character {
   position: absolute;
   right: clamp(-8px, 2vw, 18px);
@@ -866,7 +877,7 @@ img {
   justify-content: center;
   max-width: 18rem;
   padding: 22px var(--page-gutter);
-  color: var(--fence-green);
+  color: #f7edda;
   text-shadow: none;
 }
 
@@ -881,7 +892,7 @@ img {
 .campus-copy p {
   max-width: 17rem;
   margin: 12px 0 0;
-  color: rgba(9, 51, 44, 0.72);
+  color: #f7edda;
   line-height: 1.43;
   text-shadow: none;
 }

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.vite/
+.vercel/
+.chrome-*/
+dev-server*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+docs/

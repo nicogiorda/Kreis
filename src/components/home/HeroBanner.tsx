@@ -1,5 +1,5 @@
 import kreisitoUrl from "../../assets/characters/kreisito.png";
-import videoBannerUrl from "../../assets/brand/VideoBanner2.mp4";
+import videoBannerUrl from "../../assets/brand/VideoBannerVeo.mp4";
 
 export function HeroBanner() {
   return (

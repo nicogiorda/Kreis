@@ -2,7 +2,7 @@ export type Screen = "home" | "events" | "communities" | "profile";
 
 export type HomeTab = "events" | "communities";
 
-export type ComposerMode = "post" | "community";
+export type ComposerMode = "post" | "community" | "event";
 
 export type EventTone = "orange" | "green" | "beige" | "pumpkin";
 
@@ -59,6 +59,14 @@ export type Profile = {
 export type CreateCommunityInput = {
   name: string;
   category: string;
+};
+
+export type CreateEventInput = {
+  title: string;
+  date: string;
+  place: string;
+  category: string;
+  description: string;
 };
 
 export type CreatePostInput = {

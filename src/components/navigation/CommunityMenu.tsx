@@ -1,14 +1,15 @@
-import logoUrl from "../../assets/brand/logo.png";
+import logoUrl from "../../assets/brand/svgs/IMAGOTIPO.svg";
 import type { Community } from "../../types";
 
 type CommunityMenuProps = {
   menuOpen: boolean;
   communities: Community[];
   onOpenCommunity: () => void;
+  onCreateEvent: () => void;
   onCreateCommunity: () => void;
 };
 
-export function CommunityMenu({ menuOpen, communities, onOpenCommunity, onCreateCommunity }: CommunityMenuProps) {
+export function CommunityMenu({ menuOpen, communities, onOpenCommunity, onCreateEvent, onCreateCommunity }: CommunityMenuProps) {
   const joined = communities.filter((community) => community.joined);
   const visibleCommunities = joined.slice(0, 3);
   const hasMoreCommunities = joined.length > visibleCommunities.length;
@@ -18,10 +19,16 @@ export function CommunityMenu({ menuOpen, communities, onOpenCommunity, onCreate
       <div className="drawer-brand">
         <img src={logoUrl} alt="Kreis" />
       </div>
-      <button className="create-community-row" type="button" onClick={onCreateCommunity}>
-        <span>+</span>
-        Crear una comunidad
-      </button>
+      <div className="menu-create-actions">
+        <button className="menu-create-row" type="button" onClick={onCreateEvent}>
+          <span>+</span>
+          Publicar un evento
+        </button>
+        <button className="menu-create-row" type="button" onClick={onCreateCommunity}>
+          <span>+</span>
+          Crear una comunidad
+        </button>
+      </div>
       <h2>Tus comunidades</h2>
       <div className="menu-community-list">
         {visibleCommunities.map((community) => (

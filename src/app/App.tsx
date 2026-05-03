@@ -9,7 +9,7 @@ import { CommunityMenu } from "../components/navigation/CommunityMenu";
 import { Header } from "../components/navigation/Header";
 import { ProfileScreen } from "../components/profile/ProfileScreen";
 import { initialActivity, initialCommunities, initialEvents } from "../data/mockData";
-import type { ComposerMode, CreateCommunityInput, CreatePostInput, HomeTab, Screen } from "../types";
+import type { ComposerMode, CreateCommunityInput, CreateEventInput, CreatePostInput, HomeTab, Screen } from "../types";
 import { scrollTop } from "../utils/navigation";
 import { normalize } from "../utils/text";
 
@@ -51,7 +51,7 @@ export default function App() {
   function openComposer(mode: ComposerMode): void {
     setComposerMode(mode);
     setComposerOpen(true);
-    if (mode === "community") setMenuOpen(false);
+    if (mode === "community" || mode === "event") setMenuOpen(false);
   }
 
   function toggleInterest(eventId: string): void {
@@ -81,6 +81,39 @@ export default function App() {
       ...items
     ]);
     setComposerOpen(false);
+  }
+
+  function createEvent({ title, date, place, category, description }: CreateEventInput): void {
+    if (!title || !date || !place || !category || !description) return;
+
+    const [year, month, day] = date.split("-").map(Number);
+    const eventDate = new Date(year, month - 1, day);
+    const weekdays = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
+    const months = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+    const monthLabel = months[eventDate.getMonth()] ?? "";
+    const dayLabel = String(eventDate.getDate()).padStart(2, "0");
+    const dateLabel = `${weekdays[eventDate.getDay()] ?? ""} ${dayLabel} ${monthLabel.charAt(0)}${monthLabel.slice(1).toLowerCase()}`;
+
+    setEvents((items) => [
+      {
+        id: `event-${Date.now()}`,
+        title,
+        date: dateLabel,
+        day: dayLabel,
+        month: monthLabel,
+        place,
+        category,
+        icon: title.slice(0, 2).toUpperCase(),
+        tone: "orange",
+        interested: true,
+        description
+      },
+      ...items
+    ]);
+    setScreen("events");
+    setHomeTab("events");
+    setComposerOpen(false);
+    scrollTop();
   }
 
   function createPost({ communityId, postText }: CreatePostInput): void {
@@ -124,6 +157,7 @@ export default function App() {
           menuOpen={menuOpen}
           communities={communities}
           onOpenCommunity={() => navigate("communities")}
+          onCreateEvent={() => openComposer("event")}
           onCreateCommunity={() => openComposer("community")}
         />
 
@@ -155,6 +189,7 @@ export default function App() {
           communities={communities}
           onClose={() => setComposerOpen(false)}
           onCreateCommunity={createCommunity}
+          onCreateEvent={createEvent}
           onCreatePost={createPost}
         />
       </div>

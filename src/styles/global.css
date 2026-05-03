@@ -829,7 +829,7 @@ img {
   isolation: isolate;
   overflow: hidden;
   width: calc(100% + (var(--page-gutter) * 2));
-  height: clamp(238px, 64vw, 300px);
+  height: clamp(11.5rem, 50vw, 15rem);
   margin-inline: calc(var(--page-gutter) * -1);
   border-radius: 0;
   background: var(--app-bg);
@@ -860,12 +860,13 @@ img {
 
 .campus-character {
   position: absolute;
-  right: clamp(-8px, 2vw, 18px);
-  bottom: clamp(12px, 5vw, 28px);
+  top: 50%;
+  right: clamp(0.25rem, 3vw, 1.25rem);
   z-index: 1;
   width: clamp(148px, 48vw, 238px);
   height: auto;
   pointer-events: none;
+  transform: translateY(-50%);
 }
 
 .campus-copy {
@@ -877,7 +878,7 @@ img {
   justify-content: center;
   max-width: 18rem;
   padding: 22px var(--page-gutter);
-  color: #f7edda;
+  color: #f0531c;
   text-shadow: none;
 }
 
@@ -886,14 +887,6 @@ img {
   font-size: clamp(2.2rem, 11vw, 4.1rem);
   line-height: 0.92;
   letter-spacing: 0;
-  text-shadow: none;
-}
-
-.campus-copy p {
-  max-width: 17rem;
-  margin: 12px 0 0;
-  color: #f7edda;
-  line-height: 1.43;
   text-shadow: none;
 }
 

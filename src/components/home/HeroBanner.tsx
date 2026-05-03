@@ -16,7 +16,6 @@ export function HeroBanner() {
       <img className="campus-character" src={kreisitoUrl} alt="" aria-hidden="true" />
       <div className="campus-copy">
         <h1>Elegis donde entrar.</h1>
-        <p>Eventos para anotarte y comunidades nuevas para descubrir.</p>
       </div>
     </section>
   );

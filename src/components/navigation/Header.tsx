@@ -1,4 +1,4 @@
-import isotypeUrl from "../../assets/brand/isotype-inverted-splash.svg";
+import isotypeUrl from "../../assets/brand/svgs/ISOTIPO-INVERTIDO.svg";
 import { MenuIcon, NotificationIcon } from "../common/Icons";
 import type { HomeTab } from "../../types";
 

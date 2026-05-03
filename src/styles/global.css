@@ -489,11 +489,11 @@ img {
 .drawer-brand {
   display: flex;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .drawer-brand img {
-  width: 94px;
+  width: clamp(132px, 49%, 164px);
   height: auto;
   object-fit: contain;
 }
@@ -528,12 +528,20 @@ img {
 
 .menu-community,
 .menu-more-button,
-.create-community-row {
+.menu-create-row {
   width: 100%;
   min-height: 58px;
   border: 0;
   color: var(--ink);
   text-align: left;
+}
+
+.menu-create-actions {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(31, 24, 19, 0.1);
 }
 
 .menu-community {
@@ -572,7 +580,7 @@ img {
   font-weight: 700;
 }
 
-.create-community-row {
+.menu-create-row {
   display: flex;
   align-items: center;
   min-height: 44px;
@@ -585,7 +593,7 @@ img {
   line-height: 1;
 }
 
-.create-community-row span {
+.menu-create-row span {
   display: grid;
   flex: 0 0 22px;
   width: 22px;

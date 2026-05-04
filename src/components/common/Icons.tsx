@@ -1,3 +1,4 @@
+import { House, Ticket, UserCircle, Users } from "@phosphor-icons/react";
 import type { Screen } from "../../types";
 
 export function MenuIcon() {
@@ -18,21 +19,21 @@ export function NotificationIcon() {
 
 type NavIconProps = {
   type: Screen;
+  active?: boolean;
 };
 
-export function NavIcon({ type }: NavIconProps) {
-  const paths: Record<Screen, string> = {
-    home: "M12 3.7 3.8 10.4c-.5.4-.2 1.2.4 1.2h1V20c0 .6.4 1 1 1h4.1v-5.2c0-.5.4-.9.9-.9h1.6c.5 0 .9.4.9.9V21h4.1c.6 0 1-.4 1-1v-8.4h1c.6 0 .9-.8.4-1.2L12 3.7z",
-    events: "M7 2.8c.6 0 1 .4 1 1v1h8v-1c0-.6.4-1 1-1s1 .4 1 1v1h.4c1.4 0 2.6 1.2 2.6 2.6v10.8c0 1.4-1.2 2.6-2.6 2.6H5.6c-1.4 0-2.6-1.2-2.6-2.6V7.4c0-1.4 1.2-2.6 2.6-2.6H6v-1c0-.6.4-1 1-1zm-2 7v8.4c0 .3.3.6.6.6h12.8c.3 0 .6-.3.6-.6V9.8H5zm4 2.6h3.4c.4 0 .7.3.7.7v3.2c0 .4-.3.7-.7.7H9c-.4 0-.7-.3-.7-.7v-3.2c0-.4.3-.7.7-.7z",
-    communities: "M8.2 11.4a4.2 4.2 0 1 0 0-8.4 4.2 4.2 0 0 0 0 8.4zm8.3.6a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.7 20.4c.4-3.1 2.7-5.4 5.5-5.4s5.1 2.3 5.5 5.4c.1.4-.2.8-.7.8H3.4c-.5 0-.8-.4-.7-.8zm12.2.8h5.9c.4 0 .7-.4.6-.8-.3-2.7-2.4-4.8-4.9-4.8-1.1 0-2.1.4-2.9 1.1.7.9 1.2 1.9 1.3 3.1.1.5.1.9 0 1.4z",
-    profile: "M12 12.4a4.7 4.7 0 1 0 0-9.4 4.7 4.7 0 0 0 0 9.4zm-7.7 8.3c.5-4 3.7-6.7 7.7-6.7s7.2 2.7 7.7 6.7c.1.4-.3.8-.7.8H5c-.4 0-.8-.4-.7-.8z"
+export function NavIcon({ type, active = false }: NavIconProps) {
+  const icons = {
+    home: House,
+    events: Ticket,
+    communities: Users,
+    profile: UserCircle
   };
+  const Icon = icons[type];
 
   return (
     <span className="grid size-7 place-items-center text-[1.1rem] leading-none" aria-hidden="true">
-      <svg className="size-[27px] fill-current stroke-none" viewBox="0 0 24 24">
-        <path d={paths[type]} />
-      </svg>
+      <Icon className="size-[27px]" weight={active ? "fill" : "regular"} />
     </span>
   );
 }

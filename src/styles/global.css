@@ -12,11 +12,11 @@
   --color-kreis-green: #2e4b3c;
   --color-kreis-ink: #1f1813;
   --color-kreis-muted: #78685b;
-  --color-kreis-surface: #fffdf8;
+  --color-kreis-surface: #ffffff;
   --color-kreis-surface-strong: #ffffff;
-  --color-kreis-app-bg: #fffaf3;
-  --color-kreis-event-surface: oklch(95.2% 0.01 62);
-  --color-kreis-date-surface: oklch(90.6% 0.014 62);
+  --color-kreis-app-bg: #f4f3ed;
+  --color-kreis-event-surface: #ffffff;
+  --color-kreis-date-surface: #f4f3ed;
   --color-kreis-line: rgba(31, 24, 19, 0.09);
 
   --shadow-kreis-card: 0 16px 36px rgba(69, 39, 20, 0.11);
@@ -37,9 +37,9 @@
   --norfolk-green: #2e4b3c;
   --ink: #1f1813;
   --muted: #78685b;
-  --surface: #fffdf8;
+  --surface: #ffffff;
   --surface-strong: #ffffff;
-  --app-bg: #fffaf3;
+  --app-bg: #f4f3ed;
   --line: rgba(31, 24, 19, 0.09);
   --shadow: 0 16px 36px rgba(69, 39, 20, 0.11);
   --soft-shadow: 0 10px 24px rgba(69, 39, 20, 0.08);

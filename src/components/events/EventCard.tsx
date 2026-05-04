@@ -11,6 +11,7 @@ type EventCardProps = {
 
 export function EventCard({ event, variant = "full", onOpenEvents, onToggleInterest }: EventCardProps) {
   const compact = variant === "compact";
+  const locationMeta = [{ icon: "location" as const, text: event.place }];
 
   if (compact) {
     return (
@@ -21,7 +22,7 @@ export function EventCard({ event, variant = "full", onOpenEvents, onToggleInter
         </div>
         <div className="event-compact-body">
           <h3>{event.title}</h3>
-          <Meta items={[event.date, event.place]} />
+          <Meta items={locationMeta} />
         </div>
       </article>
     );
@@ -36,7 +37,7 @@ export function EventCard({ event, variant = "full", onOpenEvents, onToggleInter
         <div>
           <h3>{event.title}</h3>
           <p className="muted">{event.description}</p>
-          <Meta items={[event.date, event.place]} />
+          <Meta items={locationMeta} />
         </div>
         <div className="event-footer">
           <span className="date-badge">

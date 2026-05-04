@@ -10,6 +10,7 @@ import { Header } from "../components/navigation/Header";
 import { ProfileScreen } from "../components/profile/ProfileScreen";
 import { initialActivity, initialCommunities, initialEvents } from "../data/mockData";
 import type { ComposerMode, CreateCommunityInput, CreateEventInput, CreatePostInput, HomeTab, Screen } from "../types";
+import { cn } from "../utils/cn";
 import { scrollTop } from "../utils/navigation";
 import { normalize } from "../utils/text";
 
@@ -143,7 +144,7 @@ export default function App() {
   return (
     <>
       <SplashScreen />
-      <div className={`app-shell ${menuOpen ? "is-menu-open" : ""}`}>
+      <div className={cn("app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden pb-[calc(var(--nav-height)+18px)] md:px-6 md:pb-[calc(var(--nav-height)+28px)]", menuOpen && "is-menu-open")}>
         <Header
           globalQuery={globalQuery}
           homeTab={homeTab}
@@ -161,7 +162,7 @@ export default function App() {
           onCreateCommunity={() => openComposer("community")}
         />
 
-        <main className="app-main" tabIndex={-1}>
+        <main className="menu-shift px-[var(--page-gutter)] transition-transform duration-[760ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform md:px-0" tabIndex={-1}>
           {screen === "home" && (
             <HomeScreen
               events={visibleEvents}

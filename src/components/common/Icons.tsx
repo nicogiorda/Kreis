@@ -29,8 +29,8 @@ export function NavIcon({ type }: NavIconProps) {
   };
 
   return (
-    <span className="nav-icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24">
+    <span className="grid size-7 place-items-center text-[1.1rem] leading-none" aria-hidden="true">
+      <svg className="size-[27px] fill-current stroke-none" viewBox="0 0 24 24">
         <path d={paths[type]} />
       </svg>
     </span>

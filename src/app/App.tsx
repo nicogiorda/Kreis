@@ -145,15 +145,17 @@ export default function App() {
     <>
       <SplashScreen />
       <div className={cn("app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden pb-[calc(var(--nav-height)+18px)] md:px-6 md:pb-[calc(var(--nav-height)+28px)]", menuOpen && "is-menu-open")}>
-        <Header
-          globalQuery={globalQuery}
-          homeTab={homeTab}
-          menuOpen={menuOpen}
-          showHomeTabs={screen === "home"}
-          onHomeTab={setHomeTab}
-          onQueryChange={setGlobalQuery}
-          onToggleMenu={() => setMenuOpen((open) => !open)}
-        />
+        {screen !== "profile" ? (
+          <Header
+            globalQuery={globalQuery}
+            homeTab={homeTab}
+            menuOpen={menuOpen}
+            showHomeTabs={screen === "home"}
+            onHomeTab={setHomeTab}
+            onQueryChange={setGlobalQuery}
+            onToggleMenu={() => setMenuOpen((open) => !open)}
+          />
+        ) : null}
         <CommunityMenu
           menuOpen={menuOpen}
           communities={communities}
@@ -180,7 +182,17 @@ export default function App() {
           )}
           {screen === "events" && <EventsScreen events={visibleEvents} onToggleInterest={toggleInterest} />}
           {screen === "communities" && <CommunitiesScreen communities={communities} discover={discoverCommunities} posts={activity} onToggleJoin={toggleJoin} />}
-          {screen === "profile" && <ProfileScreen communities={communities} events={events} activity={activity} />}
+          {screen === "profile" && (
+            <ProfileScreen
+              communities={communities}
+              events={events}
+              activity={activity}
+              menuOpen={menuOpen}
+              onToggleMenu={() => setMenuOpen((open) => !open)}
+              onOpenCommunities={() => navigate("communities")}
+              onOpenEvents={() => navigate("events")}
+            />
+          )}
         </main>
 
         <BottomNav screen={screen} onNavigate={navigate} />

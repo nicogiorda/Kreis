@@ -15,8 +15,8 @@
   --color-kreis-surface: #fffdf8;
   --color-kreis-surface-strong: #ffffff;
   --color-kreis-app-bg: #fffaf3;
-  --color-kreis-event-surface: oklch(95.8% 0.002 75);
-  --color-kreis-date-surface: oklch(91.8% 0.003 75);
+  --color-kreis-event-surface: oklch(95.2% 0.01 62);
+  --color-kreis-date-surface: oklch(90.6% 0.014 62);
   --color-kreis-line: rgba(31, 24, 19, 0.09);
 
   --shadow-kreis-card: 0 16px 36px rgba(69, 39, 20, 0.11);

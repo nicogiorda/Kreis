@@ -28,7 +28,7 @@ export function BottomNav({ screen, onNavigate }: BottomNavProps) {
           aria-label={item.label}
           onClick={() => onNavigate(item.id)}
         >
-          <NavIcon type={item.id} />
+          <NavIcon active={screen === item.id} type={item.id} />
           <span className="mt-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap">{item.label}</span>
         </button>
       ))}

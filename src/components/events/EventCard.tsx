@@ -17,13 +17,13 @@ export function EventCard({ event, variant = "full", onOpenEvents, onToggleInter
   if (compact) {
     return (
       <article className="grid min-h-[76px] grid-cols-[auto_minmax(0,1fr)] items-center gap-2.5 overflow-hidden rounded-kreis-card bg-kreis-event-surface p-2.5" onClick={onOpenEvents}>
-        <div className="grid size-14 place-items-center rounded-[13px] border border-kreis-line bg-kreis-date-surface text-kreis-orange shadow-none">
+        <div className="grid size-14 place-items-center rounded-[13px] bg-kreis-date-surface text-kreis-orange shadow-none">
           <strong className="block text-[1.18rem] leading-none">{event.day}</strong>
           <span className="mt-[-5px] block text-[0.66rem] font-extrabold leading-none">{event.month}</span>
         </div>
-        <div className="min-w-0">
-          <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-base font-bold">{event.title}</h3>
-          <Meta items={locationMeta} />
+        <div className="grid min-w-0 content-center gap-1">
+          <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-base font-bold leading-[1.15]">{event.title}</h3>
+          <Meta className="!mt-0 text-[0.82rem] font-normal leading-none" items={locationMeta} />
         </div>
       </article>
     );
@@ -41,7 +41,7 @@ export function EventCard({ event, variant = "full", onOpenEvents, onToggleInter
           <Meta items={locationMeta} />
         </div>
         <div className="flex items-center justify-between gap-3">
-          <span className="w-[58px] rounded-kreis-small border border-kreis-line bg-kreis-date-surface px-1.5 py-2 text-center text-kreis-orange shadow-none">
+          <span className="w-[58px] rounded-kreis-small bg-kreis-date-surface px-1.5 py-2 text-center text-kreis-orange shadow-none">
             <strong className="block text-[1.15rem] leading-none">{event.day}</strong>
             <span className="mt-[3px] block text-[0.72rem] font-black">{event.month}</span>
           </span>

@@ -15,13 +15,12 @@
   --color-kreis-surface: #fffdf8;
   --color-kreis-surface-strong: #ffffff;
   --color-kreis-app-bg: #fffaf3;
-  --color-kreis-event: oklch(97.1% 0.032 72);
-  --color-kreis-event-strong: oklch(94.8% 0.05 69);
+  --color-kreis-event-surface: oklch(95.8% 0.002 75);
+  --color-kreis-date-surface: oklch(91.8% 0.003 75);
   --color-kreis-line: rgba(31, 24, 19, 0.09);
 
   --shadow-kreis-card: 0 16px 36px rgba(69, 39, 20, 0.11);
   --shadow-kreis-soft: 0 10px 24px rgba(69, 39, 20, 0.08);
-  --shadow-kreis-event: 0 12px 28px rgba(240, 83, 28, 0.08);
   --shadow-kreis-bottom-nav: 0 18px 44px rgba(46, 28, 16, 0.18);
 
   --radius-kreis-card: 16px;

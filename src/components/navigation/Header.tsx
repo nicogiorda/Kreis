@@ -1,6 +1,6 @@
 import isotypeUrl from "../../assets/brand/svgs/ISOTIPO-INVERTIDO.svg";
-import { MenuIcon, NotificationIcon } from "../common/Icons";
-import type { HomeTab } from "../../types";
+import { MenuIcon, ThemeToggleIcon } from "../common/Icons";
+import type { HomeTab, ThemeMode } from "../../types";
 import { cn } from "../../utils/cn";
 
 type HeaderProps = {
@@ -8,12 +8,16 @@ type HeaderProps = {
   homeTab: HomeTab;
   menuOpen: boolean;
   showHomeTabs: boolean;
+  themeMode: ThemeMode;
   onHomeTab: (tab: HomeTab) => void;
   onQueryChange: (query: string) => void;
+  onToggleTheme: () => void;
   onToggleMenu: () => void;
 };
 
-export function Header({ globalQuery, homeTab, menuOpen, showHomeTabs, onHomeTab, onQueryChange, onToggleMenu }: HeaderProps) {
+export function Header({ globalQuery, homeTab, menuOpen, showHomeTabs, themeMode, onHomeTab, onQueryChange, onToggleTheme, onToggleMenu }: HeaderProps) {
+  const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
+
   return (
     <header className="relative z-30 bg-kreis-orange pt-[var(--header-main-height)] text-kreis-cream md:-mx-6">
       <div className="app-header-main menu-shift fixed left-1/2 top-0 z-[35] w-[min(100%,1120px)] bg-kreis-orange pb-2.5 pl-[max(16px,env(safe-area-inset-left))] pr-[max(16px,env(safe-area-inset-right))] pt-[calc(8px+env(safe-area-inset-top))] transition-transform duration-[760ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform md:px-6">
@@ -37,14 +41,14 @@ export function Header({ globalQuery, homeTab, menuOpen, showHomeTabs, onHomeTab
               placeholder="Comienza a conectar"
             />
           </label>
-          <button className="grid size-11 place-items-center rounded-[15px] border border-[rgba(247,237,218,0.44)] bg-[rgba(247,237,218,0.14)] text-kreis-cream shadow-none [&_svg]:size-[25px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-[1.75] [&_svg]:[stroke-linecap:round] [&_svg]:[stroke-linejoin:round]" type="button" aria-label="Notificaciones">
-            <NotificationIcon />
+          <button className="theme-toggle-button grid size-11 place-items-center rounded-[15px] border border-[rgba(247,237,218,0.44)] bg-[rgba(247,237,218,0.14)] text-kreis-cream shadow-none [&_svg]:size-[25px]" type="button" aria-label={nextThemeLabel} aria-pressed={themeMode === "dark"} onClick={onToggleTheme}>
+            <ThemeToggleIcon themeMode={themeMode} />
           </button>
         </div>
       </div>
       {showHomeTabs ? (
         <div className="menu-shift bg-kreis-orange pb-[5px] pl-[max(16px,env(safe-area-inset-left))] pr-[max(16px,env(safe-area-inset-right))] transition-transform duration-[760ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform md:px-6">
-          <div className={cn("home-header-switch relative isolate grid w-full grid-cols-2 gap-px overflow-hidden rounded-[11px] border border-[rgba(247,237,218,0.34)] bg-[rgba(247,237,218,0.13)] p-px", homeTab === "communities" && "is-communities-active")} role="tablist" aria-label="Cambiar vista principal">
+          <div className={cn("home-header-switch relative isolate grid w-full grid-cols-2 gap-px overflow-hidden rounded-[11px] bg-[rgba(247,237,218,0.13)] p-px", homeTab === "communities" && "is-communities-active")} role="tablist" aria-label="Cambiar vista principal">
             <button
               className={cn("relative z-[1] grid min-h-[27px] min-w-0 place-items-center whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2 text-center text-[0.84rem] font-medium tracking-normal transition-[color,transform] duration-200 ease-out active:scale-[0.98]", homeTab === "events" ? "text-kreis-orange" : "text-[rgba(247,237,218,0.84)]")}
               type="button"

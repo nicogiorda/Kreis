@@ -18,7 +18,7 @@ export function CommunityMenu({ menuOpen, communities, onOpenCommunity, onCreate
   return (
     <div
       className={cn(
-        "fixed bottom-0 left-0 top-0 z-40 w-[var(--drawer-width)] overflow-y-auto border-r border-[rgba(9,51,44,0.12)] bg-kreis-app-bg px-3.5 pb-[calc(var(--nav-height)+18px)] pt-[18px] shadow-[16px_0_40px_rgba(32,20,13,0.16)] transition-[transform,opacity,visibility] duration-[760ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
+        "fixed bottom-0 left-0 top-0 z-40 w-[var(--drawer-width)] overflow-y-auto border-r border-kreis-line bg-kreis-app-bg px-3.5 pb-[calc(var(--nav-height)+18px)] pt-[18px] shadow-[16px_0_40px_rgba(32,20,13,0.16)] transition-[transform,opacity,visibility] duration-[760ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform",
         menuOpen ? "visible translate-x-0 opacity-100 pointer-events-auto" : "invisible translate-x-[calc(-100%-18px)] opacity-0 pointer-events-none"
       )}
       aria-hidden={!menuOpen}
@@ -26,7 +26,7 @@ export function CommunityMenu({ menuOpen, communities, onOpenCommunity, onCreate
       <div className="mb-6 flex items-center">
         <img className="h-auto w-[clamp(132px,49%,164px)] object-contain" src={logoUrl} alt="Kreis" />
       </div>
-      <div className="mb-[18px] grid gap-0.5 border-b border-[rgba(31,24,19,0.1)] pb-3.5">
+      <div className="mb-[18px] grid gap-0.5 border-b border-kreis-line pb-3.5">
         <button className="flex min-h-11 w-full items-center gap-2.5 rounded-none border-0 bg-transparent px-0.5 text-left font-medium leading-none text-kreis-ink" type="button" onClick={onCreateEvent}>
           <span className="grid size-[22px] flex-none place-items-center bg-transparent text-[1.3rem] font-normal leading-none text-current">+</span>
           Publicar un evento

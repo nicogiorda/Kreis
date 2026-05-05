@@ -7,13 +7,13 @@ type CommunityPostProps = {
 
 function CommunityPost({ post }: CommunityPostProps) {
   return (
-    <article className="grid grid-cols-[34px_minmax(0,1fr)] gap-2.5 border-b border-[rgba(31,24,19,0.08)] py-[13px]">
+    <article className="grid grid-cols-[34px_minmax(0,1fr)] gap-2.5 border-b border-kreis-line py-[13px]">
       <div className="grid content-start justify-items-center gap-0.5 pt-0.5 text-[0.78rem] text-kreis-orange" aria-label={`${post.score} votos`}>
         <span aria-hidden="true">^</span>
-        <strong className="text-[0.74rem] text-[rgba(31,24,19,0.72)]">{post.score}</strong>
+        <strong className="text-[0.74rem] text-kreis-muted">{post.score}</strong>
       </div>
       <div className="min-w-0">
-        <div className="flex items-center gap-[5px] text-[0.72rem] font-semibold text-[rgba(120,104,91,0.78)]">
+        <div className="flex items-center gap-[5px] text-[0.72rem] font-semibold text-kreis-muted">
           <span className="grid size-[22px] place-items-center rounded-full bg-kreis-beige text-[0.62rem] font-black text-kreis-orange">{post.icon}</span>
           <span>{post.communityName}</span>
           <span>-</span>
@@ -22,8 +22,8 @@ function CommunityPost({ post }: CommunityPostProps) {
           <span>{post.time}</span>
         </div>
         <h2 className="mb-0 mt-2 text-base font-bold leading-[1.18] text-kreis-ink">{post.title}</h2>
-        <p className="mb-0 mt-[7px] text-[0.92rem] leading-[1.38] text-[rgba(31,24,19,0.78)]">{post.text}</p>
-        <div className="mt-2.5 flex gap-3.5 text-[0.76rem] font-bold text-[rgba(120,104,91,0.76)]">
+        <p className="mb-0 mt-[7px] text-[0.92rem] leading-[1.38] text-kreis-muted">{post.text}</p>
+        <div className="mt-2.5 flex gap-3.5 text-[0.76rem] font-bold text-kreis-muted">
           <span>{post.comments} comentarios</span>
           <span>Compartir</span>
         </div>
@@ -48,7 +48,7 @@ export function CommunitiesScreen({ communities, posts }: CommunitiesScreenProps
     <section className="pt-[18px] animate-[rise_220ms_ease-out]" data-screen="communities">
       <section className="flex gap-2 overflow-x-auto pb-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Comunidades a las que perteneces">
         {joined.map((community) => (
-          <span className="inline-flex min-h-8 flex-none items-center gap-[7px] rounded-full border border-[rgba(31,24,19,0.08)] py-0 pl-1.5 pr-2.5 text-[0.8rem] font-semibold text-[rgba(31,24,19,0.72)]" key={community.id}>
+          <span className="inline-flex min-h-8 flex-none items-center gap-[7px] rounded-full border border-kreis-line py-0 pl-1.5 pr-2.5 text-[0.8rem] font-semibold text-kreis-muted" key={community.id}>
             <span className="grid size-[22px] place-items-center rounded-full bg-kreis-beige text-[0.64rem] font-black text-kreis-orange">{community.icon}</span>
             {community.name}
           </span>

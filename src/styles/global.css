@@ -45,6 +45,10 @@
   --date-chip-bg: rgba(247, 237, 218, 0.78);
   --date-chip-border: rgba(247, 237, 218, 0.64);
   --date-chip-ink: var(--ink);
+  --home-switch-track: rgba(240, 83, 28, 0.1);
+  --home-switch-thumb: var(--fiery-glow);
+  --home-switch-active: var(--cream-icon);
+  --home-switch-inactive: var(--ink);
   --line: rgba(31, 24, 19, 0.09);
   --shadow: 0 16px 36px rgba(69, 39, 20, 0.11);
   --soft-shadow: 0 10px 24px rgba(69, 39, 20, 0.08);
@@ -76,6 +80,10 @@ html[data-theme="dark"] {
   --date-chip-bg: #262629;
   --date-chip-border: rgba(244, 244, 245, 0.13);
   --date-chip-ink: var(--ink);
+  --home-switch-track: rgba(244, 244, 245, 0.08);
+  --home-switch-thumb: var(--macadamia-beige);
+  --home-switch-active: var(--ink);
+  --home-switch-inactive: rgba(244, 244, 245, 0.72);
   --line: rgba(244, 244, 245, 0.12);
   --shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
   --soft-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
@@ -158,25 +166,29 @@ html[data-theme="dark"] {
     z-index: 0;
     width: calc((100% - 3px) / 2);
     border-radius: 9px;
-    background: var(--cream-icon);
+    background: var(--home-switch-thumb);
     transform: translate3d(0, 0, 0);
     transition: transform 340ms cubic-bezier(0.25, 1, 0.5, 1);
+  }
+
+  .home-header-switch {
+    background: var(--home-switch-track);
+  }
+
+  .home-header-switch button {
+    color: var(--home-switch-inactive);
   }
 
   .home-header-switch.is-communities-active::before {
     transform: translate3d(calc(100% + 1px), 0, 0);
   }
 
-  html[data-theme="dark"] .home-header-switch::before {
-    background: var(--surface-strong);
+  .home-header-switch button[aria-selected="true"] {
+    color: var(--home-switch-active);
   }
 
-  html[data-theme="dark"] .home-header-switch button[aria-selected="true"] {
-    color: var(--ink);
-  }
-
-  html[data-theme="dark"] .home-header-switch button[aria-selected="false"] {
-    color: rgba(244, 244, 245, 0.78);
+  .home-header-switch button[aria-selected="false"] {
+    color: var(--home-switch-inactive);
   }
 
   .theme-toggle-button svg,

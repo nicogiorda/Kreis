@@ -3,25 +3,25 @@
 @theme {
   --font-sans: "Satoshi", Arial, sans-serif;
 
-  --color-kreis-lace: #fbf1df;
-  --color-kreis-orange: #f0531c;
-  --color-kreis-beige: #f6dfbd;
-  --color-kreis-pumpkin: #ffa74f;
-  --color-kreis-forest: #09332c;
-  --color-kreis-cream: #f7edda;
-  --color-kreis-green: #2e4b3c;
-  --color-kreis-ink: #1f1813;
-  --color-kreis-muted: #78685b;
-  --color-kreis-surface: #ffffff;
-  --color-kreis-surface-strong: #ffffff;
-  --color-kreis-app-bg: #f4f3ed;
-  --color-kreis-event-surface: #ffffff;
-  --color-kreis-date-surface: #f4f3ed;
-  --color-kreis-line: rgba(31, 24, 19, 0.09);
+  --color-kreis-lace: var(--venetian-lace);
+  --color-kreis-orange: var(--fiery-glow);
+  --color-kreis-beige: var(--macadamia-beige);
+  --color-kreis-pumpkin: var(--pumpkin-vapor);
+  --color-kreis-forest: var(--fence-green);
+  --color-kreis-cream: var(--cream-icon);
+  --color-kreis-green: var(--norfolk-green);
+  --color-kreis-ink: var(--ink);
+  --color-kreis-muted: var(--muted);
+  --color-kreis-surface: var(--surface);
+  --color-kreis-surface-strong: var(--surface-strong);
+  --color-kreis-app-bg: var(--app-bg);
+  --color-kreis-event-surface: var(--event-surface);
+  --color-kreis-date-surface: var(--date-surface);
+  --color-kreis-line: var(--line);
 
-  --shadow-kreis-card: 0 16px 36px rgba(69, 39, 20, 0.11);
-  --shadow-kreis-soft: 0 10px 24px rgba(69, 39, 20, 0.08);
-  --shadow-kreis-bottom-nav: 0 18px 44px rgba(46, 28, 16, 0.18);
+  --shadow-kreis-card: var(--shadow);
+  --shadow-kreis-soft: var(--soft-shadow);
+  --shadow-kreis-bottom-nav: var(--bottom-nav-shadow);
 
   --radius-kreis-card: 16px;
   --radius-kreis-small: 12px;
@@ -40,15 +40,47 @@
   --surface: #ffffff;
   --surface-strong: #ffffff;
   --app-bg: #f4f3ed;
+  --event-surface: #ffffff;
+  --date-surface: #f4f3ed;
+  --date-chip-bg: rgba(247, 237, 218, 0.78);
+  --date-chip-border: rgba(247, 237, 218, 0.64);
+  --date-chip-ink: var(--ink);
   --line: rgba(31, 24, 19, 0.09);
   --shadow: 0 16px 36px rgba(69, 39, 20, 0.11);
   --soft-shadow: 0 10px 24px rgba(69, 39, 20, 0.08);
+  --bottom-nav-shadow: 0 18px 44px rgba(46, 28, 16, 0.18);
   --radius-card: 16px;
   --radius-small: 12px;
   --nav-height: 84px;
   --header-main-height: calc(64px + env(safe-area-inset-top));
   --drawer-width: min(82vw, 340px);
   --page-gutter: 16px;
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  --venetian-lace: #242426;
+  --fiery-glow: #f0531c;
+  --macadamia-beige: #303033;
+  --pumpkin-vapor: #4b4b50;
+  --fence-green: #34363a;
+  --cream-icon: #f4f4f5;
+  --norfolk-green: #8b8f97;
+  --ink: #f4f4f5;
+  --muted: #a1a1aa;
+  --surface: #18181b;
+  --surface-strong: #202024;
+  --app-bg: #0f0f10;
+  --event-surface: #18181b;
+  --date-surface: #27272a;
+  --date-chip-bg: #262629;
+  --date-chip-border: rgba(244, 244, 245, 0.13);
+  --date-chip-ink: var(--ink);
+  --line: rgba(244, 244, 245, 0.12);
+  --shadow: 0 18px 40px rgba(0, 0, 0, 0.32);
+  --soft-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
+  --bottom-nav-shadow: 0 -12px 38px rgba(0, 0, 0, 0.34);
+  color-scheme: dark;
 }
 
 @layer base {
@@ -135,6 +167,32 @@
     transform: translate3d(calc(100% + 1px), 0, 0);
   }
 
+  html[data-theme="dark"] .home-header-switch::before {
+    background: var(--surface-strong);
+  }
+
+  html[data-theme="dark"] .home-header-switch button[aria-selected="true"] {
+    color: var(--ink);
+  }
+
+  html[data-theme="dark"] .home-header-switch button[aria-selected="false"] {
+    color: rgba(244, 244, 245, 0.78);
+  }
+
+  .theme-toggle-button svg,
+  .theme-toggle-button svg * {
+    fill: currentColor;
+    stroke: none;
+  }
+
+  .home-event-date-chip {
+    border: 1px solid var(--date-chip-border);
+  }
+
+  html[data-theme="dark"] .home-event-date-chip {
+    border-color: transparent;
+  }
+
   .campus-panel::after {
     content: "";
     position: absolute;
@@ -154,11 +212,6 @@
     min-height: calc(100dvh + env(safe-area-inset-top));
     padding-top: calc(24px + env(safe-area-inset-top) + env(safe-area-inset-top));
     animation: splash-exit 360ms cubic-bezier(0.7, 0, 0.84, 0) 1780ms both;
-  }
-
-  html.is-splashing,
-  html.is-splashing body {
-    background: var(--fiery-glow);
   }
 
   .splash-mark-shell {
@@ -229,6 +282,12 @@
     width: 30px;
     height: 30px;
     stroke-width: 1.8;
+  }
+
+  .profile-theme-button svg,
+  .profile-theme-button svg * {
+    fill: currentColor;
+    stroke: none;
   }
 
   .profile-notification-button span {
@@ -774,18 +833,21 @@
     height: 60px;
     place-items: center;
     align-content: center;
+    row-gap: 0;
+    border: 1px solid var(--date-chip-border);
     border-radius: 13px;
-    background: #fff0e7;
-    color: var(--fiery-glow);
+    background: var(--date-chip-bg);
+    color: var(--date-chip-ink);
   }
 
   .profile-event-card time strong {
-    color: var(--fiery-glow);
+    color: var(--date-chip-ink);
     font-size: 1.25rem;
-    line-height: 1;
+    line-height: 0.95;
   }
 
   .profile-event-card time span {
+    margin-top: 3px;
     font-size: 0.75rem;
     font-weight: 950;
     line-height: 1;
@@ -795,6 +857,7 @@
     display: flex;
     align-items: center;
     gap: 5px;
+    margin-top: 4px;
     white-space: nowrap;
   }
 
@@ -1606,6 +1669,85 @@
     font-size: 0.9rem;
     font-weight: 900;
     box-shadow: 0 16px 40px rgba(31, 24, 19, 0.22);
+  }
+
+  html[data-theme="dark"] .profile-actions-card,
+  html[data-theme="dark"] .profile-panel,
+  html[data-theme="dark"] .profile-editor,
+  html[data-theme="dark"] .profile-media-manager,
+  html[data-theme="dark"] .profile-editor-preview,
+  html[data-theme="dark"] .profile-setting-section,
+  html[data-theme="dark"] .profile-public-preview {
+    border-color: var(--line);
+    background: var(--surface);
+    box-shadow: var(--soft-shadow);
+  }
+
+  html[data-theme="dark"] .profile-action-button,
+  html[data-theme="dark"] .profile-mini-card,
+  html[data-theme="dark"] .profile-event-card,
+  html[data-theme="dark"] .profile-achievement,
+  html[data-theme="dark"] .profile-social-link,
+  html[data-theme="dark"] .profile-editor-field input,
+  html[data-theme="dark"] .profile-editor-field textarea,
+  html[data-theme="dark"] .profile-toggle-row,
+  html[data-theme="dark"] .profile-choice-group label,
+  html[data-theme="dark"] .profile-account-actions button,
+  html[data-theme="dark"] .profile-editor-footer button {
+    border-color: var(--line);
+    background: var(--surface-strong);
+    color: var(--ink);
+  }
+
+  html[data-theme="dark"] .profile-mini-avatar,
+  html[data-theme="dark"] .profile-chip-list span,
+  html[data-theme="dark"] .profile-attitude,
+  html[data-theme="dark"] .profile-setting-title > span,
+  html[data-theme="dark"] .profile-action-feedback,
+  html[data-theme="dark"] .profile-public-stats span {
+    border-color: var(--line);
+    background: var(--date-surface);
+  }
+
+  html[data-theme="dark"] .profile-mini-card small,
+  html[data-theme="dark"] .profile-event-card small,
+  html[data-theme="dark"] .profile-achievement small,
+  html[data-theme="dark"] .profile-info-item small,
+  html[data-theme="dark"] .profile-social-link small,
+  html[data-theme="dark"] .profile-privacy-item small,
+  html[data-theme="dark"] .profile-mini-card em,
+  html[data-theme="dark"] .profile-public-preview p,
+  html[data-theme="dark"] .profile-public-preview span,
+  html[data-theme="dark"] .profile-setting-title small,
+  html[data-theme="dark"] .profile-toggle-row small,
+  html[data-theme="dark"] .profile-editor-field small {
+    color: var(--muted);
+  }
+
+  html[data-theme="dark"] .profile-mini-card > svg,
+  html[data-theme="dark"] .profile-event-card > svg,
+  html[data-theme="dark"] .profile-privacy-item > svg:last-child {
+    color: var(--muted);
+  }
+
+  html[data-theme="dark"] .profile-editor-backdrop {
+    background: rgba(0, 0, 0, 0.56);
+  }
+
+  html[data-theme="dark"] .profile-editor-tabs,
+  html[data-theme="dark"] .profile-editor-footer,
+  html[data-theme="dark"] .profile-editor-topbar {
+    border-color: var(--line);
+  }
+
+  html[data-theme="dark"] .profile-public-preview {
+    background:
+      linear-gradient(180deg, rgba(244, 244, 245, 0.05), rgba(24, 24, 27, 0.96)),
+      var(--surface);
+  }
+
+  html[data-theme="dark"] .profile-public-preview blockquote {
+    color: var(--ink);
   }
 
   @media (max-width: 820px) {

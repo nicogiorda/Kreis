@@ -9,7 +9,9 @@ export function SplashScreen() {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    document.documentElement.classList.add("is-splashing");
+    const firstPaintFrame = window.requestAnimationFrame(() => {
+      document.getElementById("kreis-first-paint")?.remove();
+    });
 
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const timeout = window.setTimeout(
@@ -18,14 +20,11 @@ export function SplashScreen() {
     );
 
     return () => {
+      window.cancelAnimationFrame(firstPaintFrame);
       window.clearTimeout(timeout);
-      document.documentElement.classList.remove("is-splashing");
+      document.getElementById("kreis-first-paint")?.remove();
     };
   }, []);
-
-  useEffect(() => {
-    if (!visible) document.documentElement.classList.remove("is-splashing");
-  }, [visible]);
 
   if (!visible) return null;
 

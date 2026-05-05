@@ -15,7 +15,7 @@ export function CommunityCard({ community, mode = "discover", onToggleJoin }: Co
           <span className="grid size-[38px] place-items-center rounded-full bg-kreis-beige text-[0.88rem] font-black text-kreis-orange">{community.icon}</span>
           <div className="min-w-0">
             <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[1.06rem] font-bold">{community.name}</h3>
-            <span className="mt-0.5 block text-[0.68rem] font-medium leading-none text-[rgba(120,104,91,0.72)]">{community.members} miembros</span>
+            <span className="mt-0.5 block text-[0.68rem] font-medium leading-none text-kreis-muted">{community.members} miembros</span>
           </div>
         </div>
         <button

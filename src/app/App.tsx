@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ComposerModal } from "../components/composer/ComposerModal";
 import { CommunitiesScreen } from "../components/communities/CommunitiesScreen";
 import { EventsScreen } from "../components/events/EventsScreen";
@@ -9,10 +9,25 @@ import { CommunityMenu } from "../components/navigation/CommunityMenu";
 import { Header } from "../components/navigation/Header";
 import { ProfileScreen } from "../components/profile/ProfileScreen";
 import { initialActivity, initialCommunities, initialEvents } from "../data/mockData";
-import type { ComposerMode, CreateCommunityInput, CreateEventInput, CreatePostInput, HomeTab, Screen } from "../types";
+import type { ComposerMode, CreateCommunityInput, CreateEventInput, CreatePostInput, HomeTab, Screen, ThemeMode } from "../types";
 import { cn } from "../utils/cn";
 import { scrollTop } from "../utils/navigation";
 import { normalize } from "../utils/text";
+
+const themeStorageKey = "kreis-theme-mode-v2";
+
+function getInitialThemeMode(): ThemeMode {
+  if (typeof window === "undefined") return "light";
+
+  try {
+    const storedTheme = window.localStorage.getItem(themeStorageKey);
+    if (storedTheme === "light" || storedTheme === "dark") return storedTheme;
+  } catch {
+    return "light";
+  }
+
+  return "light";
+}
 
 export default function App() {
   const [events, setEvents] = useState(initialEvents);
@@ -26,6 +41,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerMode, setComposerMode] = useState<ComposerMode>("post");
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => getInitialThemeMode());
 
   const query = normalize(globalQuery.trim());
   const matchesQuery = (text: string): boolean => !query || normalize(text).includes(query);
@@ -43,6 +59,18 @@ export default function App() {
     return !community.joined && categoryMatch && matchesQuery(`${community.name} ${community.category} ${community.pulse} ${community.description ?? ""}`);
   });
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    document.documentElement.dataset.theme = themeMode;
+
+    try {
+      window.localStorage.setItem(themeStorageKey, themeMode);
+    } catch {
+      // Theme persistence is nice to have, but the UI can still work without storage.
+    }
+  }, [themeMode]);
+
   function navigate(nextScreen: Screen): void {
     setScreen(nextScreen);
     setMenuOpen(false);
@@ -53,6 +81,10 @@ export default function App() {
     setComposerMode(mode);
     setComposerOpen(true);
     if (mode === "community" || mode === "event") setMenuOpen(false);
+  }
+
+  function toggleTheme(): void {
+    setThemeMode((current) => current === "dark" ? "light" : "dark");
   }
 
   function toggleInterest(eventId: string): void {
@@ -151,8 +183,10 @@ export default function App() {
             homeTab={homeTab}
             menuOpen={menuOpen}
             showHomeTabs={screen === "home"}
+            themeMode={themeMode}
             onHomeTab={setHomeTab}
             onQueryChange={setGlobalQuery}
+            onToggleTheme={toggleTheme}
             onToggleMenu={() => setMenuOpen((open) => !open)}
           />
         ) : null}
@@ -188,7 +222,9 @@ export default function App() {
               events={events}
               activity={activity}
               menuOpen={menuOpen}
+              themeMode={themeMode}
               onToggleMenu={() => setMenuOpen((open) => !open)}
+              onToggleTheme={toggleTheme}
               onOpenCommunities={() => navigate("communities")}
               onOpenEvents={() => navigate("events")}
             />

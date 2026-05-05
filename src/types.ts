@@ -1,5 +1,7 @@
 export type Screen = "home" | "events" | "communities" | "profile";
 
+export type ThemeMode = "light" | "dark";
+
 export type HomeTab = "events" | "communities";
 
 export type ComposerMode = "post" | "community" | "event";

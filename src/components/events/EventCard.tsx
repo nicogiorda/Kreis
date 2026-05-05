@@ -17,13 +17,13 @@ export function EventCard({ event, variant = "full", onOpenEvents, onToggleInter
   if (compact) {
     return (
       <article className="grid min-h-[76px] grid-cols-[auto_minmax(0,1fr)] items-center gap-2.5 overflow-hidden rounded-kreis-card bg-kreis-event-surface p-2.5" onClick={onOpenEvents}>
-        <div className="grid size-14 place-items-center rounded-[13px] bg-kreis-date-surface text-kreis-orange shadow-none">
-          <strong className="block text-[1.18rem] leading-none">{event.day}</strong>
-          <span className="mt-[-5px] block text-[0.66rem] font-extrabold leading-none">{event.month}</span>
+        <div className="home-event-date-chip grid size-14 content-center justify-items-center rounded-[13px] bg-[var(--date-chip-bg)] text-[var(--date-chip-ink)] shadow-none">
+          <strong className="block text-[1.18rem] leading-[0.95]">{event.day}</strong>
+          <span className="mt-[3px] block text-[0.66rem] font-extrabold leading-none">{event.month}</span>
         </div>
-        <div className="grid min-w-0 content-center gap-1">
-          <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-base font-bold leading-[1.15]">{event.title}</h3>
-          <Meta className="!mt-0 text-[0.82rem] font-normal leading-none" items={locationMeta} />
+        <div className="grid min-w-0 content-center gap-1.5">
+          <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-base font-medium leading-[1.15]">{event.title}</h3>
+          <Meta className="!mt-0.5 text-[0.82rem] font-normal leading-none" items={locationMeta} />
         </div>
       </article>
     );

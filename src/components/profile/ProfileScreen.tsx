@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { profile as baseProfile } from "../../data/profile";
-import type { ActivityPost, Community, KreisEvent } from "../../types";
-import { MenuIcon, NotificationIcon } from "../common/Icons";
+import type { ActivityPost, Community, KreisEvent, ThemeMode } from "../../types";
+import { MenuIcon, ThemeToggleIcon } from "../common/Icons";
 
 type ProfileScreenProps = {
   communities: Community[];
   events: KreisEvent[];
   activity?: ActivityPost[];
   menuOpen?: boolean;
+  themeMode: ThemeMode;
   onToggleMenu?: () => void;
+  onToggleTheme: () => void;
   onOpenCommunities?: () => void;
   onOpenEvents?: () => void;
 };
@@ -132,7 +134,7 @@ const achievements = [
   { icon: "star" as Glyph, title: "Activo", text: "Perfil completo" }
 ];
 
-export function ProfileScreen({ communities, events, activity = [], menuOpen = false, onToggleMenu, onOpenCommunities, onOpenEvents }: ProfileScreenProps) {
+export function ProfileScreen({ communities, events, activity = [], menuOpen = false, themeMode, onToggleMenu, onToggleTheme, onOpenCommunities, onOpenEvents }: ProfileScreenProps) {
   const [profileData, setProfileData] = useState<EditableProfile>(() => loadProfileSettings());
   const [draft, setDraft] = useState<EditableProfile>(profileData);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -152,6 +154,7 @@ export function ProfileScreen({ communities, events, activity = [], menuOpen = f
   const contactCount = 128 + activity.length;
   const interestTags = useMemo(() => toTags(profileData.interests), [profileData.interests]);
   const skillTags = useMemo(() => toTags(profileData.skills), [profileData.skills]);
+  const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
   const personalInfo = useMemo(
     () => [
       { icon: "map" as Glyph, title: "Ciudad", text: profileData.city },
@@ -272,9 +275,8 @@ export function ProfileScreen({ communities, events, activity = [], menuOpen = f
         </button>
         <span className="profile-brand">Kreis</span>
         <div className="profile-header-actions">
-          <button className="profile-header-icon profile-notification-button" type="button" aria-label="Notificaciones" onClick={() => openEditor("preferences")}>
-            <NotificationIcon />
-            <span>2</span>
+          <button className="profile-header-icon profile-theme-button" type="button" aria-label={nextThemeLabel} aria-pressed={themeMode === "dark"} onClick={onToggleTheme}>
+            <ThemeToggleIcon themeMode={themeMode} />
           </button>
           <button className="profile-header-icon" type="button" aria-label="Configuracion" onClick={() => openEditor("preferences")}>
             <ProfileGlyph type="settings" />

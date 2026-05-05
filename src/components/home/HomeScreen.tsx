@@ -79,7 +79,7 @@ export function HomeScreen({
     "grid min-h-8 flex-none place-items-center rounded-[18px] border px-3 text-center text-[0.82rem] font-medium leading-none shadow-none",
     active
       ? "border-transparent bg-kreis-orange text-kreis-surface-strong"
-      : "border-[rgba(31,24,19,0.08)] bg-kreis-app-bg text-[rgba(120,104,91,0.72)]"
+      : "border-kreis-line bg-kreis-app-bg text-kreis-muted"
   );
 
   useLayoutEffect(() => {

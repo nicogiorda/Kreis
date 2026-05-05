@@ -1,5 +1,5 @@
-import { House, Ticket, UserCircle, Users } from "@phosphor-icons/react";
-import type { Screen } from "../../types";
+import { House, Moon, SunDim, Ticket, UserCircle, Users } from "@phosphor-icons/react";
+import type { Screen, ThemeMode } from "../../types";
 
 export function MenuIcon() {
   return (
@@ -15,6 +15,12 @@ export function NotificationIcon() {
       <path d="M18.4 9.9c0-3.4-2.1-5.8-5.1-6.4a1.35 1.35 0 0 0-2.6 0c-3 .6-5.1 3-5.1 6.4v2.7c0 1.1-.5 2.1-1.3 2.8-.5.4-.2 1.2.5 1.2h14.4c.7 0 1-.8.5-1.2-.8-.7-1.3-1.7-1.3-2.8V9.9zM9.7 18.5c.3 1 1.2 1.7 2.3 1.7s2-.7 2.3-1.7" />
     </svg>
   );
+}
+
+export function ThemeToggleIcon({ themeMode }: { themeMode: ThemeMode }) {
+  const Icon = themeMode === "dark" ? SunDim : Moon;
+
+  return <Icon aria-hidden="true" weight="regular" />;
 }
 
 type NavIconProps = {

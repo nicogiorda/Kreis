@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import { CaretRight } from "@phosphor-icons/react";
 import { CommunityCard } from "../communities/CommunityCard";
 import { EmptyState } from "../common/EmptyState";
 import { EventCard } from "../events/EventCard";
@@ -47,11 +48,8 @@ type HomeScreenProps = {
   events: KreisEvent[];
   communities: Community[];
   homeTab: HomeTab;
-  eventFilter: string;
-  eventCategories: string[];
   communityFilter: string;
   communityCategories: string[];
-  onFilter: (category: string) => void;
   onCommunityFilter: (category: string) => void;
   onOpenEvents: () => void;
   onToggleJoin: (communityId: string) => void;
@@ -61,11 +59,8 @@ export function HomeScreen({
   events,
   communities,
   homeTab,
-  eventFilter,
-  eventCategories,
   communityFilter,
   communityCategories,
-  onFilter,
   onCommunityFilter,
   onOpenEvents,
   onToggleJoin
@@ -103,7 +98,7 @@ export function HomeScreen({
         <div className="relative min-h-[210px] overflow-hidden" style={tabPanelHeight ? { height: tabPanelHeight } : undefined}>
           <div
             className={cn(
-              "home-tab-panel absolute left-0 top-0 grid w-full gap-2.5 transition-[transform,opacity] duration-[340ms] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none",
+              "home-tab-panel absolute left-0 top-0 grid w-full gap-2.5 pb-8 transition-[transform,opacity] duration-[340ms] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none md:pb-3",
               homeTab === "events" ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none -translate-x-[22px] opacity-0"
             )}
             ref={eventsPanelRef}
@@ -112,21 +107,21 @@ export function HomeScreen({
             aria-hidden={homeTab !== "events"}
             inert={homeTab !== "events"}
           >
-            <div className="flex gap-[9px] overflow-x-auto px-0.5 pb-[5px] pt-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Filtrar eventos por categoria">
-              {eventCategories.map((category) => (
-                <button className={filterButtonClass(eventFilter === category)} type="button" key={category} onClick={() => onFilter(category)}>
-                  {category}
-                </button>
-              ))}
+            <div className="flex items-center justify-between gap-4 px-0.5 pb-[3px] pt-0.5">
+              <h2 className="m-0 text-[1.08rem] font-medium leading-tight text-kreis-ink">Proximos eventos</h2>
+              <button className="inline-flex items-center gap-1 border-0 bg-transparent p-0 text-[0.88rem] font-medium leading-none text-kreis-orange shadow-none" type="button" onClick={onOpenEvents}>
+                Ver más
+                <CaretRight className="size-4" aria-hidden="true" weight="bold" />
+              </button>
             </div>
             <div className="grid gap-2.5 md:grid-cols-2 lg:grid-cols-3">
-              {events.length ? events.map((event) => <EventCard event={event} key={event.id} variant="compact" onOpenEvents={onOpenEvents} />) : <EmptyState text="No hay eventos con ese filtro." />}
+              {events.length ? events.map((event) => <EventCard event={event} key={event.id} variant="compact" onOpenEvents={onOpenEvents} />) : <EmptyState text="No hay proximos eventos con esa busqueda." />}
             </div>
           </div>
 
           <div
             className={cn(
-              "home-tab-panel absolute left-0 top-0 grid w-full gap-2.5 transition-[transform,opacity] duration-[340ms] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none",
+              "home-tab-panel absolute left-0 top-0 grid w-full gap-2.5 pb-8 transition-[transform,opacity] duration-[340ms] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none md:pb-3",
               homeTab === "communities" ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none translate-x-[22px] opacity-0"
             )}
             ref={communitiesPanelRef}

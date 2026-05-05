@@ -49,9 +49,11 @@ export default function App() {
   const eventCategories = useMemo<string[]>(() => ["Todos", ...new Set(events.map((event) => event.category))], [events]);
   const communityCategories = useMemo<string[]>(() => ["Todos", ...new Set(communities.map((community) => community.category))], [communities]);
 
-  const visibleEvents = events.filter((event) => {
+  const homeEvents = events.filter((event) => matchesQuery(`${event.title} ${event.category} ${event.place} ${event.description}`));
+
+  const visibleEvents = homeEvents.filter((event) => {
     const categoryMatch = eventFilter === "Todos" || event.category === eventFilter;
-    return categoryMatch && matchesQuery(`${event.title} ${event.category} ${event.place} ${event.description}`);
+    return categoryMatch;
   });
 
   const discoverCommunities = communities.filter((community) => {
@@ -75,6 +77,11 @@ export default function App() {
     setScreen(nextScreen);
     setMenuOpen(false);
     scrollTop();
+  }
+
+  function openEventsFromHome(): void {
+    setEventFilter("Todos");
+    navigate("events");
   }
 
   function openComposer(mode: ComposerMode): void {
@@ -201,20 +208,17 @@ export default function App() {
         <main className="menu-shift px-[var(--page-gutter)] transition-transform duration-[760ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform md:px-0" tabIndex={-1}>
           {screen === "home" && (
             <HomeScreen
-              events={visibleEvents}
+              events={homeEvents}
               communities={discoverCommunities}
               homeTab={homeTab}
-              eventFilter={eventFilter}
-              eventCategories={eventCategories}
               communityFilter={communityFilter}
               communityCategories={communityCategories}
-              onFilter={setEventFilter}
               onCommunityFilter={setCommunityFilter}
-              onOpenEvents={() => navigate("events")}
+              onOpenEvents={openEventsFromHome}
               onToggleJoin={toggleJoin}
             />
           )}
-          {screen === "events" && <EventsScreen events={visibleEvents} onToggleInterest={toggleInterest} />}
+          {screen === "events" && <EventsScreen events={visibleEvents} eventFilter={eventFilter} eventCategories={eventCategories} onFilter={setEventFilter} onToggleInterest={toggleInterest} />}
           {screen === "communities" && <CommunitiesScreen communities={communities} discover={discoverCommunities} posts={activity} onToggleJoin={toggleJoin} />}
           {screen === "profile" && (
             <ProfileScreen

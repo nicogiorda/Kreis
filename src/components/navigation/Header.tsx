@@ -17,6 +17,8 @@ type HeaderProps = {
 
 export function Header({ globalQuery, homeTab, menuOpen, showHomeTabs, themeMode, onHomeTab, onQueryChange, onToggleTheme, onToggleMenu }: HeaderProps) {
   const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
+  const selectedHomeTabClass = themeMode === "dark" ? "text-kreis-ink" : "text-kreis-orange";
+  const inactiveHomeTabClass = themeMode === "dark" ? "text-[rgba(244,244,245,0.78)]" : "text-[rgba(247,237,218,0.84)]";
 
   return (
     <header className="relative z-30 bg-kreis-orange pt-[var(--header-main-height)] text-kreis-cream md:-mx-6">
@@ -50,7 +52,7 @@ export function Header({ globalQuery, homeTab, menuOpen, showHomeTabs, themeMode
         <div className="menu-shift bg-kreis-orange pb-[5px] pl-[max(16px,env(safe-area-inset-left))] pr-[max(16px,env(safe-area-inset-right))] transition-transform duration-[760ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform md:px-6">
           <div className={cn("home-header-switch relative isolate grid w-full grid-cols-2 gap-px overflow-hidden rounded-[11px] bg-[rgba(247,237,218,0.13)] p-px", homeTab === "communities" && "is-communities-active")} role="tablist" aria-label="Cambiar vista principal">
             <button
-              className={cn("relative z-[1] grid min-h-[27px] min-w-0 place-items-center whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2 text-center text-[0.84rem] font-medium tracking-normal transition-[color,transform] duration-200 ease-out active:scale-[0.98]", homeTab === "events" ? "text-kreis-orange" : "text-[rgba(247,237,218,0.84)]")}
+              className={cn("relative z-[1] grid min-h-[27px] min-w-0 place-items-center whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2 text-center text-[0.84rem] font-medium tracking-normal transition-[color,transform] duration-200 ease-out active:scale-[0.98]", homeTab === "events" ? selectedHomeTabClass : inactiveHomeTabClass)}
               type="button"
               role="tab"
               aria-selected={homeTab === "events"}
@@ -59,7 +61,7 @@ export function Header({ globalQuery, homeTab, menuOpen, showHomeTabs, themeMode
               Eventos
             </button>
             <button
-              className={cn("relative z-[1] grid min-h-[27px] min-w-0 place-items-center whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2 text-center text-[0.84rem] font-medium tracking-normal transition-[color,transform] duration-200 ease-out active:scale-[0.98]", homeTab === "communities" ? "text-kreis-orange" : "text-[rgba(247,237,218,0.84)]")}
+              className={cn("relative z-[1] grid min-h-[27px] min-w-0 place-items-center whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2 text-center text-[0.84rem] font-medium tracking-normal transition-[color,transform] duration-200 ease-out active:scale-[0.98]", homeTab === "communities" ? selectedHomeTabClass : inactiveHomeTabClass)}
               type="button"
               role="tab"
               aria-selected={homeTab === "communities"}

@@ -1,4 +1,4 @@
-import { House, Ticket, User, Users } from "@phosphor-icons/react";
+import { House, Ticket, UserCircle, Users } from "@phosphor-icons/react";
 import type { Screen } from "../../types";
 
 export function MenuIcon() {
@@ -27,7 +27,7 @@ export function NavIcon({ type, active = false }: NavIconProps) {
     home: House,
     events: Ticket,
     communities: Users,
-    profile: User
+    profile: UserCircle
   };
   const Icon = icons[type];
 

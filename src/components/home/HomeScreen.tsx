@@ -50,6 +50,7 @@ type HomeScreenProps = {
   homeTab: HomeTab;
   communityFilter: string;
   communityCategories: string[];
+  onHomeTab: (tab: HomeTab) => void;
   onCommunityFilter: (category: string) => void;
   onOpenEvents: () => void;
   onToggleJoin: (communityId: string) => void;
@@ -61,6 +62,7 @@ export function HomeScreen({
   homeTab,
   communityFilter,
   communityCategories,
+  onHomeTab,
   onCommunityFilter,
   onOpenEvents,
   onToggleJoin
@@ -93,6 +95,27 @@ export function HomeScreen({
   return (
     <section className="grid gap-4 animate-[rise_220ms_ease-out]" data-screen="home">
       <HeroBanner />
+
+      <div className={cn("home-header-switch relative isolate grid w-full grid-cols-2 gap-px overflow-hidden rounded-[11px] p-px", homeTab === "communities" && "is-communities-active")} role="tablist" aria-label="Cambiar vista principal">
+        <button
+          className="relative z-[1] grid min-h-[27px] min-w-0 place-items-center whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2 text-center text-[0.84rem] font-medium tracking-normal transition-[color,transform] duration-200 ease-out active:scale-[0.98]"
+          type="button"
+          role="tab"
+          aria-selected={homeTab === "events"}
+          onClick={() => onHomeTab("events")}
+        >
+          Eventos
+        </button>
+        <button
+          className="relative z-[1] grid min-h-[27px] min-w-0 place-items-center whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2 text-center text-[0.84rem] font-medium tracking-normal transition-[color,transform] duration-200 ease-out active:scale-[0.98]"
+          type="button"
+          role="tab"
+          aria-selected={homeTab === "communities"}
+          onClick={() => onHomeTab("communities")}
+        >
+          Comunidades
+        </button>
+      </div>
 
       <section className="mt-0 rounded-none bg-transparent p-0 shadow-none">
         <div className="relative min-h-[210px] overflow-hidden" style={tabPanelHeight ? { height: tabPanelHeight } : undefined}>

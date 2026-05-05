@@ -187,11 +187,8 @@ export default function App() {
         {screen !== "profile" ? (
           <Header
             globalQuery={globalQuery}
-            homeTab={homeTab}
             menuOpen={menuOpen}
-            showHomeTabs={screen === "home"}
             themeMode={themeMode}
-            onHomeTab={setHomeTab}
             onQueryChange={setGlobalQuery}
             onToggleTheme={toggleTheme}
             onToggleMenu={() => setMenuOpen((open) => !open)}
@@ -213,6 +210,7 @@ export default function App() {
               homeTab={homeTab}
               communityFilter={communityFilter}
               communityCategories={communityCategories}
+              onHomeTab={setHomeTab}
               onCommunityFilter={setCommunityFilter}
               onOpenEvents={openEventsFromHome}
               onToggleJoin={toggleJoin}

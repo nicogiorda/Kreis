@@ -1,3 +1,4 @@
+import { SealCheck } from "@phosphor-icons/react";
 import { Meta } from "../common/Meta";
 import { eventToneClass } from "../../utils/events";
 import { cn } from "../../utils/cn";
@@ -13,6 +14,7 @@ type EventCardProps = {
 export function EventCard({ event, variant = "full", onOpenEvents, onToggleInterest }: EventCardProps) {
   const compact = variant === "compact";
   const locationMeta = [{ icon: "location" as const, text: event.place }];
+  const officialBadge = event.official ? <SealCheck className="event-official-badge size-[1em] flex-none" weight="fill" aria-label="Evento oficial de UADE" /> : null;
 
   if (compact) {
     return (
@@ -22,7 +24,10 @@ export function EventCard({ event, variant = "full", onOpenEvents, onToggleInter
           <span className="mt-[3px] block text-[0.66rem] font-extrabold leading-none">{event.month}</span>
         </div>
         <div className="grid min-w-0 content-center gap-1.5">
-          <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-base font-medium leading-[1.15]">{event.title}</h3>
+          <h3 className="m-0 inline-flex min-w-0 items-center gap-1.5 text-base font-medium leading-[1.15]">
+            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{event.title}</span>
+            {officialBadge}
+          </h3>
           <Meta className="!mt-0.5 text-[0.82rem] font-normal leading-none" items={locationMeta} />
         </div>
       </article>
@@ -36,7 +41,10 @@ export function EventCard({ event, variant = "full", onOpenEvents, onToggleInter
       </div>
       <div className="grid gap-3 p-4">
         <div>
-          <h3 className="m-0 text-[1.06rem] font-bold">{event.title}</h3>
+          <h3 className="m-0 inline-flex max-w-full items-center gap-1.5 text-[1.06rem] font-bold">
+            <span className="min-w-0">{event.title}</span>
+            {officialBadge}
+          </h3>
           <p className="mt-[5px] font-normal text-kreis-muted leading-[1.45]">{event.description}</p>
           <Meta items={locationMeta} />
         </div>

@@ -223,12 +223,6 @@ export default function App() {
               communities={communities}
               events={events}
               activity={activity}
-              menuOpen={menuOpen}
-              themeMode={themeMode}
-              onToggleMenu={() => setMenuOpen((open) => !open)}
-              onToggleTheme={toggleTheme}
-              onOpenCommunities={() => navigate("communities")}
-              onOpenEvents={() => navigate("events")}
             />
           )}
         </main>

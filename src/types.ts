@@ -24,6 +24,7 @@ export type KreisEvent = {
   tone: EventTone;
   interested: boolean;
   description: string;
+  official?: boolean;
 };
 
 export type Community = {

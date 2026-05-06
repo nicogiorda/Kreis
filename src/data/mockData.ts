@@ -12,6 +12,7 @@ export const initialEvents: KreisEvent[] = [
     icon: "EX",
     tone: "orange",
     interested: false,
+    official: true,
     description: "Expo con propuestas, actividades y espacios para conectar con la comunidad UADE."
   },
   {

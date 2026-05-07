@@ -1,0 +1,204 @@
+@font-face {
+    font-family: 'Amsi Pro';
+    src: url('AmsiProNormal-BoldItalic.eot');
+    src: local('Amsi Pro Bold Italic'), local('AmsiProNormal-BoldItalic'),
+        url('AmsiProNormal-BoldItalic.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-BoldItalic.woff2') format('woff2'),
+        url('AmsiProNormal-BoldItalic.woff') format('woff'),
+        url('AmsiProNormal-BoldItalic.ttf') format('truetype');
+    font-weight: bold;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Amsi Pro';
+    src: url('AmsiProNormal-ExtraLight.eot');
+    src: local('Amsi Pro ExtraLight'), local('AmsiProNormal-ExtraLight'),
+        url('AmsiProNormal-ExtraLight.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-ExtraLight.woff2') format('woff2'),
+        url('AmsiProNormal-ExtraLight.woff') format('woff'),
+        url('AmsiProNormal-ExtraLight.ttf') format('truetype');
+    font-weight: 200;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Amsi Pro';
+    src: url('AmsiProNormal-ExtraLightItalic.eot');
+    src: local('Amsi Pro ExtraLight Italic'), local('AmsiProNormal-ExtraLightItalic'),
+        url('AmsiProNormal-ExtraLightItalic.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-ExtraLightItalic.woff2') format('woff2'),
+        url('AmsiProNormal-ExtraLightItalic.woff') format('woff'),
+        url('AmsiProNormal-ExtraLightItalic.ttf') format('truetype');
+    font-weight: 200;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Amsi Pro';
+    src: url('AmsiProNormal-Black.eot');
+    src: local('Amsi Pro Black'), local('AmsiProNormal-Black'),
+        url('AmsiProNormal-Black.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-Black.woff2') format('woff2'),
+        url('AmsiProNormal-Black.woff') format('woff'),
+        url('AmsiProNormal-Black.ttf') format('truetype');
+    font-weight: 900;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Amsi Pro';
+    src: url('AmsiProNormal-BlackItalic.eot');
+    src: local('Amsi Pro Black Italic'), local('AmsiProNormal-BlackItalic'),
+        url('AmsiProNormal-BlackItalic.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-BlackItalic.woff2') format('woff2'),
+        url('AmsiProNormal-BlackItalic.woff') format('woff'),
+        url('AmsiProNormal-BlackItalic.ttf') format('truetype');
+    font-weight: 900;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Amsi Pro';
+    src: url('AmsiProNormal-Bold.eot');
+    src: local('Amsi Pro Bold'), local('AmsiProNormal-Bold'),
+        url('AmsiProNormal-Bold.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-Bold.woff2') format('woff2'),
+        url('AmsiProNormal-Bold.woff') format('woff'),
+        url('AmsiProNormal-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Amsi Pro';
+    src: url('AmsiProNormal-Italic.eot');
+    src: local('Amsi Pro Italic'), local('AmsiProNormal-Italic'),
+        url('AmsiProNormal-Italic.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-Italic.woff2') format('woff2'),
+        url('AmsiProNormal-Italic.woff') format('woff'),
+        url('AmsiProNormal-Italic.ttf') format('truetype');
+    font-weight: normal;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Amsi Pro';
+    src: url('AmsiProNormal-Regular.eot');
+    src: local('Amsi Pro'), local('AmsiProNormal-Regular'),
+        url('AmsiProNormal-Regular.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-Regular.woff2') format('woff2'),
+        url('AmsiProNormal-Regular.woff') format('woff'),
+        url('AmsiProNormal-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Amsi Pro';
+    src: url('AmsiProNormal-ThinItalic.eot');
+    src: local('Amsi Pro Thin Italic'), local('AmsiProNormal-ThinItalic'),
+        url('AmsiProNormal-ThinItalic.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-ThinItalic.woff2') format('woff2'),
+        url('AmsiProNormal-ThinItalic.woff') format('woff'),
+        url('AmsiProNormal-ThinItalic.ttf') format('truetype');
+    font-weight: 100;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Amsi Pro';
+    src: url('AmsiProNormal-LightItalic.eot');
+    src: local('Amsi Pro Light Italic'), local('AmsiProNormal-LightItalic'),
+        url('AmsiProNormal-LightItalic.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-LightItalic.woff2') format('woff2'),
+        url('AmsiProNormal-LightItalic.woff') format('woff'),
+        url('AmsiProNormal-LightItalic.ttf') format('truetype');
+    font-weight: 300;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Amsi Pro Ultra';
+    src: url('AmsiProNormal-UltraItalic.eot');
+    src: local('Amsi Pro Ultra Italic'), local('AmsiProNormal-UltraItalic'),
+        url('AmsiProNormal-UltraItalic.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-UltraItalic.woff2') format('woff2'),
+        url('AmsiProNormal-UltraItalic.woff') format('woff'),
+        url('AmsiProNormal-UltraItalic.ttf') format('truetype');
+    font-weight: normal;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Amsi Pro';
+    src: url('AmsiProNormal-Light.eot');
+    src: local('Amsi Pro Light'), local('AmsiProNormal-Light'),
+        url('AmsiProNormal-Light.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-Light.woff2') format('woff2'),
+        url('AmsiProNormal-Light.woff') format('woff'),
+        url('AmsiProNormal-Light.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Amsi Pro';
+    src: url('AmsiProNormal-SemiBoldItalic.eot');
+    src: local('Amsi Pro SemiBold Italic'), local('AmsiProNormal-SemiBoldItalic'),
+        url('AmsiProNormal-SemiBoldItalic.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-SemiBoldItalic.woff2') format('woff2'),
+        url('AmsiProNormal-SemiBoldItalic.woff') format('woff'),
+        url('AmsiProNormal-SemiBoldItalic.ttf') format('truetype');
+    font-weight: 600;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Amsi Pro';
+    src: url('AmsiProNormal-Thin.eot');
+    src: local('Amsi Pro Thin'), local('AmsiProNormal-Thin'),
+        url('AmsiProNormal-Thin.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-Thin.woff2') format('woff2'),
+        url('AmsiProNormal-Thin.woff') format('woff'),
+        url('AmsiProNormal-Thin.ttf') format('truetype');
+    font-weight: 100;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Amsi Pro Ultra';
+    src: url('AmsiProNormal-Ultra.eot');
+    src: local('Amsi Pro Ultra'), local('AmsiProNormal-Ultra'),
+        url('AmsiProNormal-Ultra.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-Ultra.woff2') format('woff2'),
+        url('AmsiProNormal-Ultra.woff') format('woff'),
+        url('AmsiProNormal-Ultra.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Amsi Pro Opt Headline';
+    src: url('AmsiProOpt-Headline.eot');
+    src: local('Amsi Pro Opt Headline'), local('AmsiProOpt-Headline'),
+        url('AmsiProOpt-Headline.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProOpt-Headline.woff2') format('woff2'),
+        url('AmsiProOpt-Headline.woff') format('woff'),
+        url('AmsiProOpt-Headline.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Amsi Pro';
+    src: url('AmsiProNormal-SemiBold.eot');
+    src: local('Amsi Pro SemiBold'), local('AmsiProNormal-SemiBold'),
+        url('AmsiProNormal-SemiBold.eot?#iefix') format('embedded-opentype'),
+        url('AmsiProNormal-SemiBold.woff2') format('woff2'),
+        url('AmsiProNormal-SemiBold.woff') format('woff'),
+        url('AmsiProNormal-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+}
+

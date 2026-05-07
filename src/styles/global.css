@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Amsi Pro Ultra";
+  src:
+    url("../assets/fonts/amsi-pro/AmsiProNormal-Ultra.woff2") format("woff2"),
+    url("../assets/fonts/amsi-pro/AmsiProNormal-Ultra.woff") format("woff");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
 @theme {
   --font-sans: "Satoshi", Arial, sans-serif;
 
@@ -223,6 +233,11 @@ html[data-theme="dark"] {
     pointer-events: none;
     transform: skewX(-17deg);
     transform-origin: top right;
+  }
+
+  .hero-banner-title {
+    font-family: "Amsi Pro Ultra", var(--font-sans);
+    font-weight: 400;
   }
 
   .splash-screen {

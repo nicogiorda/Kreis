@@ -93,12 +93,15 @@ export function HomeScreen({
   }, [homeTab]);
 
   return (
-    <section className="grid gap-4 animate-[rise_220ms_ease-out]" data-screen="home">
+    <section className="grid animate-[rise_220ms_ease-out]" data-screen="home">
       <HeroBanner />
 
-      <div className={cn("home-header-switch relative isolate grid w-full grid-cols-2 gap-px overflow-hidden rounded-[11px] p-px", homeTab === "communities" && "is-communities-active")} role="tablist" aria-label="Cambiar vista principal">
+      <div className="relative z-[3] -mx-[var(--page-gutter)] -mt-[clamp(1.22rem,4.4vw,1.8rem)] bg-kreis-green">
+        <div className="rounded-t-[clamp(1.8rem,7vw,3.1rem)] bg-kreis-app-bg px-[var(--page-gutter)] pt-[clamp(1rem,4.5vw,1.4rem)]">
+          <div className="grid gap-4">
+      <div className={cn("home-header-switch relative isolate grid w-full grid-cols-2 gap-px overflow-hidden rounded-[13px] p-px", homeTab === "communities" && "is-communities-active")} role="tablist" aria-label="Cambiar vista principal">
         <button
-          className="relative z-[1] grid min-h-[27px] min-w-0 place-items-center whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2 text-center text-[0.84rem] font-medium tracking-normal transition-[color,transform] duration-200 ease-out active:scale-[0.98]"
+          className="relative z-[1] grid min-h-[27px] min-w-0 place-items-center whitespace-nowrap rounded-[11px] border-0 bg-transparent px-2 text-center text-[0.84rem] font-medium tracking-normal transition-[color,transform] duration-200 ease-out active:scale-[0.98]"
           type="button"
           role="tab"
           aria-selected={homeTab === "events"}
@@ -107,7 +110,7 @@ export function HomeScreen({
           Eventos
         </button>
         <button
-          className="relative z-[1] grid min-h-[27px] min-w-0 place-items-center whitespace-nowrap rounded-[9px] border-0 bg-transparent px-2 text-center text-[0.84rem] font-medium tracking-normal transition-[color,transform] duration-200 ease-out active:scale-[0.98]"
+          className="relative z-[1] grid min-h-[27px] min-w-0 place-items-center whitespace-nowrap rounded-[11px] border-0 bg-transparent px-2 text-center text-[0.84rem] font-medium tracking-normal transition-[color,transform] duration-200 ease-out active:scale-[0.98]"
           type="button"
           role="tab"
           aria-selected={homeTab === "communities"}
@@ -171,6 +174,9 @@ export function HomeScreen({
           </div>
         </div>
       </section>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

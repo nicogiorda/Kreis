@@ -80,7 +80,7 @@ html[data-theme="dark"] {
   --pumpkin-vapor: #4b4b50;
   --fence-green: #34363a;
   --cream-icon: #f4f4f5;
-  --norfolk-green: #8b8f97;
+  --norfolk-green: #2e4b3c;
   --ink: #f4f4f5;
   --muted: #a1a1aa;
   --surface: #18181b;
@@ -177,7 +177,7 @@ html[data-theme="dark"] {
     left: 1px;
     z-index: 0;
     width: calc((100% - 3px) / 2);
-    border-radius: 9px;
+    border-radius: 11px;
     background: var(--home-switch-thumb);
     transform: translate3d(0, 0, 0);
     transition: transform 340ms cubic-bezier(0.25, 1, 0.5, 1);
@@ -219,20 +219,6 @@ html[data-theme="dark"] {
 
   html[data-theme="dark"] .home-event-date-chip {
     border-color: transparent;
-  }
-
-  .campus-panel::after {
-    content: "";
-    position: absolute;
-    top: -12%;
-    right: clamp(-2.4rem, -5vw, -0.8rem);
-    z-index: 0;
-    width: clamp(5.5rem, 22vw, 11rem);
-    height: 130%;
-    background: rgba(203, 61, 17, 0.17);
-    pointer-events: none;
-    transform: skewX(-17deg);
-    transform-origin: top right;
   }
 
   .hero-banner-title {

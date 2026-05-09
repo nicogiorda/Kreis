@@ -9,18 +9,18 @@ type CommunityCardProps = {
 
 export function CommunityCard({ community, mode = "discover", onToggleJoin }: CommunityCardProps) {
   return (
-    <article className={cn("grid items-start gap-2 rounded-kreis-card border border-kreis-line p-[11px_12px] shadow-none", mode === "joined" ? "bg-kreis-surface" : "bg-kreis-app-bg")}>
+    <article className={cn("grid items-start gap-2 rounded-kreis-card p-[11px_12px] shadow-none", mode === "joined" ? "bg-kreis-surface" : "bg-kreis-event-surface")}>
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2.5">
         <div className="grid min-w-0 grid-cols-[auto_1fr] items-center gap-2.5">
           <span className="grid size-[38px] place-items-center rounded-full bg-kreis-beige text-[0.88rem] font-black text-kreis-orange">{community.icon}</span>
           <div className="min-w-0">
-            <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[1.06rem] font-bold">{community.name}</h3>
+            <h3 className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-[1.06rem] font-semibold">{community.name}</h3>
             <span className="mt-0.5 block text-[0.68rem] font-medium leading-none text-kreis-muted">{community.members} miembros</span>
           </div>
         </div>
         <button
           className={cn(
-            "min-h-[34px] rounded-kreis-small border-0 px-3 text-[0.82rem] font-semibold text-white shadow-none",
+            "min-h-[34px] rounded-full border-0 px-3 text-[0.82rem] font-semibold text-white shadow-none",
             community.joined ? "bg-kreis-forest" : "bg-kreis-orange"
           )}
           type="button"

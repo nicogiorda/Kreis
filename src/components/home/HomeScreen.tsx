@@ -72,11 +72,12 @@ export function HomeScreen({
   const eventsPanelRef = useRef<HTMLDivElement>(null);
   const communitiesPanelRef = useRef<HTMLDivElement>(null);
   const [tabPanelHeight, setTabPanelHeight] = useState(0);
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const filterButtonClass = (active: boolean) => cn(
     "grid min-h-8 flex-none place-items-center rounded-[18px] border px-3 text-center text-[0.82rem] font-medium leading-none shadow-none",
     active
       ? "border-transparent bg-kreis-orange text-kreis-surface-strong"
-      : "border-kreis-line bg-kreis-app-bg text-kreis-muted"
+      : "border-kreis-line bg-kreis-event-surface text-kreis-muted"
   );
 
   useLayoutEffect(() => {
@@ -97,7 +98,7 @@ export function HomeScreen({
       <HeroBanner />
 
       <div className="relative z-[3] -mx-[var(--page-gutter)] -mt-[clamp(1.22rem,4.4vw,1.8rem)] bg-kreis-green">
-        <div className="rounded-t-[clamp(1.8rem,7vw,3.1rem)] bg-kreis-app-bg px-[var(--page-gutter)] pt-[clamp(1rem,4.5vw,1.4rem)]">
+        <div className="rounded-t-[clamp(1.8rem,7vw,3.1rem)] bg-[var(--home-panel-bg)] px-[var(--page-gutter)] pt-[clamp(1rem,4.5vw,1.4rem)]">
           <div className="grid gap-4">
       <div className={cn("home-header-switch relative isolate grid w-full grid-cols-2 gap-px overflow-hidden rounded-[13px] p-px", homeTab === "communities" && "is-communities-active")} role="tablist" aria-label="Cambiar vista principal">
         <button
@@ -121,7 +122,7 @@ export function HomeScreen({
       </div>
 
       <section className="mt-0 rounded-none bg-transparent p-0 shadow-none">
-        <div className="relative min-h-[210px] overflow-hidden" style={tabPanelHeight ? { height: tabPanelHeight } : undefined}>
+        <div className="relative min-h-[210px] overflow-hidden transition-[height] duration-[260ms] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none" style={tabPanelHeight ? { height: tabPanelHeight } : undefined}>
           <div
             className={cn(
               "home-tab-panel absolute left-0 top-0 grid w-full gap-2.5 pb-8 transition-[transform,opacity] duration-[340ms] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none md:pb-3",
@@ -134,14 +135,23 @@ export function HomeScreen({
             inert={homeTab !== "events"}
           >
             <div className="flex items-center justify-between gap-4 px-0.5 pb-[3px] pt-0.5">
-              <h2 className="m-0 text-[1.08rem] font-medium leading-tight text-kreis-ink">Proximos eventos</h2>
+              <h2 className="m-0 text-[1.08rem] font-medium leading-tight text-kreis-ink">Próximos eventos</h2>
               <button className="inline-flex items-center gap-1 border-0 bg-transparent p-0 text-[0.88rem] font-medium leading-none text-kreis-orange shadow-none" type="button" onClick={onOpenEvents}>
                 Ver más
                 <CaretRight className="size-4" aria-hidden="true" weight="bold" />
               </button>
             </div>
             <div className="grid gap-2.5 md:grid-cols-2 lg:grid-cols-3">
-              {events.length ? events.map((event) => <EventCard event={event} key={event.id} variant="compact" onOpenEvents={onOpenEvents} />) : <EmptyState text="No hay proximos eventos con esa busqueda." />}
+              {events.length ? events.map((event) => (
+                <EventCard
+                  event={event}
+                  expanded={expandedEventId === event.id}
+                  key={event.id}
+                  variant="compact"
+                  onOpenEvents={onOpenEvents}
+                  onToggleExpanded={(eventId) => setExpandedEventId((current) => current === eventId ? null : eventId)}
+                />
+              )) : <EmptyState text="No hay próximos eventos con esa búsqueda." />}
             </div>
           </div>
 

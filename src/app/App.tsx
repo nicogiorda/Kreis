@@ -227,7 +227,6 @@ export default function App() {
           )}
         </main>
 
-        <BottomNav screen={screen} onNavigate={navigate} />
         <ComposerModal
           open={composerOpen}
           mode={composerMode}
@@ -238,6 +237,7 @@ export default function App() {
           onCreatePost={createPost}
         />
       </div>
+      <BottomNav screen={screen} menuOpen={menuOpen} onNavigate={navigate} />
     </>
   );
 }

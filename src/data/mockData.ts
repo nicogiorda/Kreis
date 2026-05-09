@@ -13,7 +13,7 @@ export const initialEvents: KreisEvent[] = [
     tone: "orange",
     interested: false,
     official: true,
-    description: "Expo con propuestas, actividades y espacios para conectar con la comunidad UADE."
+    description: "Del 27 al 29 de Mayo, estudiantes de colegios secundarios podrán participar en charlas en vivo y diversas actividades para tener un acercamiento a la vida universitaria."
   },
   {
     id: "after-office-uade",

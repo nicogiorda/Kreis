@@ -47,14 +47,15 @@
   --norfolk-green: #2e4b3c;
   --ink: #1f1813;
   --muted: #78685b;
-  --surface: #ffffff;
-  --surface-strong: #ffffff;
+  --surface: #fdfcf8;
+  --surface-strong: #fdfcf8;
   --app-bg: #f4f3ed;
-  --event-surface: #ffffff;
+  --home-panel-bg: #f3f0e9;
+  --event-surface: #fdfcf8;
   --date-surface: #f4f3ed;
-  --date-chip-bg: rgba(247, 237, 218, 0.78);
-  --date-chip-border: rgba(247, 237, 218, 0.64);
-  --date-chip-ink: var(--ink);
+  --date-chip-bg: rgba(46, 75, 60, 0.4);
+  --date-chip-border: transparent;
+  --date-chip-ink: var(--norfolk-green);
   --official-badge: var(--pumpkin-vapor);
   --home-switch-track: var(--event-surface);
   --home-switch-thumb: var(--fiery-glow);
@@ -69,7 +70,7 @@
   --nav-height: 84px;
   --header-main-height: calc(64px + env(safe-area-inset-top));
   --drawer-width: min(82vw, 340px);
-  --page-gutter: 16px;
+  --page-gutter: 18px;
   color-scheme: light;
 }
 
@@ -86,6 +87,7 @@ html[data-theme="dark"] {
   --surface: #18181b;
   --surface-strong: #202024;
   --app-bg: #0f0f10;
+  --home-panel-bg: var(--app-bg);
   --event-surface: #18181b;
   --date-surface: #27272a;
   --date-chip-bg: #262629;
@@ -160,6 +162,14 @@ html[data-theme="dark"] {
 
   .app-shell.is-menu-open .app-header-main {
     transform: translateX(calc(-50% + var(--drawer-width)));
+  }
+
+  .bottom-nav {
+    transform: translate3d(0, 0, 0);
+  }
+
+  .bottom-nav.is-menu-open {
+    transform: translate3d(var(--drawer-width), 0, 0);
   }
 
   .global-search input::-webkit-search-cancel-button,

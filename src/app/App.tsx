@@ -183,8 +183,14 @@ export default function App() {
   return (
     <>
       <SplashScreen />
-      <div className={cn("app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden pb-[calc(var(--nav-height)+18px)] md:px-6 md:pb-[calc(var(--nav-height)+28px)]", menuOpen && "is-menu-open")}>
-        {screen !== "profile" ? (
+      <div
+        className={cn(
+          "app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden md:px-6",
+          screen === "home" ? "pb-0 md:pb-0" : "pb-[calc(var(--nav-height)+18px)] md:pb-[calc(var(--nav-height)+28px)]",
+          menuOpen && "is-menu-open"
+        )}
+      >
+        {screen !== "profile" && screen !== "home" ? (
           <Header
             globalQuery={globalQuery}
             menuOpen={menuOpen}
@@ -210,9 +216,13 @@ export default function App() {
               homeTab={homeTab}
               communityFilter={communityFilter}
               communityCategories={communityCategories}
+              menuOpen={menuOpen}
+              themeMode={themeMode}
               onHomeTab={setHomeTab}
               onCommunityFilter={setCommunityFilter}
               onOpenEvents={openEventsFromHome}
+              onToggleTheme={toggleTheme}
+              onToggleMenu={() => setMenuOpen((open) => !open)}
               onToggleJoin={toggleJoin}
             />
           )}

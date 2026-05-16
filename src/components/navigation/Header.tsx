@@ -15,8 +15,8 @@ export function Header({ globalQuery, menuOpen, themeMode, onQueryChange, onTogg
   const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
 
   return (
-    <header className="relative z-30 bg-kreis-orange pt-[var(--header-main-height)] text-kreis-cream md:-mx-6">
-      <div className="app-header-main menu-shift fixed left-1/2 top-0 z-[35] w-[min(100%,1120px)] bg-kreis-orange pb-2.5 pl-[max(16px,env(safe-area-inset-left))] pr-[max(16px,env(safe-area-inset-right))] pt-[calc(8px+env(safe-area-inset-top))] transition-transform duration-[760ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform md:px-6">
+    <header className="relative z-30 bg-kreis-green pt-[var(--header-main-height)] text-kreis-cream md:-mx-6">
+      <div className="app-header-main menu-shift fixed left-1/2 top-0 z-[35] w-[min(100%,1120px)] bg-kreis-green pb-2.5 pl-[max(16px,env(safe-area-inset-left))] pr-[max(16px,env(safe-area-inset-right))] pt-[calc(8px+env(safe-area-inset-top))] transition-transform duration-[760ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform md:px-6">
         <div className="grid w-full grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2">
           <button
             className="grid size-11 place-items-center border-0 bg-transparent text-kreis-cream shadow-none [&_svg]:size-[31px] [&_svg]:fill-none [&_svg]:stroke-current [&_svg]:stroke-[1.65] [&_svg]:[stroke-linecap:round] [&_svg]:[stroke-linejoin:round]"

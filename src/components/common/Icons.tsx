@@ -1,4 +1,4 @@
-import { House, Moon, SunDim, Ticket, UserCircle, Users } from "@phosphor-icons/react";
+import { CalendarBlank, House, Moon, SunDim, UserCircle, UserCirclePlus, UsersThree } from "@phosphor-icons/react";
 import type { Screen, ThemeMode } from "../../types";
 
 export function MenuIcon() {
@@ -23,6 +23,10 @@ export function ThemeToggleIcon({ themeMode }: { themeMode: ThemeMode }) {
   return <Icon aria-hidden="true" weight="regular" />;
 }
 
+export function HeaderActionIcon() {
+  return <UserCirclePlus aria-hidden="true" weight="regular" />;
+}
+
 type NavIconProps = {
   type: Screen;
   active?: boolean;
@@ -31,15 +35,15 @@ type NavIconProps = {
 export function NavIcon({ type, active = false }: NavIconProps) {
   const icons = {
     home: House,
-    events: Ticket,
-    communities: Users,
+    events: CalendarBlank,
+    communities: UsersThree,
     profile: UserCircle
   };
   const Icon = icons[type];
 
   return (
     <span className="grid size-7 place-items-center text-[1.1rem] leading-none" aria-hidden="true">
-      <Icon className="size-[27px]" weight={active ? "fill" : "regular"} />
+      <Icon className="size-[28px]" weight="fill" />
     </span>
   );
 }

@@ -1,13 +1,56 @@
+import isotypeUrl from "../../assets/brand/svgs/ISOTIPO-INVERTIDO.svg";
 import kreisitoUrl from "../../assets/characters/kreisito_saludando.webp";
+import { HeaderActionIcon, ThemeToggleIcon } from "../common/Icons";
+import type { ThemeMode } from "../../types";
 
-export function HeroBanner() {
+type HeroBannerProps = {
+  menuOpen: boolean;
+  themeMode: ThemeMode;
+  onToggleTheme: () => void;
+  onToggleMenu: () => void;
+};
+
+export function HeroBanner({ menuOpen, themeMode, onToggleTheme, onToggleMenu }: HeroBannerProps) {
+  const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
+
   return (
-    <section className="campus-panel relative isolate -mx-[var(--page-gutter)] min-h-[clamp(13.7rem,52vw,18.2rem)] w-[calc(100%+(var(--page-gutter)*2))] overflow-hidden bg-kreis-green px-[var(--page-gutter)] pb-[clamp(3rem,8vw,4.5rem)] pt-[clamp(3.15rem,12vw,4.25rem)] text-kreis-cream shadow-none" aria-label="Kreis">
-      <div className="relative z-[2] grid max-w-[clamp(11rem,55vw,22rem)] gap-[0.48rem]">
-        <h1 className="hero-banner-title m-0 max-w-[8.1em] text-[clamp(1.5rem,6.5vw,2.72rem)] leading-none tracking-normal text-kreis-cream">Elegís donde entrar</h1>
-        <p className="m-0 max-w-[13rem] text-[clamp(0.9rem,3.5vw,1.04rem)] font-medium leading-[1.22] text-[rgba(247,237,218,0.86)]">Planes, grupos y momentos para cruzarte con gente nueva.</p>
+    <section className="relative isolate -mx-[var(--page-gutter)] h-[309px] w-[calc(100%+(var(--page-gutter)*2))] overflow-hidden bg-kreis-green text-kreis-cream shadow-none" aria-label="Kreis">
+      <div className="home-hero-frame">
+        <button
+          className="header-glass-button home-header-control home-header-brand"
+          type="button"
+          aria-label={menuOpen ? "Cerrar comunidades" : "Abrir comunidades"}
+          aria-expanded={menuOpen}
+          onClick={onToggleMenu}
+        >
+          <img src={isotypeUrl} alt="" aria-hidden="true" />
+        </button>
+        <button
+          className="header-glass-button home-header-control home-header-theme theme-toggle-button"
+          type="button"
+          aria-label={nextThemeLabel}
+          aria-pressed={themeMode === "dark"}
+          onClick={onToggleTheme}
+        >
+          <ThemeToggleIcon themeMode={themeMode} />
+        </button>
+        <button
+          className="header-glass-button home-header-control home-header-action"
+          type="button"
+          aria-label="Abrir comunidades"
+          aria-expanded={menuOpen}
+          onClick={onToggleMenu}
+        >
+          <HeaderActionIcon />
+        </button>
+        <div className="home-hero-copy">
+          <h1 className="m-0 text-[48px] leading-[50px] tracking-normal text-kreis-cream">
+            <span className="hero-banner-title block">Hola,</span>
+            <span className="hero-banner-name block">Nicolás</span>
+          </h1>
+        </div>
+        <img className="home-hero-character" src={kreisitoUrl} alt="" aria-hidden="true" />
       </div>
-      <img className="pointer-events-none absolute right-[var(--page-gutter)] top-[clamp(1.9rem,9.2vw,2.55rem)] z-[1] h-auto w-[clamp(8.65rem,37.2vw,10rem)] max-w-none" src={kreisitoUrl} alt="" aria-hidden="true" />
     </section>
   );
 }

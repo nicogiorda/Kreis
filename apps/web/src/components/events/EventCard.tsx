@@ -7,13 +7,11 @@ import type { KreisEvent } from "../../types";
 type EventCardProps = {
   event: KreisEvent;
   variant?: "full" | "compact";
-  expanded?: boolean;
   onOpenEvents?: () => void;
-  onToggleExpanded?: (eventId: string) => void;
   onToggleInterest?: (eventId: string) => void;
 };
 
-export function EventCard({ event, variant = "full", expanded = false, onOpenEvents, onToggleExpanded, onToggleInterest }: EventCardProps) {
+export function EventCard({ event, variant = "full", onOpenEvents, onToggleInterest }: EventCardProps) {
   const compact = variant === "compact";
   const locationMeta = [{ icon: "location" as const, text: event.place }];
   const officialBadge = event.official ? <SealCheck className="event-official-badge size-[1em] flex-none" weight="fill" aria-label="Evento oficial de UADE" /> : null;

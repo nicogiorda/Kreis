@@ -16,7 +16,7 @@ The app currently uses `Satoshi` with `Arial` fallback. Keep UI labels compact a
 
 ## Assets
 
-Runtime brand assets live in `src/assets/brand/` and should be limited to files imported by the app. Original brand exports live in `docs/brand-assets/`.
+Runtime brand assets live in `apps/web/src/assets/brand/` and should be limited to files imported by the app. Original brand exports live in `docs/brand-assets/`.
 
 The inverted SVG source files are light marks intended for dark or saturated backgrounds:
 

@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.shared.tsbuildinfo",
+    "tsBuildInfoFile": "../../node_modules/.tmp/tsconfig.api.tsbuildinfo",
     "target": "ES2023",
     "lib": ["ES2023"],
     "skipLibCheck": true,
@@ -8,8 +8,11 @@
     "moduleDetection": "force",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "strict": true,
-    "noEmit": true
+    "noEmit": true,
+    "composite": true,
+    "types": ["node"]
   },
-  "include": ["shared/**/*.ts"]
+  "include": ["src/**/*.ts"]
 }

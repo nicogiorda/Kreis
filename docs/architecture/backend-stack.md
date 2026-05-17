@@ -2,14 +2,14 @@
 
 ## Recomendacion actual
 
-Usar Node.js + TypeScript + Express para el backend de Kreis, manteniendo el frontend actual en Vite.
+Usar Node.js + TypeScript + Express para el backend de Kreis, manteniendo el frontend PWA en Vite.
 
 No instalar Next.js todavia. Next.js es excelente si la app completa va a vivir en Next, pero para un backend modular separado no es la opcion mas limpia: mezcla una segunda capa de frontend/routing con una app que ya funciona en Vite.
 
 ## Estructura correcta para este camino
 
 ```text
-backend/
+apps/api/
   src/
     platform/       HTTP server, middlewares, route registry
     core/           config, errors, auth primitives, logging
@@ -33,7 +33,7 @@ Decision actual: Express.
 Motivos:
 
 - Es el framework Node mas familiar para levantar un backend rapido.
-- Encaja bien con una API separada del frontend Vite.
+- Encaja bien con una API separada del frontend Vite ubicado en `apps/web`.
 - No impone arquitectura; la arquitectura la define nuestro monolito modular.
 - Tiene ecosistema amplio para auth, middlewares, testing y documentacion.
 
@@ -75,7 +75,7 @@ Scripts:
 
 ```json
 {
-  "dev:api": "tsx watch backend/src/platform/server.ts",
-  "typecheck:api": "tsc -p backend/tsconfig.json"
+  "dev:api": "tsx watch apps/api/src/platform/server.ts",
+  "typecheck:api": "tsc -p apps/api/tsconfig.json"
 }
 ```

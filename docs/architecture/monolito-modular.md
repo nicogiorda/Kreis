@@ -9,8 +9,8 @@ Usar un monolito modular para el backend:
 - Un deploy de API.
 - Una base de datos principal.
 - Modulos por dominio de producto.
-- Contratos compartidos en `shared/contracts`.
-- Migraciones y documentacion de datos en `database`.
+- Contratos compartidos en `packages/shared/contracts`.
+- Migraciones y documentacion de datos en `infra/database`.
 - Runtime backend en Node.js con TypeScript.
 
 ## Por que no microservicios ahora
@@ -43,9 +43,9 @@ tests/           Pruebas del modulo
 
 ## Datos
 
-El equipo de datos trabaja desde `database/`. Las migraciones viven en `database/migrations`, el modelo conceptual en `database/schema` y los seeds en `database/seeds`.
+El equipo de datos trabaja desde `infra/database/`. Las migraciones viven en `infra/database/migrations`, el modelo conceptual en `infra/database/schema` y los seeds en `infra/database/seeds`.
 
-La base sugerida es relacional. Si el equipo elige Postgres, Prisma, Drizzle u otro stack, esa decision deberia documentarse aca y reflejarse en `database/README.md` antes de escribir migraciones reales.
+La base sugerida es relacional. Si el equipo elige Postgres, Prisma, Drizzle u otro stack, esa decision deberia documentarse aca y reflejarse en `infra/database/README.md` antes de escribir migraciones reales.
 
 ## Node.js y Next.js
 
@@ -53,4 +53,4 @@ Node.js es correcto como runtime backend para este repo.
 
 Next.js solo seria la decision correcta si Kreis pasa a ser una app full-stack Next, migrando el frontend actual desde Vite. Instalar Next dentro del repo sin migrar la app no crea automaticamente un backend util; dejaria dos frameworks frontend conviviendo y aumentaria la complejidad.
 
-Para mantener el monolito modular actual, la opcion recomendada es una API Node.js en `backend/` y conservar el frontend Vite en `src/`. Si mas adelante se elige Next, la migracion deberia planificarse como cambio de arquitectura, no como instalacion suelta.
+Para mantener el monolito modular actual, la opcion recomendada es una API Node.js en `apps/api/` y conservar el frontend Vite en `apps/web/`. Si mas adelante se elige Next, la migracion deberia planificarse como cambio de arquitectura, no como instalacion suelta.

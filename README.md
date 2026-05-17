@@ -1,35 +1,32 @@
-# Kreis Web App
+# Kreis
 
-App React + Vite + TypeScript para prototipar la experiencia de Kreis.
+PWA React + Vite + TypeScript con API Express en Node.js para prototipar la experiencia de Kreis.
 
 ## Estructura
 
 ```text
-backend/
-  src/                  Base futura del API Node.js como monolito modular
-database/
-  migrations/           Cambios versionados de schema
-  schema/               Modelo de datos y decisiones de persistencia
-  seeds/                Datos iniciales para entornos locales
-shared/
-  contracts/            Tipos/contratos compartidos entre frontend y backend
-src/
-  app/                  Punto de entrada de la app y estado principal
-  assets/               Assets runtime importados por Vite
-  components/           Componentes agrupados por funcionalidad
-  data/                 Datos iniciales/mock de eventos, comunidades y perfil
-  styles/global.css     CSS global de la aplicacion
-  utils/                Helpers reutilizables
-public/
-  icons/                Iconos PWA y manifest
+apps/
+  web/                  PWA React/Vite: src, public, manifest, icons
+  api/                  API Express como monolito modular Node.js
+packages/
+  shared/               Contratos TypeScript compartidos
+infra/
+  database/             Migraciones, schema, seeds y fixtures
 docs/
   architecture/         Decisiones tecnicas y limites de modulos
+  design/               Direccion visual del producto
+  product/              Contexto de producto
   brand-assets/         Originales y exports de marca que no se importan en runtime
+codex-skills/           Skills locales del proyecto
 ```
 
-## Backend
+## Web PWA
 
-La direccion recomendada es Node.js + TypeScript + Express dentro de `backend/`. Next.js solo conviene si se migra tambien el frontend desde Vite a Next; no hace falta instalarlo para tener un backend modular.
+La app instalable vive en `apps/web`. Ahi estan `index.html`, `public/manifest.json`, iconos PWA, assets runtime y todo el frontend. El service worker se genera con `vite-plugin-pwa` desde `apps/web/vite.config.ts`.
+
+## API
+
+La API vive en `apps/api`. La direccion recomendada es Node.js + TypeScript + Express. Next.js solo conviene si se migra tambien el frontend desde Vite a Next; no hace falta instalarlo para tener un backend modular.
 
 ## Comandos
 
@@ -47,3 +44,5 @@ Para probar desde el celular en la misma red Wi-Fi:
 ```bash
 npm.cmd run dev -- --host 0.0.0.0
 ```
+
+La guia de ownership de carpetas esta en `docs/architecture/project-structure.md`.

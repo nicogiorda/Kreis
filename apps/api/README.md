@@ -1,13 +1,13 @@
-# Backend
+# API
 
-Base para el API de Kreis. La idea es un monolito modular: una aplicacion backend Node.js, separada internamente por dominios de producto.
+Base para el API de Kreis. La idea es un monolito modular: una aplicacion Express en Node.js, separada internamente por dominios de producto.
 
-Por ahora este directorio solo define limites y ownership. No instala framework ni dependencias nuevas para no condicionar al equipo backend antes de elegir stack.
+Por ahora este directorio deja una base Express minima y los limites de ownership para que backend pueda empezar sin mezclar responsabilidades.
 
 ## Estructura
 
 ```text
-backend/
+apps/api/
   src/
     core/        Configuracion, errores, logging, auth primitives
     platform/    HTTP server, middlewares, routing, jobs
@@ -19,8 +19,8 @@ backend/
 
 - Un modulo no importa `infrastructure` de otro modulo.
 - Las lecturas que combinan varios dominios viven en `discovery` o en un caso de uso explicito.
-- Los cambios de schema se coordinan con `database/migrations`.
-- Los tipos compartidos con el frontend viven en `shared/contracts`.
+- Los cambios de schema se coordinan con `infra/database/migrations`.
+- Los tipos compartidos con el frontend viven en `packages/shared/contracts`.
 
 ## Stack recomendado
 
@@ -28,7 +28,7 @@ Para la estructura actual, la recomendacion es:
 
 - Runtime: Node.js.
 - Lenguaje: TypeScript.
-- App backend: API Node.js dentro de `backend/`.
+- App backend: API Node.js dentro de `apps/api/`.
 - Framework HTTP: Express.
 - Validacion: Zod.
 - Seguridad base: Helmet.

@@ -5,7 +5,7 @@ Base de trabajo para el equipo de datos. Este directorio concentra schema, migra
 ## Estructura
 
 ```text
-database/
+infra/database/
   migrations/   Cambios versionados de schema
   schema/       Modelo conceptual, ERD y decisiones de tablas
   seeds/        Datos iniciales para desarrollo

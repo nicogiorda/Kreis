@@ -49,3 +49,5 @@ npm.cmd run dev -- --host 0.0.0.0
 ```
 
 La guia de ownership de carpetas esta en `docs/architecture/project-structure.md`.
+
+Para incorporar nuevos colaboradores, usar `docs/onboarding/repo-handbook.md` o la version imprimible `docs/onboarding/repo-handbook.html`.

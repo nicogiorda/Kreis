@@ -33,6 +33,9 @@ La API vive en `apps/api`. La direccion recomendada es Node.js + TypeScript + Ex
 ```bash
 npm.cmd run dev
 npm.cmd run dev:api
+npm.cmd run lint
+npm.cmd run format:check
+npm.cmd run test
 npm.cmd run typecheck
 npm.cmd run typecheck:api
 npm.cmd run build

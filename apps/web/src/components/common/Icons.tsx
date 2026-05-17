@@ -43,7 +43,7 @@ export function NavIcon({ type, active = false }: NavIconProps) {
 
   return (
     <span className="grid size-7 place-items-center text-[1.1rem] leading-none" aria-hidden="true">
-      <Icon className="size-[28px]" weight="fill" />
+      <Icon className="size-[28px]" weight={active ? "fill" : "regular"} />
     </span>
   );
 }

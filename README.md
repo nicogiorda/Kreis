@@ -6,7 +6,7 @@ App React + Vite + TypeScript para prototipar la experiencia de Kreis.
 
 ```text
 backend/
-  src/                  Base futura del API como monolito modular
+  src/                  Base futura del API Node.js como monolito modular
 database/
   migrations/           Cambios versionados de schema
   schema/               Modelo de datos y decisiones de persistencia
@@ -27,11 +27,17 @@ docs/
   brand-assets/         Originales y exports de marca que no se importan en runtime
 ```
 
+## Backend
+
+La direccion recomendada es Node.js + TypeScript + Express dentro de `backend/`. Next.js solo conviene si se migra tambien el frontend desde Vite a Next; no hace falta instalarlo para tener un backend modular.
+
 ## Comandos
 
 ```bash
 npm.cmd run dev
+npm.cmd run dev:api
 npm.cmd run typecheck
+npm.cmd run typecheck:api
 npm.cmd run build
 npm.cmd run preview
 ```

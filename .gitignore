@@ -1,6 +1,12 @@
 node_modules/
 dist/
 .vite/
+.env
+.env.local
+.env.*.local
+apps/*/.env
+apps/*/.env.local
+apps/*/.env.*.local
 .chrome-*/
 dev-server*.log
 npm-debug.log*
@@ -9,3 +15,6 @@ yarn-error.log*
 
 .vercel
 Kreis-Web-APP-React.code-workspace
+
+/generated/prisma
+/.agents

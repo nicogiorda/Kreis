@@ -1,13 +1,5 @@
-import { CalendarBlank, House, Moon, SunDim, UserCircle, UserCirclePlus, UsersThree } from "@phosphor-icons/react";
-import type { Screen, ThemeMode } from "../../types";
-
-export function MenuIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24">
-      <path d="M5 7h14M5 12h14M5 17h14" />
-    </svg>
-  );
-}
+import { Moon, SunDim } from "@phosphor-icons/react";
+import type { ThemeMode } from "../../types";
 
 export function NotificationIcon() {
   return (
@@ -21,29 +13,4 @@ export function ThemeToggleIcon({ themeMode }: { themeMode: ThemeMode }) {
   const Icon = themeMode === "dark" ? SunDim : Moon;
 
   return <Icon aria-hidden="true" weight="regular" />;
-}
-
-export function HeaderActionIcon() {
-  return <UserCirclePlus aria-hidden="true" weight="regular" />;
-}
-
-type NavIconProps = {
-  type: Screen;
-  active?: boolean;
-};
-
-export function NavIcon({ type, active = false }: NavIconProps) {
-  const icons = {
-    home: House,
-    events: CalendarBlank,
-    communities: UsersThree,
-    profile: UserCircle
-  };
-  const Icon = icons[type];
-
-  return (
-    <span className="grid size-7 place-items-center text-[1.1rem] leading-none" aria-hidden="true">
-      <Icon className="size-[28px]" weight={active ? "fill" : "regular"} />
-    </span>
-  );
 }

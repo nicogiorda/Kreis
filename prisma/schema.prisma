@@ -5,5 +5,182 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["public", "auth"]
+  schemas  = ["auth", "public"]
+}
+
+model users {
+  id      String   @id @db.Uuid
+  email   String?  @db.VarChar(255)
+  usuario usuario?
+
+  @@schema("auth")
+}
+
+model facultad {
+  id_facultad BigInt    @id @default(autoincrement())
+  nombre      String    @unique
+  usuario     usuario[]
+
+  @@schema("public")
+}
+
+model usuario {
+  legajo         Int              @id
+  auth_id        String           @unique @db.Uuid
+  nombre         String
+  apellido       String
+  id_facultad    BigInt
+  rol            user_role        @default(Estudiante)
+  verificado     Boolean          @default(false)
+  created_at     DateTime         @default(now()) @db.Timestamptz(6)
+  authUser       users            @relation(fields: [auth_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_usuario_auth")
+  facultad       facultad         @relation(fields: [id_facultad], references: [id_facultad], onDelete: Cascade, onUpdate: NoAction, map: "fk_usuario_facultad")
+  comentario     comentario[]
+  comunidad      comunidad[]
+  evento         evento[]
+  post           post[]
+  user_comunidad user_comunidad[]
+  user_evento    user_evento[]
+  user_interest  user_interest[]
+
+  @@schema("public")
+}
+
+model interest {
+  id_interest   BigInt          @id @default(autoincrement())
+  interes       String          @unique
+  user_interest user_interest[]
+
+  @@schema("public")
+}
+
+model user_interest {
+  legajo      Int
+  id_interest BigInt
+  interest    interest @relation(fields: [id_interest], references: [id_interest], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_interest_interest")
+  usuario     usuario  @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_interest_usuario")
+
+  @@id([legajo, id_interest])
+  @@schema("public")
+}
+
+model tag {
+  id_tag        BigInt          @id @default(autoincrement())
+  tag           String          @unique
+  comunidad_tag comunidad_tag[]
+  evento_tag    evento_tag[]
+
+  @@schema("public")
+}
+
+model evento {
+  id_evento    BigInt             @id @default(autoincrement())
+  legajo       Int
+  nombre       String
+  ubicacion    String?
+  fecha_inicio DateTime           @db.Timestamptz(6)
+  descripcion  String?
+  estado       publication_status @default(Pendiente)
+  created_at   DateTime           @default(now()) @db.Timestamptz(6)
+  usuario      usuario            @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_creador")
+  evento_tag   evento_tag[]
+  user_evento  user_evento[]
+
+  @@schema("public")
+}
+
+model user_evento {
+  legajo    Int
+  id_evento BigInt
+  evento    evento  @relation(fields: [id_evento], references: [id_evento], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_evento_evento")
+  usuario   usuario @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_evento_usuario")
+
+  @@id([legajo, id_evento])
+  @@schema("public")
+}
+
+model evento_tag {
+  id_evento BigInt
+  id_tag    BigInt
+  evento    evento @relation(fields: [id_evento], references: [id_evento], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_tag_evento")
+  tag       tag    @relation(fields: [id_tag], references: [id_tag], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_tag_tag")
+
+  @@id([id_evento, id_tag])
+  @@schema("public")
+}
+
+model comunidad {
+  id_comunidad   BigInt             @id @default(autoincrement())
+  legajo         Int
+  nombre         String
+  descripcion    String?
+  estado         publication_status @default(Pendiente)
+  created_at     DateTime           @default(now()) @db.Timestamptz(6)
+  usuario        usuario            @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_comunidad_creador")
+  comunidad_tag  comunidad_tag[]
+  post           post[]
+  user_comunidad user_comunidad[]
+
+  @@schema("public")
+}
+
+model user_comunidad {
+  legajo       Int
+  id_comunidad BigInt
+  comunidad    comunidad @relation(fields: [id_comunidad], references: [id_comunidad], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_comunidad_comunidad")
+  usuario      usuario   @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_comunidad_usuario")
+
+  @@id([legajo, id_comunidad])
+  @@schema("public")
+}
+
+model comunidad_tag {
+  id_comunidad BigInt
+  id_tag       BigInt
+  comunidad    comunidad @relation(fields: [id_comunidad], references: [id_comunidad], onDelete: Cascade, onUpdate: NoAction, map: "fk_comunidad_tag_comunidad")
+  tag          tag       @relation(fields: [id_tag], references: [id_tag], onDelete: Cascade, onUpdate: NoAction, map: "fk_comunidad_tag_tag")
+
+  @@id([id_comunidad, id_tag])
+  @@schema("public")
+}
+
+model post {
+  id_post      BigInt       @id @default(autoincrement())
+  legajo       Int
+  id_comunidad BigInt
+  cuerpo       String
+  created_at   DateTime     @default(now()) @db.Timestamptz(6)
+  comunidad    comunidad    @relation(fields: [id_comunidad], references: [id_comunidad], onDelete: Cascade, onUpdate: NoAction, map: "fk_post_comunidad")
+  usuario      usuario      @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_post_usuario")
+  comentario   comentario[]
+
+  @@schema("public")
+}
+
+model comentario {
+  id_comentario BigInt   @id @default(autoincrement())
+  legajo        Int
+  id_post       BigInt
+  cuerpo        String
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  post          post     @relation(fields: [id_post], references: [id_post], onDelete: Cascade, onUpdate: NoAction, map: "fk_comentario_post")
+  usuario       usuario  @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_comentario_usuario")
+
+  @@schema("public")
+}
+
+enum publication_status {
+  Pendiente
+  Aceptado
+  Rechazado
+
+  @@schema("public")
+}
+
+enum user_role {
+  Estudiante
+  Moderador
+  Administrador
+
+  @@schema("public")
 }

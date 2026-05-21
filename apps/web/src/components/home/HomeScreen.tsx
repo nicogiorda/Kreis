@@ -49,13 +49,11 @@ type HomeScreenProps = {
   homeTab: HomeTab;
   communityFilter: string;
   communityCategories: string[];
-  menuOpen: boolean;
   themeMode: ThemeMode;
   onHomeTab: (tab: HomeTab) => void;
   onCommunityFilter: (category: string) => void;
   onOpenEvents: () => void;
   onToggleTheme: () => void;
-  onToggleMenu: () => void;
   onToggleJoin: (communityId: string) => void;
 };
 
@@ -65,13 +63,11 @@ export function HomeScreen({
   homeTab,
   communityFilter,
   communityCategories,
-  menuOpen,
   themeMode,
   onHomeTab,
   onCommunityFilter,
   onOpenEvents,
   onToggleTheme,
-  onToggleMenu,
   onToggleJoin
 }: HomeScreenProps) {
   const recommendedCommunities = communities.filter((community) => community.recommended);
@@ -100,13 +96,11 @@ export function HomeScreen({
   }, [homeTab]);
 
   return (
-    <section className="grid animate-[rise_220ms_ease-out]" data-screen="home">
-      <HeroBanner menuOpen={menuOpen} themeMode={themeMode} onToggleTheme={onToggleTheme} onToggleMenu={onToggleMenu} />
+    <section className="grid min-h-dvh animate-[rise_220ms_ease-out] bg-[var(--app-bg)]" data-screen="home">
+      <HeroBanner themeMode={themeMode} onToggleTheme={onToggleTheme} />
 
-      <div className="relative z-[3] -mx-[var(--page-gutter)] w-[calc(100%+(var(--page-gutter)*2))] bg-kreis-green">
-        <div className="home-panel-surface relative rounded-t-[40px] bg-[var(--home-panel-bg)] px-3 pt-[19px]">
-          <div className="absolute left-1/2 top-[6px] h-[3px] w-[55px] -translate-x-1/2 rounded bg-[rgba(10,10,10,0.1)]" aria-hidden="true" />
-
+      <div className="relative z-[3] w-full bg-[var(--app-bg)]">
+        <div className="home-panel-surface relative bg-[var(--home-panel-bg)] px-0 pt-[14px]">
           <div className="grid gap-0">
             <div className={cn("home-header-switch home-switch-rail relative isolate mx-auto grid h-[25px] grid-cols-2 overflow-hidden rounded-[10px]", homeTab === "communities" && "is-communities-active")} role="tablist" aria-label="Cambiar vista principal">
               <button
@@ -129,11 +123,11 @@ export function HomeScreen({
               </button>
             </div>
 
-            <section className="home-content-rail mx-auto mt-[21px] rounded-none bg-transparent p-0 shadow-none">
+            <section className="home-content-rail mx-auto mt-[18px] rounded-none bg-transparent p-0 shadow-none">
               <div className="relative min-h-[210px] overflow-hidden transition-[height] duration-[260ms] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none" style={tabPanelHeight ? { height: tabPanelHeight } : undefined}>
                 <div
                   className={cn(
-                    "home-tab-panel absolute left-0 top-0 grid w-full gap-[19px] pb-[112px] transition-[transform,opacity] duration-[340ms] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none",
+                    "home-tab-panel absolute left-0 top-0 grid w-full gap-[18px] pb-[98px] transition-[transform,opacity] duration-[340ms] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none",
                     homeTab === "events" ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none -translate-x-[22px] opacity-0"
                   )}
                   ref={eventsPanelRef}
@@ -162,7 +156,7 @@ export function HomeScreen({
 
                 <div
                   className={cn(
-                    "home-tab-panel absolute left-0 top-0 grid w-full gap-2.5 pb-[112px] transition-[transform,opacity] duration-[340ms] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none",
+                    "home-tab-panel absolute left-0 top-0 grid w-full gap-2.5 pb-[98px] transition-[transform,opacity] duration-[340ms] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none",
                     homeTab === "communities" ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none translate-x-[22px] opacity-0"
                   )}
                   ref={communitiesPanelRef}

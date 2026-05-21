@@ -1,4 +1,4 @@
-import { MapPin } from "@phosphor-icons/react";
+import { MapPoint } from "@solar-icons/react";
 import { cn } from "../../utils/cn";
 
 type MetaItem = string | {
@@ -26,7 +26,7 @@ export function Meta({ items, className, itemClassName }: MetaProps) {
         return (
           <span className={cn("inline-flex min-w-0 items-center gap-1", itemClassName)} key={text}>
             {icon === "location" ? (
-              <MapPin className="size-[1em] flex-none" weight="regular" />
+              <MapPoint className="size-[1em] flex-none" weight="Outline" />
             ) : null}
             {text}
           </span>

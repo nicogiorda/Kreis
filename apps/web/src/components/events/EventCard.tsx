@@ -1,4 +1,5 @@
-import { CaretRight, SealCheck } from "@phosphor-icons/react";
+import { SealCheck } from "@phosphor-icons/react";
+import { AltArrowRight } from "@solar-icons/react";
 import { Meta } from "../common/Meta";
 import { eventToneClass } from "../../utils/events";
 import { cn } from "../../utils/cn";
@@ -42,7 +43,7 @@ export function EventCard({ event, variant = "full", onOpenEvents, onToggleInter
             aria-label={`Ver detalles de ${event.title}`}
             onClick={() => onOpenEvents?.()}
           >
-            <CaretRight className="size-[18px]" weight="regular" aria-hidden="true" />
+            <AltArrowRight className="size-[18px]" weight="Outline" aria-hidden="true" />
           </button>
         </div>
       </article>

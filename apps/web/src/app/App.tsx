@@ -5,7 +5,6 @@ import { EventsScreen } from "../components/events/EventsScreen";
 import { SplashScreen } from "../components/common/SplashScreen";
 import { HomeScreen } from "../components/home/HomeScreen";
 import { BottomNav } from "../components/navigation/BottomNav";
-import { CommunityMenu } from "../components/navigation/CommunityMenu";
 import { Header } from "../components/navigation/Header";
 import { ProfileScreen } from "../components/profile/ProfileScreen";
 import { initialActivity, initialCommunities, initialEvents } from "../data/mockData";
@@ -38,9 +37,8 @@ export default function App() {
   const [eventFilter, setEventFilter] = useState("Todos");
   const [communityFilter, setCommunityFilter] = useState("Todos");
   const [globalQuery, setGlobalQuery] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
-  const [composerMode, setComposerMode] = useState<ComposerMode>("post");
+  const [composerMode] = useState<ComposerMode>("post");
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => getInitialThemeMode());
 
   const query = normalize(globalQuery.trim());
@@ -75,19 +73,12 @@ export default function App() {
 
   function navigate(nextScreen: Screen): void {
     setScreen(nextScreen);
-    setMenuOpen(false);
     scrollTop();
   }
 
   function openEventsFromHome(): void {
     setEventFilter("Todos");
     navigate("events");
-  }
-
-  function openComposer(mode: ComposerMode): void {
-    setComposerMode(mode);
-    setComposerOpen(true);
-    if (mode === "community" || mode === "event") setMenuOpen(false);
   }
 
   function toggleTheme(): void {
@@ -186,29 +177,19 @@ export default function App() {
       <div
         className={cn(
           "app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden md:px-6",
-          screen === "home" ? "pb-0 md:pb-0" : "pb-[calc(var(--nav-height)+18px)] md:pb-[calc(var(--nav-height)+28px)]",
-          menuOpen && "is-menu-open"
+          screen === "home" ? "pb-0 md:pb-0" : "pb-[calc(var(--nav-height)+18px)] md:pb-[calc(var(--nav-height)+28px)]"
         )}
       >
         {screen !== "profile" && screen !== "home" ? (
           <Header
             globalQuery={globalQuery}
-            menuOpen={menuOpen}
             themeMode={themeMode}
             onQueryChange={setGlobalQuery}
             onToggleTheme={toggleTheme}
-            onToggleMenu={() => setMenuOpen((open) => !open)}
           />
         ) : null}
-        <CommunityMenu
-          menuOpen={menuOpen}
-          communities={communities}
-          onOpenCommunity={() => navigate("communities")}
-          onCreateEvent={() => openComposer("event")}
-          onCreateCommunity={() => openComposer("community")}
-        />
 
-        <main className="menu-shift px-[var(--page-gutter)] transition-transform duration-[760ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform md:px-0" tabIndex={-1}>
+        <main className={cn(screen === "home" ? "px-0" : "px-[var(--page-gutter)] md:px-0")} tabIndex={-1}>
           {screen === "home" && (
             <HomeScreen
               events={homeEvents}
@@ -216,13 +197,11 @@ export default function App() {
               homeTab={homeTab}
               communityFilter={communityFilter}
               communityCategories={communityCategories}
-              menuOpen={menuOpen}
               themeMode={themeMode}
               onHomeTab={setHomeTab}
               onCommunityFilter={setCommunityFilter}
               onOpenEvents={openEventsFromHome}
               onToggleTheme={toggleTheme}
-              onToggleMenu={() => setMenuOpen((open) => !open)}
               onToggleJoin={toggleJoin}
             />
           )}
@@ -247,7 +226,7 @@ export default function App() {
           onCreatePost={createPost}
         />
       </div>
-      <BottomNav screen={screen} menuOpen={menuOpen} onNavigate={navigate} />
+      <BottomNav screen={screen} onNavigate={navigate} />
     </>
   );
 }

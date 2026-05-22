@@ -1,21 +1,41 @@
-import { SealCheck } from "@phosphor-icons/react";
-import { AltArrowRight } from "@solar-icons/react";
+import { AltArrowRight, Calendar, CameraMinimalistic, MapPoint, RoundArrowRightUp, VerifiedCheck } from "@solar-icons/react";
 import { Meta } from "../common/Meta";
-import { eventToneClass } from "../../utils/events";
-import { cn } from "../../utils/cn";
 import type { KreisEvent } from "../../types";
 
 type EventCardProps = {
   event: KreisEvent;
   variant?: "full" | "compact";
   onOpenEvents?: () => void;
-  onToggleInterest?: (eventId: string) => void;
+  onOpenEventDetails?: (eventId: string) => void;
 };
 
-export function EventCard({ event, variant = "full", onOpenEvents, onToggleInterest }: EventCardProps) {
+const monthLabels: Record<string, string> = {
+  ENE: "Enero",
+  FEB: "Feb",
+  MAR: "Marzo",
+  ABR: "Abril",
+  MAY: "Mayo",
+  JUN: "Junio",
+  JUL: "Julio",
+  AGO: "Agosto",
+  SEP: "Sept",
+  OCT: "Oct",
+  NOV: "Nov",
+  DIC: "Dic"
+};
+
+function getEventDateLabel(event: KreisEvent): string {
+  const month = monthLabels[event.month] ?? event.month;
+  const day = String(Number(event.day));
+
+  return `${day} ${month}`;
+}
+
+export function EventCard({ event, variant = "full", onOpenEvents, onOpenEventDetails }: EventCardProps) {
   const compact = variant === "compact";
   const locationMeta = [{ icon: "location" as const, text: event.place }];
-  const officialBadge = event.official ? <SealCheck className="event-official-badge size-[1em] flex-none" weight="fill" aria-label="Evento oficial de UADE" /> : null;
+  const officialBadge = event.official ? <VerifiedCheck className="event-official-badge size-[1em] flex-none" weight="Bold" aria-label="Evento oficial de UADE" /> : null;
+  const eventDateLabel = getEventDateLabel(event);
 
   if (compact) {
     return (
@@ -24,16 +44,16 @@ export function EventCard({ event, variant = "full", onOpenEvents, onToggleInter
           <div
             className="home-event-date-chip grid size-[53px] content-center justify-items-center rounded-[16px] bg-[var(--date-chip-bg)] text-[var(--date-chip-ink)] shadow-none transition-[background-color,color,border-color] duration-[260ms] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none"
           >
-            <strong className="block text-[18px] leading-[15px]">{event.day}</strong>
-            <span className="block text-[11px] font-bold leading-[15px]">{event.month}</span>
+            <strong className="block text-[18px] leading-[18px]">{event.day}</strong>
+            <span className="block text-[11px] font-bold leading-[13px]">{event.month}</span>
           </div>
           <div className="grid min-w-0 content-center gap-1">
-            <h3 className="m-0 inline-flex min-w-0 items-center gap-1.5 text-[16px] font-medium leading-[15px]">
+            <h3 className="m-0 inline-flex min-w-0 items-center gap-1.5 text-[16px] font-medium leading-[19px]">
               <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{event.title}</span>
               {officialBadge}
             </h3>
             <Meta
-              className="!mt-0 text-[13px] font-normal leading-[15px] text-kreis-muted"
+              className="!mt-0 text-[13px] font-normal leading-[16px] text-kreis-muted"
               items={locationMeta}
             />
           </div>
@@ -51,37 +71,33 @@ export function EventCard({ event, variant = "full", onOpenEvents, onToggleInter
   }
 
   return (
-    <article className="overflow-hidden rounded-kreis-card bg-kreis-event-surface">
-      <div className={cn("grid min-h-[120px] grid-cols-[1fr_auto] items-end gap-3 p-3.5", eventToneClass(event.tone), event.tone === "beige" ? "text-kreis-ink" : "text-white")}>
-        <span className="grid size-[54px] place-items-center rounded-[14px] bg-white/20 text-[1.7rem]">{event.icon}</span>
+    <article className="grid h-[160px] min-w-0 content-start overflow-hidden rounded-[17px] bg-kreis-event-surface pt-2 text-kreis-ink transition-[background-color,color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none">
+      <div className="event-photo-placeholder relative mx-[9px] h-[72px] overflow-hidden rounded-[12px]">
+        <CameraMinimalistic className="absolute left-1/2 top-1/2 size-[24px] -translate-x-1/2 -translate-y-1/2" weight="LineDuotone" aria-hidden="true" />
       </div>
-      <div className="grid gap-3 p-4">
-        <div>
-          <h3 className="m-0 inline-flex max-w-full items-center gap-1.5 text-[1.06rem] font-bold">
-            <span className="min-w-0">{event.title}</span>
+      <div className="grid min-h-0 content-start gap-[3px] px-[9px] pb-2.5 pt-[9px]">
+        <div className="flex min-w-0 items-center justify-between gap-1.5">
+          <h3 className="m-0 inline-flex min-w-0 flex-1 items-center gap-1 text-[14px] font-medium leading-[17px] text-kreis-ink">
+            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{event.title}</span>
             {officialBadge}
           </h3>
-          <p className="mt-[5px] font-normal text-kreis-muted leading-[1.45]">{event.description}</p>
-          <Meta items={locationMeta} />
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="w-[58px] rounded-kreis-small bg-kreis-date-surface px-1.5 py-2 text-center text-kreis-orange shadow-none">
-            <strong className="block text-[1.15rem] leading-none">{event.day}</strong>
-            <span className="mt-[3px] block text-[0.72rem] font-black">{event.month}</span>
-          </span>
           <button
-            className={cn(
-              "min-h-[42px] rounded-[14px] px-4 font-black shadow-none",
-              event.interested
-                ? "border-0 bg-kreis-orange text-white"
-                : "border border-kreis-orange bg-kreis-surface-strong text-kreis-orange"
-            )}
+            className="grid size-5 flex-none place-items-center border-0 bg-transparent p-0 text-kreis-green shadow-none [-webkit-tap-highlight-color:transparent]"
             type="button"
-            onClick={() => onToggleInterest?.(event.id)}
+            aria-label={`Expandir informacion de ${event.title}`}
+            onClick={() => onOpenEventDetails?.(event.id)}
           >
-            {event.interested ? "Anotado" : "Me interesa"}
+            <RoundArrowRightUp className="size-5" weight="Bold" aria-hidden="true" />
           </button>
         </div>
+        <p className="m-0 inline-flex min-w-0 items-center gap-1 text-[13px] font-normal leading-[16px] text-kreis-muted">
+          <MapPoint className="size-[12px] flex-none" weight="Outline" aria-hidden="true" />
+          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{event.place}</span>
+        </p>
+        <p className="m-0 inline-flex min-w-0 items-center gap-1 text-[13px] font-normal leading-[16px] text-kreis-muted">
+          <Calendar className="size-[12px] flex-none" weight="Outline" aria-hidden="true" />
+          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{eventDateLabel}</span>
+        </p>
       </div>
     </article>
   );

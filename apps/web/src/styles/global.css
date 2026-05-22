@@ -70,6 +70,8 @@
   --app-bg: #f7edda;
   --home-panel-bg: #f7edda;
   --event-surface: rgba(10, 10, 10, 0.05);
+  --event-photo-placeholder: rgba(31, 24, 19, 0.08);
+  --event-photo-glyph: rgba(46, 75, 60, 0.36);
   --date-surface: rgba(10, 10, 10, 0.05);
   --date-chip-bg: rgba(46, 75, 60, 0.4);
   --date-chip-border: transparent;
@@ -92,7 +94,7 @@
   --radius-card: 16px;
   --radius-small: 12px;
   --home-hero-height: min(100vw, 430px);
-  --nav-height: 76px;
+  --nav-height: 64px;
   --header-main-height: calc(64px + env(safe-area-inset-top));
   --page-gutter: 18px;
   color-scheme: light;
@@ -113,6 +115,8 @@ html[data-theme="dark"] {
   --app-bg: #2b2928;
   --home-panel-bg: #2b2928;
   --event-surface: rgba(10, 10, 10, 0.1);
+  --event-photo-placeholder: rgba(247, 237, 218, 0.1);
+  --event-photo-glyph: rgba(247, 237, 218, 0.34);
   --date-surface: rgba(10, 10, 10, 0.1);
   --date-chip-bg: rgba(46, 75, 60, 0.4);
   --date-chip-border: transparent;
@@ -139,8 +143,12 @@ html[data-theme="dark"] {
   html {
     min-height: 100%;
     background: var(--app-bg);
+    overscroll-behavior-x: none;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    touch-action: manipulation;
   }
 
   html::-webkit-scrollbar,
@@ -153,9 +161,11 @@ html[data-theme="dark"] {
     min-height: 100dvh;
     margin: 0;
     overflow-x: hidden;
+    overscroll-behavior-x: none;
     background: var(--app-bg);
     color: var(--ink);
     font-family: var(--font-sans);
+    touch-action: manipulation;
   }
 
   button {
@@ -473,6 +483,18 @@ html[data-theme="dark"] {
 
   .event-official-badge {
     color: var(--official-badge);
+  }
+
+  .event-photo-placeholder {
+    color: var(--event-photo-glyph);
+    background: var(--event-photo-placeholder);
+  }
+
+  .events-search-input::-webkit-search-cancel-button,
+  .events-search-input::-webkit-search-decoration,
+  .events-search-input::-webkit-search-results-button,
+  .events-search-input::-webkit-search-results-decoration {
+    -webkit-appearance: none;
   }
 
   html[data-theme="dark"] .home-event-date-chip {

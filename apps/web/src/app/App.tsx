@@ -38,7 +38,7 @@ export default function App() {
   const [communityFilter, setCommunityFilter] = useState("Todos");
   const [globalQuery, setGlobalQuery] = useState("");
   const [composerOpen, setComposerOpen] = useState(false);
-  const [composerMode] = useState<ComposerMode>("post");
+  const [composerMode, setComposerMode] = useState<ComposerMode>("post");
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => getInitialThemeMode());
 
   const query = normalize(globalQuery.trim());
@@ -85,8 +85,9 @@ export default function App() {
     setThemeMode((current) => current === "dark" ? "light" : "dark");
   }
 
-  function toggleInterest(eventId: string): void {
-    setEvents((items) => items.map((event) => event.id === eventId ? { ...event, interested: !event.interested } : event));
+  function openComposer(mode: ComposerMode): void {
+    setComposerMode(mode);
+    setComposerOpen(true);
   }
 
   function toggleJoin(communityId: string): void {
@@ -180,7 +181,7 @@ export default function App() {
           screen === "home" ? "pb-0 md:pb-0" : "pb-[calc(var(--nav-height)+18px)] md:pb-[calc(var(--nav-height)+28px)]"
         )}
       >
-        {screen !== "profile" && screen !== "home" ? (
+        {screen !== "profile" && screen !== "home" && screen !== "events" ? (
           <Header
             globalQuery={globalQuery}
             themeMode={themeMode}
@@ -205,7 +206,19 @@ export default function App() {
               onToggleJoin={toggleJoin}
             />
           )}
-          {screen === "events" && <EventsScreen events={visibleEvents} eventFilter={eventFilter} eventCategories={eventCategories} onFilter={setEventFilter} onToggleInterest={toggleInterest} />}
+          {screen === "events" && (
+            <EventsScreen
+              events={visibleEvents}
+              eventFilter={eventFilter}
+              eventCategories={eventCategories}
+              searchQuery={globalQuery}
+              themeMode={themeMode}
+              onFilter={setEventFilter}
+              onSearchChange={setGlobalQuery}
+              onCreateEvent={() => openComposer("event")}
+              onToggleTheme={toggleTheme}
+            />
+          )}
           {screen === "communities" && <CommunitiesScreen communities={communities} discover={discoverCommunities} posts={activity} onToggleJoin={toggleJoin} />}
           {screen === "profile" && (
             <ProfileScreen

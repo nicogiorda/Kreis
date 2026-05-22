@@ -1,39 +1,107 @@
+import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { EmptyState } from "../common/EmptyState";
+import { ThemeToggleIcon } from "../common/Icons";
 import { EventCard } from "./EventCard";
-import type { KreisEvent } from "../../types";
+import type { KreisEvent, ThemeMode } from "../../types";
 import { cn } from "../../utils/cn";
 
 type EventsScreenProps = {
   events: KreisEvent[];
   eventFilter: string;
   eventCategories: string[];
+  searchQuery: string;
+  themeMode: ThemeMode;
   onFilter: (category: string) => void;
-  onToggleInterest: (eventId: string) => void;
+  onSearchChange: (query: string) => void;
+  onCreateEvent: () => void;
+  onToggleTheme: () => void;
 };
 
-export function EventsScreen({ events, eventFilter, eventCategories, onFilter, onToggleInterest }: EventsScreenProps) {
+function getCategoryLabel(category: string): string {
+  if (category === "Todos") return "Todos";
+  if (category === "Academico") return "Acad.";
+
+  return category;
+}
+
+export function EventsScreen({
+  events,
+  eventFilter,
+  eventCategories,
+  searchQuery,
+  themeMode,
+  onFilter,
+  onSearchChange,
+  onCreateEvent,
+  onToggleTheme
+}: EventsScreenProps) {
   const filterButtonClass = (active: boolean) => cn(
-    "grid min-h-8 flex-none place-items-center rounded-[18px] border px-3 text-center text-[0.82rem] font-medium leading-none shadow-none",
+    "grid w-[39px] flex-none justify-items-center gap-[5px] border-0 bg-transparent p-0 text-center text-[10px] font-normal leading-[14px] text-kreis-muted shadow-none transition-[color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95",
     active
-      ? "border-transparent bg-kreis-orange text-kreis-surface-strong"
-      : "border-kreis-line bg-kreis-app-bg text-kreis-muted"
+      ? "text-kreis-ink [&_.event-category-dot]:bg-kreis-orange/20 [&_.event-category-dot]:ring-1 [&_.event-category-dot]:ring-kreis-orange/40"
+      : "text-kreis-muted"
   );
+  const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
 
   return (
-    <section className="animate-[rise_220ms_ease-out]" data-screen="events">
-      <header className="mb-[18px] mt-2">
-        <h1 className="m-0 text-[clamp(1.9rem,8vw,3.4rem)] leading-[1.02] tracking-normal">Eventos</h1>
-        <p className="mt-[5px] text-kreis-muted leading-[1.45]">Todo lo que podes ver, guardar o anotarte desde Kreis.</p>
-      </header>
-      <div className="mb-4 flex gap-[9px] overflow-x-auto px-0.5 pb-[5px] pt-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Filtrar eventos por categoria">
-        {eventCategories.map((category) => (
-          <button className={filterButtonClass(eventFilter === category)} type="button" key={category} onClick={() => onFilter(category)}>
-            {category}
-          </button>
-        ))}
+    <section className="grid w-full max-w-[430px] animate-[rise_220ms_ease-out] pt-[63px] sm:mx-auto" data-screen="events">
+      <div className="mb-[21px] flex h-[37px] items-center justify-end gap-[11px]">
+        <button
+          className="grid size-[37px] place-items-center rounded-[12px] border-0 bg-kreis-orange p-0 text-kreis-cream shadow-none transition-[transform,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95"
+          type="button"
+          aria-label="Crear evento"
+          onClick={onCreateEvent}
+        >
+          <Plus className="size-[21px]" weight="bold" aria-hidden="true" />
+        </button>
+        <button
+          className="grid size-[37px] place-items-center rounded-[12px] border-0 bg-kreis-event-surface p-0 text-kreis-muted shadow-none transition-[transform,color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95 [&_svg]:size-[20px]"
+          type="button"
+          aria-label={nextThemeLabel}
+          aria-pressed={themeMode === "dark"}
+          onClick={onToggleTheme}
+        >
+          <ThemeToggleIcon themeMode={themeMode} />
+        </button>
       </div>
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {events.length ? events.map((event) => <EventCard event={event} key={event.id} onToggleInterest={onToggleInterest} />) : <EmptyState text="Proba buscando otra categoria." />}
+
+      <header className="mb-[14px] text-center">
+        <h1 className="m-0 text-[38px] font-black leading-[49px] tracking-normal text-kreis-ink">Eventos</h1>
+      </header>
+
+      <label className="events-search-field relative grid h-10 items-center rounded-[20px] bg-kreis-event-surface text-kreis-muted" aria-label="Buscar eventos por lugar">
+        <MagnifyingGlass className="pointer-events-none absolute left-[14px] top-1/2 size-[17px] -translate-y-1/2" weight="regular" aria-hidden="true" />
+        <input
+          className="events-search-input h-full min-w-0 appearance-none rounded-[20px] border-0 bg-transparent py-0 pl-[47px] pr-4 text-[16px] font-normal leading-10 text-kreis-ink outline-0 placeholder:text-kreis-muted"
+          value={searchQuery}
+          onChange={(event) => onSearchChange(event.target.value)}
+          type="search"
+          placeholder="Busca tu lugar"
+        />
+      </label>
+
+      <section className="mt-4" aria-labelledby="event-category-title">
+        <h2 id="event-category-title" className="m-0 text-[18px] font-medium leading-[22px] text-kreis-ink">Busca por categoría</h2>
+        <div className="mt-[7px] flex gap-[13px] overflow-x-auto px-[9px] py-[2px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Filtrar eventos por categoria">
+          {eventCategories.map((category) => (
+            <button className={filterButtonClass(eventFilter === category)} type="button" key={category} onClick={() => onFilter(category)}>
+              <span className="event-category-dot block size-[39px] rounded-full bg-kreis-event-surface transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]" aria-hidden="true" />
+              <span className="block max-w-[52px] overflow-hidden text-ellipsis whitespace-nowrap">{getCategoryLabel(category)}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <div className="mt-4">
+        <h2 className="m-0 text-[18px] font-medium leading-[22px] text-kreis-ink">Todos los eventos</h2>
+      </div>
+
+      <div className="mt-[13px] grid grid-cols-2 gap-x-[17px] gap-y-[15px]">
+        {events.length ? events.map((event) => <EventCard event={event} key={event.id} />) : (
+          <div className="col-span-full">
+            <EmptyState text="Proba buscando otra categoria." />
+          </div>
+        )}
       </div>
     </section>
   );

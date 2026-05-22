@@ -23,7 +23,7 @@ export function BottomNav({ screen, onNavigate }: BottomNavProps) {
         {navItems.map(({ id, label, Icon }) => (
           <button
             className={cn(
-              "relative z-[1] grid min-h-[var(--nav-height)] min-w-0 place-items-start justify-items-center border-0 bg-transparent px-0 pb-[calc(12px+env(safe-area-inset-bottom))] pt-[24px] shadow-none transition-[color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95",
+              "relative z-[1] grid min-h-[var(--nav-height)] min-w-0 place-items-start justify-items-center border-0 bg-transparent px-0 pb-[calc(9px+env(safe-area-inset-bottom))] pt-[19px] shadow-none transition-[color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95",
               screen === id ? "text-kreis-orange" : "text-[var(--bottom-nav-icon-muted)]"
             )}
             type="button"

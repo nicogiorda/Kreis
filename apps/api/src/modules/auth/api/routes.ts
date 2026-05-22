@@ -3,12 +3,19 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { config } from "../../../core/config";
 
-const registerRequestSchema = z.object({
+const loginRequestSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8)
 });
 
-const loginRequestSchema = registerRequestSchema;
+
+const registerRequestSchema= z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  legajo: z.string().min(1),
+  nombre: z.string().min(1),
+  apellido: z.string().min(1),
+  });
 
 const supabaseAdmin = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
   auth: {

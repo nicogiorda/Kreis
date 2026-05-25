@@ -22,12 +22,12 @@ const eventInclude = {
   usuario: {
     select: userSelect
   },
-  evento_tag: {
+  evento_topico: {
     include: {
-      tag: {
+      topico: {
         select: {
-          id_tag: true,
-          tag: true
+          id_topico: true,
+          topico: true
         }
       }
     }
@@ -65,10 +65,10 @@ export type EventWithRelations = {
   estado: string;
   created_at: Date;
   usuario: EventUser;
-  evento_tag: Array<{
-    tag: {
-      id_tag: bigint;
-      tag: string;
+  evento_topico: Array<{
+    topico: {
+      id_topico: bigint;
+      topico: string;
     };
   }>;
   user_evento: Array<{
@@ -78,6 +78,7 @@ export type EventWithRelations = {
 
 
 export type EventSummary = {
+  id_evento: bigint;
   nombre: string;
   ubicacion: string | null;
   fecha_inicio: Date;
@@ -90,7 +91,7 @@ export async function listAcceptedEventsLimit(): Promise<EventSummary[]> {
       estado: ACCEPTED_EVENT_STATUS
     },
     select: {
-      evento_id: true,
+      id_evento: true,
       nombre: true,
       ubicacion: true,
       fecha_inicio: true
@@ -109,7 +110,7 @@ export async function listAcceptedEvents(): Promise<EventSummary[]> {
       estado: ACCEPTED_EVENT_STATUS
     },
     select: {
-      evento_id: true,
+      id_evento: true,
       nombre: true,
       ubicacion: true,
       fecha_inicio: true

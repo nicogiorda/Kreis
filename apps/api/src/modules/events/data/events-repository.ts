@@ -76,15 +76,47 @@ export type EventWithRelations = {
   }>;
 };
 
-export async function listAcceptedEvents(): Promise<EventWithRelations[]> {
+
+export type EventSummary = {
+  nombre: string;
+  ubicacion: string | null;
+  fecha_inicio: Date;
+};
+
+// función para traer todos los eventos aceptados ordenados por fecha de inicio de forma ascendente, mostrando un detalle resumido de dichos eventos!!
+export async function listAcceptedEventsLimit(): Promise<EventSummary[]> {
   return prisma.evento.findMany({
     where: {
       estado: ACCEPTED_EVENT_STATUS
     },
-    include: eventInclude,
+    select: {
+      evento_id: true,
+      nombre: true,
+      ubicacion: true,
+      fecha_inicio: true
+    },
     orderBy: {
       fecha_inicio: "asc"
-    }
+    },
+    take: 6
+  });
+}
+
+// función para traer todos los eventos aceptados ordenados por fecha de inicio de forma ascendente, mostrando un detalle resumido de dichos eventos!
+export async function listAcceptedEvents(): Promise<EventSummary[]> {
+  return prisma.evento.findMany({
+    where: {
+      estado: ACCEPTED_EVENT_STATUS
+    },
+    select: {
+      evento_id: true,
+      nombre: true,
+      ubicacion: true,
+      fecha_inicio: true
+    },
+    orderBy: {
+      fecha_inicio: "asc"
+    },
   });
 }
 
@@ -94,6 +126,6 @@ export async function findAcceptedEventById(id_evento: bigint): Promise<EventWit
       id_evento,
       estado: ACCEPTED_EVENT_STATUS
     },
-    include: eventInclude
+    include: eventInclude 
   });
 }

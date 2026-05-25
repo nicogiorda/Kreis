@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { config } from "../../../core/config";
 
+// posible formato de los bodys de las peticiones a los endpoints de auth
 const loginRequestSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8)
@@ -15,6 +16,7 @@ const registerRequestSchema= z.object({
   legajo: z.string().min(1),
   nombre: z.string().min(1),
   apellido: z.string().min(1),
+  facultad : z.string().min(1),
   });
 
 const supabaseAdmin = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
@@ -33,10 +35,10 @@ const supabaseAuth = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY,
 
 export function createAuthRouter(): Router {
   const router = Router();
-
+// definimos rutas para el módulo autenticación!
   router.post("/register", async (request, response, next) => {
     try {
-      const parsedBody = registerRequestSchema.safeParse(request.body);
+      const parsedBody = registerRequestSchema.safeParse(request.body); // recuperamos el body de la petición 
 
       if (!parsedBody.success) {
         response.status(400).json({

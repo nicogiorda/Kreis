@@ -12,7 +12,7 @@
 //   - Eventos a los que el usuario se anoto (tabla intermedia user_evento)
 //   - Comunidades que el usuario creo (solo Aceptadas)
 //   - Comunidades donde el usuario es miembro (tabla intermedia user_comunidad)
-//   - Intereses del usuario (tabla intermedia user_interest)
+//   - Topicos del usuario (tabla intermedia usuario_topico)
 //
 // El tipo exportado UserProfileWithRelations es el contrato entre este archivo
 // y el serializer (serialize-user-profile.ts). Si cambia la consulta, el tipo
@@ -44,10 +44,10 @@ const userProfileInclude = {
       descripcion: true,
       estado: true,
       created_at: true,
-      // Tags asociados al evento (tabla intermedia evento_tag → tag)
-      evento_tag: {
+      // Topicos asociados al evento (tabla intermedia evento_topico -> topico)
+      evento_topico: {
         include: {
-          tag: { select: { id_tag: true, tag: true } }
+          topico: { select: { id_topico: true, topico: true } }
         }
       }
     }
@@ -65,9 +65,9 @@ const userProfileInclude = {
           descripcion: true,
           estado: true,
           created_at: true,
-          evento_tag: {
+          evento_topico: {
             include: {
-              tag: { select: { id_tag: true, tag: true } }
+              topico: { select: { id_topico: true, topico: true } }
             }
           }
         }
@@ -84,10 +84,10 @@ const userProfileInclude = {
       descripcion: true,
       estado: true,
       created_at: true,
-      // Tags asociados a la comunidad (tabla intermedia comunidad_tag → tag)
-      comunidad_tag: {
+      // Topicos asociados a la comunidad (tabla intermedia comunidad_topico -> topico)
+      comunidad_topico: {
         include: {
-          tag: { select: { id_tag: true, tag: true } }
+          topico: { select: { id_topico: true, topico: true } }
         }
       }
     }
@@ -103,9 +103,9 @@ const userProfileInclude = {
           descripcion: true,
           estado: true,
           created_at: true,
-          comunidad_tag: {
+          comunidad_topico: {
             include: {
-              tag: { select: { id_tag: true, tag: true } }
+              topico: { select: { id_topico: true, topico: true } }
             }
           }
         }
@@ -113,13 +113,13 @@ const userProfileInclude = {
     }
   },
 
-  // Intereses del usuario (tabla intermedia user_interest → interest)
-  user_interest: {
+  // Topicos del usuario (tabla intermedia usuario_topico -> topico)
+  usuario_topico: {
     include: {
-      interest: {
+      topico: {
         select: {
-          id_interest: true,
-          interes: true
+          id_topico: true,
+          topico: true
         }
       }
     }
@@ -128,7 +128,7 @@ const userProfileInclude = {
 
 // Tipos auxiliares que describen la forma de un evento y sus tags tal como
 // los devuelve Prisma con el select de arriba
-type EventTag = { tag: { id_tag: bigint; tag: string } };
+type EventTopico = { topico: { id_topico: bigint; topico: string } };
 
 type EventSummary = {
   id_evento: bigint;
@@ -138,11 +138,11 @@ type EventSummary = {
   descripcion: string | null;
   estado: string;
   created_at: Date;
-  evento_tag: EventTag[];
+  evento_topico: EventTopico[];
 };
 
-// Tipos auxiliares para comunidad y sus tags
-type ComunidadTag = { tag: { id_tag: bigint; tag: string } };
+// Tipos auxiliares para comunidad y sus topicos
+type ComunidadTopico = { topico: { id_topico: bigint; topico: string } };
 
 type ComunidadSummary = {
   id_comunidad: bigint;
@@ -150,7 +150,7 @@ type ComunidadSummary = {
   descripcion: string | null;
   estado: string;
   created_at: Date;
-  comunidad_tag: ComunidadTag[];
+  comunidad_topico: ComunidadTopico[];
 };
 
 // Tipo principal que representa al usuario con todas sus relaciones cargadas.
@@ -168,7 +168,7 @@ export type UserProfileWithRelations = {
   user_evento: Array<{ evento: EventSummary }>;                // eventos en que se anoto
   comunidad: ComunidadSummary[];                               // comunidades que creo
   user_comunidad: Array<{ comunidad: ComunidadSummary }>;      // comunidades donde es miembro
-  user_interest: Array<{ interest: { id_interest: bigint; interes: string } }>;
+  usuario_topico: Array<{ topico: { id_topico: bigint; topico: string } }>;
 };
 
 // Busca el perfil completo de un usuario por su auth_id (UUID de Supabase).

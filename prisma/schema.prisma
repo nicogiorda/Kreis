@@ -41,35 +41,28 @@ model usuario {
   post           post[]
   user_comunidad user_comunidad[]
   user_evento    user_evento[]
-  user_interest  user_interest[]
+  usuario_topico usuario_topico[]
 
   @@schema("public")
 }
 
-model interest {
-  id_interest   BigInt          @id @default(autoincrement())
-  interes       String          @unique
-  user_interest user_interest[]
+model topico {
+  id_topico        BigInt             @id @default(autoincrement())
+  topico           String             @unique
+  comunidad_topico comunidad_topico[]
+  evento_topico    evento_topico[]
+  usuario_topico   usuario_topico[]
 
   @@schema("public")
 }
 
-model user_interest {
-  legajo      Int
-  id_interest BigInt
-  interest    interest @relation(fields: [id_interest], references: [id_interest], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_interest_interest")
-  usuario     usuario  @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_interest_usuario")
+model usuario_topico {
+  legajo    Int
+  id_topico BigInt
+  topico    topico  @relation(fields: [id_topico], references: [id_topico], onDelete: Cascade, onUpdate: NoAction, map: "fk_usuario_topico_topico")
+  usuario   usuario @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_usuario_topico_usuario")
 
-  @@id([legajo, id_interest])
-  @@schema("public")
-}
-
-model tag {
-  id_tag        BigInt          @id @default(autoincrement())
-  tag           String          @unique
-  comunidad_tag comunidad_tag[]
-  evento_tag    evento_tag[]
-
+  @@id([legajo, id_topico])
   @@schema("public")
 }
 
@@ -83,8 +76,8 @@ model evento {
   estado       publication_status @default(Pendiente)
   created_at   DateTime           @default(now()) @db.Timestamptz(6)
   usuario      usuario            @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_creador")
-  evento_tag   evento_tag[]
-  user_evento  user_evento[]
+  evento_topico evento_topico[]
+  user_evento   user_evento[]
 
   @@schema("public")
 }
@@ -99,13 +92,13 @@ model user_evento {
   @@schema("public")
 }
 
-model evento_tag {
+model evento_topico {
   id_evento BigInt
-  id_tag    BigInt
-  evento    evento @relation(fields: [id_evento], references: [id_evento], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_tag_evento")
-  tag       tag    @relation(fields: [id_tag], references: [id_tag], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_tag_tag")
+  id_topico BigInt
+  evento    evento @relation(fields: [id_evento], references: [id_evento], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_topico_evento")
+  topico    topico @relation(fields: [id_topico], references: [id_topico], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_topico_topico")
 
-  @@id([id_evento, id_tag])
+  @@id([id_evento, id_topico])
   @@schema("public")
 }
 
@@ -117,9 +110,9 @@ model comunidad {
   estado         publication_status @default(Pendiente)
   created_at     DateTime           @default(now()) @db.Timestamptz(6)
   usuario        usuario            @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_comunidad_creador")
-  comunidad_tag  comunidad_tag[]
-  post           post[]
-  user_comunidad user_comunidad[]
+  comunidad_topico comunidad_topico[]
+  post             post[]
+  user_comunidad   user_comunidad[]
 
   @@schema("public")
 }
@@ -134,13 +127,13 @@ model user_comunidad {
   @@schema("public")
 }
 
-model comunidad_tag {
+model comunidad_topico {
   id_comunidad BigInt
-  id_tag       BigInt
-  comunidad    comunidad @relation(fields: [id_comunidad], references: [id_comunidad], onDelete: Cascade, onUpdate: NoAction, map: "fk_comunidad_tag_comunidad")
-  tag          tag       @relation(fields: [id_tag], references: [id_tag], onDelete: Cascade, onUpdate: NoAction, map: "fk_comunidad_tag_tag")
+  id_topico    BigInt
+  comunidad    comunidad @relation(fields: [id_comunidad], references: [id_comunidad], onDelete: Cascade, onUpdate: NoAction, map: "fk_comunidad_topico_comunidad")
+  topico       topico    @relation(fields: [id_topico], references: [id_topico], onDelete: Cascade, onUpdate: NoAction, map: "fk_comunidad_topico_topico")
 
-  @@id([id_comunidad, id_tag])
+  @@id([id_comunidad, id_topico])
   @@schema("public")
 }
 

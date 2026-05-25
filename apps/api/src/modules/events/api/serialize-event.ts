@@ -52,9 +52,9 @@ export function serializeEvent(event: EventWithRelations) {
     estado: event.estado,
     created_at: serializeDate(event.created_at),
     creador: serializeUser(event.usuario),
-    tags: event.evento_tag.map((eventTag) => ({
-      id_tag: serializeBigInt(eventTag.tag.id_tag),
-      tag: eventTag.tag.tag
+    topicos: event.evento_topico.map((eventTopico) => ({
+      id_topico: serializeBigInt(eventTopico.topico.id_topico),
+      topico: eventTopico.topico.topico
     })),
     usuarios_interesados: usuariosInteresados,
     cantidad_interesados: usuariosInteresados.length

@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
-import { findAcceptedEventById, listAcceptedEvents } from "../data/events-repository";
+import { findAcceptedEventById, listAcceptedEvents, listAcceptedEventsLimit } from "../data/events-repository";
 import { serializeEvent } from "./serialize-event";
+import { serializeEventSummary } from "./serialize-event-summary";
 //Todos esos imports son necesarios para poder utilizar las funciones y tipos que se encuentran en esos archivos, como la función serializeEvent que se utiliza para convertir los objetos de tipo EventWithRelations a un formato que pueda ser enviado a través de la API, y las funciones findAcceptedEventById y listAcceptedEvents que se utilizan para obtener los eventos aceptados desde el repositorio de eventos. Además, también se importa el tipo z de la librería zod para validar los parámetros de entrada en las rutas de la API.
 
 
@@ -18,18 +19,33 @@ const eventIdParamsSchema = z.object({
 export function createEventsRouter(): Router {
   const router = Router();
 
-  router.get("/", async (_request, response, next) => {
+  // ruta para traer 6 eventos más recientes aceptados ordenados por fecha de inicio de forma ascendente, mostrando un detalle resumido de dichos eventos!!
+  router.get("/accepted/summary/limit", async (_request, response, next) => {
     try {
-      const events = await listAcceptedEvents();
+      const events = await listAcceptedEventsLimit();
 
       response.json({
-        events: events.map(serializeEvent)
+        events: events.map(serializeEventSummary)
       });
     } catch (error) {
       next(error);
     }
   });
 
+  // ruta para traer todos los eventos aceptados ordenados por fecha de inicio de forma ascendente, mostrando un detalle resumido de dichos eventos!
+  router.get("/accepted/summary/all", async (_request, response, next) => {
+    try {
+      const events = await listAcceptedEvents();
+
+      response.json({
+        events: events.map(serializeEventSummary)
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ruta para obtener los detalles completos de un evento específico al clickear el mismo tal que se recibe su evento_id -->
   router.get("/:id_evento", async (request, response, next) => {
     try {
       const parsedParams = eventIdParamsSchema.safeParse(request.params);
@@ -58,12 +74,11 @@ export function createEventsRouter(): Router {
       }
 
       response.json({
-        event: serializeEvent(event)
+        event: serializeEvent(event) // aquí mostramos todos los datos completos del evento al clickear el mismo!!
       });
     } catch (error) {
       next(error);
     }
   });
-
   return router;
 }

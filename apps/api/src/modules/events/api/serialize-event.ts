@@ -38,6 +38,7 @@ function serializeUser(user: EventUser) {
   };
 }
 
+// La función serializeEvent toma un objeto de tipo EventWithRelations y devuelve un nuevo objeto con las propiedades del evento serializadas correctamente. Esto incluye convertir los campos de tipo bigint a cadenas de texto y los campos de tipo Date a cadenas de texto en formato ISO. Además, también se serializan las relaciones del evento, incluyendo el creador del evento, los tags asociados al evento y los usuarios interesados en el evento.
 export function serializeEvent(event: EventWithRelations) {
   const usuariosInteresados = event.user_evento.map((userEvent) => serializeUser(userEvent.usuario));
 

@@ -1,4 +1,4 @@
-import { getPrismaClient } from "./prisma-client";
+import { prisma } from "../../../core/database";
 
 const ACCEPTED_EVENT_STATUS = "Aceptado";
 
@@ -77,8 +77,6 @@ export type EventWithRelations = {
 };
 
 export async function listAcceptedEvents(): Promise<EventWithRelations[]> {
-  const prisma = await getPrismaClient();
-
   return prisma.evento.findMany({
     where: {
       estado: ACCEPTED_EVENT_STATUS
@@ -91,8 +89,6 @@ export async function listAcceptedEvents(): Promise<EventWithRelations[]> {
 }
 
 export async function findAcceptedEventById(id_evento: bigint): Promise<EventWithRelations | null> {
-  const prisma = await getPrismaClient();
-
   return prisma.evento.findFirst({
     where: {
       id_evento,

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 import { ComposerModal } from "../components/composer/ComposerModal";
 import { CommunitiesScreen } from "../components/communities/CommunitiesScreen";
 import { EventsScreen } from "../components/events/EventsScreen";
@@ -14,6 +15,21 @@ import { scrollTop } from "../utils/navigation";
 import { normalize } from "../utils/text";
 
 const themeStorageKey = "kreis-theme-mode-v2";
+const screenRoutes: Record<Screen, string> = {
+  home: "/",
+  events: "/events",
+  communities: "/communities",
+  profile: "/profile"
+};
+const routeScreens = Object.fromEntries(
+  Object.entries(screenRoutes).map(([screen, path]) => [path, screen])
+) as Partial<Record<string, Screen>>;
+
+function normalizeRoute(pathname: string): string {
+  if (pathname === "/") return pathname;
+
+  return pathname.replace(/\/+$/, "");
+}
 
 function getInitialThemeMode(): ThemeMode {
   if (typeof window === "undefined") return "light";
@@ -32,7 +48,6 @@ export default function App() {
   const [events, setEvents] = useState(initialEvents);
   const [communities, setCommunities] = useState(initialCommunities);
   const [activity, setActivity] = useState(initialActivity);
-  const [screen, setScreen] = useState<Screen>("home");
   const [homeTab, setHomeTab] = useState<HomeTab>("events");
   const [eventFilter, setEventFilter] = useState("Todos");
   const [communityFilter, setCommunityFilter] = useState("Todos");
@@ -40,6 +55,10 @@ export default function App() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerMode, setComposerMode] = useState<ComposerMode>("post");
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => getInitialThemeMode());
+  const location = useLocation();
+  const routerNavigate = useNavigate();
+  const activeRoute = normalizeRoute(location.pathname);
+  const screen = routeScreens[activeRoute] ?? "home";
 
   const query = normalize(globalQuery.trim());
   const matchesQuery = (text: string): boolean => !query || normalize(text).includes(query);
@@ -71,8 +90,18 @@ export default function App() {
     }
   }, [themeMode]);
 
+  useEffect(() => {
+    if (routeScreens[activeRoute]) return;
+
+    routerNavigate(screenRoutes.home, { replace: true });
+  }, [activeRoute, routerNavigate]);
+
+  useEffect(() => {
+    scrollTop();
+  }, [activeRoute]);
+
   function navigate(nextScreen: Screen): void {
-    setScreen(nextScreen);
+    routerNavigate(screenRoutes[nextScreen]);
     scrollTop();
   }
 
@@ -142,10 +171,9 @@ export default function App() {
       },
       ...items
     ]);
-    setScreen("events");
     setHomeTab("events");
     setComposerOpen(false);
-    scrollTop();
+    navigate("events");
   }
 
   function createPost({ communityId, postText }: CreatePostInput): void {

@@ -1,0 +1,183 @@
+// users-repository.ts — Capa de acceso a datos del modulo de usuarios
+//
+// Responsabilidad: ejecutar las consultas a la base de datos relacionadas
+// con el perfil de un usuario y devolver los datos en bruto (sin serializar).
+//
+// Este archivo NO sabe nada de HTTP ni de Express. Solo habla con Prisma.
+// Esa separacion permite testear la logica de consulta de forma aislada.
+//
+// Que datos trae una consulta de perfil?
+//   - Datos basicos del usuario: legajo, nombre, apellido, rol, facultad
+//   - Eventos que el usuario creo (solo Aceptados)
+//   - Eventos a los que el usuario se anoto (tabla intermedia user_evento)
+//   - Comunidades que el usuario creo (solo Aceptadas)
+//   - Comunidades donde el usuario es miembro (tabla intermedia user_comunidad)
+//   - Intereses del usuario (tabla intermedia user_interest)
+//
+// El tipo exportado UserProfileWithRelations es el contrato entre este archivo
+// y el serializer (serialize-user-profile.ts). Si cambia la consulta, el tipo
+// cambia, y TypeScript fuerza a actualizar el serializer tambien.
+
+// Usamos el cliente Prisma centralizado de core/database.ts en lugar de
+// instanciar uno propio. Asi todos los modulos comparten la misma conexion.
+import { prisma } from "../../../core/database";
+
+// Define que relaciones y campos traer junto al usuario en la consulta.
+// Prisma usa este objeto como argumento de include / select.
+const userProfileInclude = {
+  // Facultad a la que pertenece el usuario
+  facultad: {
+    select: {
+      id_facultad: true,
+      nombre: true
+    }
+  },
+
+  // Eventos que el usuario creo (solo los que estan en estado Aceptado)
+  evento: {
+    where: { estado: "Aceptado" as const },
+    select: {
+      id_evento: true,
+      nombre: true,
+      ubicacion: true,
+      fecha_inicio: true,
+      descripcion: true,
+      estado: true,
+      created_at: true,
+      // Tags asociados al evento (tabla intermedia evento_tag → tag)
+      evento_tag: {
+        include: {
+          tag: { select: { id_tag: true, tag: true } }
+        }
+      }
+    }
+  },
+
+  // Eventos a los que el usuario se anoto (tabla intermedia user_evento)
+  user_evento: {
+    include: {
+      evento: {
+        select: {
+          id_evento: true,
+          nombre: true,
+          ubicacion: true,
+          fecha_inicio: true,
+          descripcion: true,
+          estado: true,
+          created_at: true,
+          evento_tag: {
+            include: {
+              tag: { select: { id_tag: true, tag: true } }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  // Comunidades que el usuario creo (solo las Aceptadas)
+  comunidad: {
+    where: { estado: "Aceptado" as const },
+    select: {
+      id_comunidad: true,
+      nombre: true,
+      descripcion: true,
+      estado: true,
+      created_at: true,
+      // Tags asociados a la comunidad (tabla intermedia comunidad_tag → tag)
+      comunidad_tag: {
+        include: {
+          tag: { select: { id_tag: true, tag: true } }
+        }
+      }
+    }
+  },
+
+  // Comunidades a las que el usuario pertenece como miembro (tabla intermedia user_comunidad)
+  user_comunidad: {
+    include: {
+      comunidad: {
+        select: {
+          id_comunidad: true,
+          nombre: true,
+          descripcion: true,
+          estado: true,
+          created_at: true,
+          comunidad_tag: {
+            include: {
+              tag: { select: { id_tag: true, tag: true } }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  // Intereses del usuario (tabla intermedia user_interest → interest)
+  user_interest: {
+    include: {
+      interest: {
+        select: {
+          id_interest: true,
+          interes: true
+        }
+      }
+    }
+  }
+} as const;
+
+// Tipos auxiliares que describen la forma de un evento y sus tags tal como
+// los devuelve Prisma con el select de arriba
+type EventTag = { tag: { id_tag: bigint; tag: string } };
+
+type EventSummary = {
+  id_evento: bigint;
+  nombre: string;
+  ubicacion: string | null;
+  fecha_inicio: Date;
+  descripcion: string | null;
+  estado: string;
+  created_at: Date;
+  evento_tag: EventTag[];
+};
+
+// Tipos auxiliares para comunidad y sus tags
+type ComunidadTag = { tag: { id_tag: bigint; tag: string } };
+
+type ComunidadSummary = {
+  id_comunidad: bigint;
+  nombre: string;
+  descripcion: string | null;
+  estado: string;
+  created_at: Date;
+  comunidad_tag: ComunidadTag[];
+};
+
+// Tipo principal que representa al usuario con todas sus relaciones cargadas.
+// Lo exportamos para que el serializer pueda tiparlo correctamente.
+export type UserProfileWithRelations = {
+  legajo: number;
+  nombre: string;
+  apellido: string;
+  id_facultad: bigint;
+  rol: string;
+  verificado: boolean;
+  created_at: Date;
+  facultad: { id_facultad: bigint; nombre: string };
+  evento: EventSummary[];                                       // eventos creados por el usuario
+  user_evento: Array<{ evento: EventSummary }>;                // eventos en que se anoto
+  comunidad: ComunidadSummary[];                               // comunidades que creo
+  user_comunidad: Array<{ comunidad: ComunidadSummary }>;      // comunidades donde es miembro
+  user_interest: Array<{ interest: { id_interest: bigint; interes: string } }>;
+};
+
+// Busca el perfil completo de un usuario por su auth_id (UUID de Supabase).
+// Se usa auth_id en lugar del legajo para que el endpoint sea seguro:
+// el auth_id se extrae del JWT verificado por Supabase, no lo puede
+// fabricar el cliente para acceder al perfil de otro usuario.
+export async function findUserProfileByAuthId(authId: string): Promise<UserProfileWithRelations | null> {
+  return prisma.usuario.findUnique({
+    where: { auth_id: authId },
+    include: userProfileInclude
+  });
+}

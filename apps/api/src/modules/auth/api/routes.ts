@@ -1,23 +1,22 @@
-import { Router } from "express";
 import { createClient } from "@supabase/supabase-js";
+import { Router } from "express";
 import { z } from "zod";
 import { config } from "../../../core/config";
+import { prisma } from "../../../core/database";
 
-// posible formato de los bodys de las peticiones a los endpoints de auth
 const loginRequestSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8)
 });
 
-
-const registerRequestSchema= z.object({
+const registerRequestSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  legajo: z.string().min(1),
+  legajo: z.coerce.number().int().positive(),
   nombre: z.string().min(1),
   apellido: z.string().min(1),
-  facultad : z.string().min(1),
-  });
+  id_facultad: z.coerce.number().int().positive()
+});
 
 const supabaseAdmin = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
   auth: {
@@ -35,10 +34,10 @@ const supabaseAuth = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY,
 
 export function createAuthRouter(): Router {
   const router = Router();
-// definimos rutas para el módulo autenticación!
+
   router.post("/register", async (request, response, next) => {
     try {
-      const parsedBody = registerRequestSchema.safeParse(request.body); // recuperamos el body de la petición 
+      const parsedBody = registerRequestSchema.safeParse(request.body);
 
       if (!parsedBody.success) {
         response.status(400).json({
@@ -51,7 +50,7 @@ export function createAuthRouter(): Router {
         return;
       }
 
-      const { email, password } = parsedBody.data;
+      const { email, password, legajo, nombre, apellido, id_facultad } = parsedBody.data;
       const { data, error } = await supabaseAdmin.auth.admin.createUser({
         email,
         password,
@@ -68,10 +67,38 @@ export function createAuthRouter(): Router {
         return;
       }
 
+      try {
+        await prisma.usuario.create({
+          data: {
+            auth_id: data.user.id,
+            legajo,
+            nombre,
+            apellido,
+            id_facultad: BigInt(id_facultad)
+          }
+        });
+      } catch (profileError) {
+        await supabaseAdmin.auth.admin.deleteUser(data.user.id);
+
+        const message = profileError instanceof Error ? profileError.message : "Profile creation failed";
+
+        response.status(500).json({
+          error: {
+            code: "profile_creation_failed",
+            message
+          }
+        });
+        return;
+      }
+
       response.status(201).json({
         user: {
           id: data.user.id,
-          email: data.user.email
+          email: data.user.email,
+          legajo,
+          nombre,
+          apellido,
+          idFacultad: id_facultad
         }
       });
     } catch (error) {

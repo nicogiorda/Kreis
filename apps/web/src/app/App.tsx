@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { ComposerModal } from "../components/composer/ComposerModal";
 import { CommunitiesScreen } from "../components/communities/CommunitiesScreen";
+import { EventDetailScreen } from "../components/events/EventDetailScreen";
 import { EventsScreen } from "../components/events/EventsScreen";
 import { SplashScreen } from "../components/common/SplashScreen";
 import { HomeScreen } from "../components/home/HomeScreen";
@@ -21,6 +22,7 @@ const screenRoutes: Record<Screen, string> = {
   communities: "/communities",
   profile: "/profile"
 };
+const eventDetailRoutePrefix = `${screenRoutes.events}/`;
 const routeScreens = Object.fromEntries(
   Object.entries(screenRoutes).map(([screen, path]) => [path, screen])
 ) as Partial<Record<string, Screen>>;
@@ -29,6 +31,19 @@ function normalizeRoute(pathname: string): string {
   if (pathname === "/") return pathname;
 
   return pathname.replace(/\/+$/, "");
+}
+
+function getEventDetailId(pathname: string): string | null {
+  if (!pathname.startsWith(eventDetailRoutePrefix)) return null;
+
+  const eventId = pathname.slice(eventDetailRoutePrefix.length);
+  if (!eventId) return null;
+
+  try {
+    return decodeURIComponent(eventId);
+  } catch {
+    return eventId;
+  }
 }
 
 function getInitialThemeMode(): ThemeMode {
@@ -58,7 +73,10 @@ export default function App() {
   const location = useLocation();
   const routerNavigate = useNavigate();
   const activeRoute = normalizeRoute(location.pathname);
-  const screen = routeScreens[activeRoute] ?? "home";
+  const eventDetailId = getEventDetailId(activeRoute);
+  const activeEvent = eventDetailId ? events.find((event) => event.id === eventDetailId) : undefined;
+  const isEventDetail = Boolean(eventDetailId);
+  const screen = isEventDetail ? "events" : routeScreens[activeRoute] ?? "home";
 
   const query = normalize(globalQuery.trim());
   const matchesQuery = (text: string): boolean => !query || normalize(text).includes(query);
@@ -93,8 +111,15 @@ export default function App() {
   useEffect(() => {
     if (routeScreens[activeRoute]) return;
 
+    if (eventDetailId) {
+      if (activeEvent) return;
+
+      routerNavigate(screenRoutes.events, { replace: true });
+      return;
+    }
+
     routerNavigate(screenRoutes.home, { replace: true });
-  }, [activeRoute, routerNavigate]);
+  }, [activeEvent, activeRoute, eventDetailId, routerNavigate]);
 
   useEffect(() => {
     scrollTop();
@@ -110,6 +135,16 @@ export default function App() {
     navigate("events");
   }
 
+  function openEventDetails(eventId: string): void {
+    routerNavigate(`${screenRoutes.events}/${encodeURIComponent(eventId)}`);
+    scrollTop();
+  }
+
+  function closeEventDetails(): void {
+    routerNavigate(screenRoutes.events);
+    scrollTop();
+  }
+
   function toggleTheme(): void {
     setThemeMode((current) => current === "dark" ? "light" : "dark");
   }
@@ -121,6 +156,10 @@ export default function App() {
 
   function toggleJoin(communityId: string): void {
     setCommunities((items) => items.map((community) => community.id === communityId ? { ...community, joined: !community.joined } : community));
+  }
+
+  function toggleEventInterest(eventId: string): void {
+    setEvents((items) => items.map((event) => event.id === eventId ? { ...event, interested: !event.interested } : event));
   }
 
   function createCommunity({ name, category }: CreateCommunityInput): void {
@@ -206,7 +245,7 @@ export default function App() {
       <div
         className={cn(
           "app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden md:px-6",
-          screen === "home" ? "pb-0 md:pb-0" : "pb-[calc(var(--nav-height)+18px)] md:pb-[calc(var(--nav-height)+28px)]"
+          screen === "home" || isEventDetail ? "pb-0 md:pb-0" : "pb-[calc(var(--nav-height)+18px)] md:pb-[calc(var(--nav-height)+28px)]"
         )}
       >
         {screen !== "profile" && screen !== "home" && screen !== "events" ? (
@@ -218,8 +257,16 @@ export default function App() {
           />
         ) : null}
 
-        <main className={cn(screen === "home" ? "px-0" : "px-[var(--page-gutter)] md:px-0")} tabIndex={-1}>
-          {screen === "home" && (
+        <main className={cn(screen === "home" || isEventDetail ? "px-0" : "px-[var(--page-gutter)] md:px-0")} tabIndex={-1}>
+          {isEventDetail && activeEvent && (
+            <EventDetailScreen
+              event={activeEvent}
+              themeMode={themeMode}
+              onBack={closeEventDetails}
+              onToggleInterest={toggleEventInterest}
+            />
+          )}
+          {!isEventDetail && screen === "home" && (
             <HomeScreen
               events={homeEvents}
               communities={discoverCommunities}
@@ -230,11 +277,12 @@ export default function App() {
               onHomeTab={setHomeTab}
               onCommunityFilter={setCommunityFilter}
               onOpenEvents={openEventsFromHome}
+              onOpenEventDetails={openEventDetails}
               onToggleTheme={toggleTheme}
               onToggleJoin={toggleJoin}
             />
           )}
-          {screen === "events" && (
+          {!isEventDetail && screen === "events" && (
             <EventsScreen
               events={visibleEvents}
               eventFilter={eventFilter}
@@ -244,11 +292,12 @@ export default function App() {
               onFilter={setEventFilter}
               onSearchChange={setGlobalQuery}
               onCreateEvent={() => openComposer("event")}
+              onOpenEventDetails={openEventDetails}
               onToggleTheme={toggleTheme}
             />
           )}
-          {screen === "communities" && <CommunitiesScreen communities={communities} discover={discoverCommunities} posts={activity} onToggleJoin={toggleJoin} />}
-          {screen === "profile" && (
+          {!isEventDetail && screen === "communities" && <CommunitiesScreen communities={communities} discover={discoverCommunities} posts={activity} onToggleJoin={toggleJoin} />}
+          {!isEventDetail && screen === "profile" && (
             <ProfileScreen
               communities={communities}
               events={events}
@@ -267,7 +316,7 @@ export default function App() {
           onCreatePost={createPost}
         />
       </div>
-      <BottomNav screen={screen} onNavigate={navigate} />
+      {!isEventDetail && <BottomNav screen={screen} onNavigate={navigate} />}
     </>
   );
 }

@@ -53,6 +53,7 @@ type HomeScreenProps = {
   onHomeTab: (tab: HomeTab) => void;
   onCommunityFilter: (category: string) => void;
   onOpenEvents: () => void;
+  onOpenEventDetails: (eventId: string) => void;
   onToggleTheme: () => void;
   onToggleJoin: (communityId: string) => void;
 };
@@ -67,6 +68,7 @@ export function HomeScreen({
   onHomeTab,
   onCommunityFilter,
   onOpenEvents,
+  onOpenEventDetails,
   onToggleTheme,
   onToggleJoin
 }: HomeScreenProps) {
@@ -149,6 +151,7 @@ export function HomeScreen({
                         key={event.id}
                         variant="compact"
                         onOpenEvents={onOpenEvents}
+                        onOpenEventDetails={onOpenEventDetails}
                       />
                     )) : <EmptyState text="No hay próximos eventos con esa búsqueda." />}
                   </div>

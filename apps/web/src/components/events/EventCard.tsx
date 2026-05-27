@@ -36,6 +36,14 @@ export function EventCard({ event, variant = "full", onOpenEvents, onOpenEventDe
   const locationMeta = [{ icon: "location" as const, text: event.place }];
   const officialBadge = event.official ? <VerifiedCheck className="event-official-badge size-[1em] flex-none" weight="Bold" aria-label="Evento oficial de UADE" /> : null;
   const eventDateLabel = getEventDateLabel(event);
+  const openDetails = () => {
+    if (onOpenEventDetails) {
+      onOpenEventDetails(event.id);
+      return;
+    }
+
+    onOpenEvents?.();
+  };
 
   if (compact) {
     return (
@@ -61,7 +69,7 @@ export function EventCard({ event, variant = "full", onOpenEvents, onOpenEventDe
             className="grid size-6 place-items-center rounded-full border-0 bg-transparent p-0 text-kreis-muted shadow-none transition-[color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95"
             type="button"
             aria-label={`Ver detalles de ${event.title}`}
-            onClick={() => onOpenEvents?.()}
+            onClick={openDetails}
           >
             <AltArrowRight className="size-[18px]" weight="Outline" aria-hidden="true" />
           </button>
@@ -85,7 +93,7 @@ export function EventCard({ event, variant = "full", onOpenEvents, onOpenEventDe
             className="grid size-5 flex-none place-items-center border-0 bg-transparent p-0 text-kreis-green shadow-none [-webkit-tap-highlight-color:transparent]"
             type="button"
             aria-label={`Expandir informacion de ${event.title}`}
-            onClick={() => onOpenEventDetails?.(event.id)}
+            onClick={openDetails}
           >
             <RoundArrowRightUp className="size-5" weight="Bold" aria-hidden="true" />
           </button>

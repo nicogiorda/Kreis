@@ -12,6 +12,9 @@ export const initialEvents: KreisEvent[] = [
     icon: "EX",
     tone: "orange",
     interested: false,
+    time: "9:00",
+    organizer: "UADE",
+    detailDescription: "Expo UADE es un evento anual de orientacion vocacional organizado por la Universidad Argentina de la Empresa (UADE), disenado para estudiantes secundarios y futuros ingresantes. Funciona como una muestra de su oferta academica, ofreciendo charlas, stands de carreras, actividades inmersivas y asesoramiento para conocer la vida universitaria y el futuro profesional.",
     official: true,
     description: "Del 27 al 29 de Mayo, estudiantes de colegios secundarios podrán participar en charlas en vivo y diversas actividades para tener un acercamiento a la vida universitaria."
   },

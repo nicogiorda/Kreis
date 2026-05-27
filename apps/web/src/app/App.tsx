@@ -261,7 +261,6 @@ export default function App() {
           {isEventDetail && activeEvent && (
             <EventDetailScreen
               event={activeEvent}
-              themeMode={themeMode}
               onBack={closeEventDetails}
               onToggleInterest={toggleEventInterest}
             />

@@ -490,6 +490,16 @@ html[data-theme="dark"] {
     background: var(--event-photo-placeholder);
   }
 
+  .event-detail-glass-button {
+    background: rgba(10, 10, 10, 0.12);
+    -webkit-backdrop-filter: blur(12px) saturate(1.15);
+    backdrop-filter: blur(12px) saturate(1.15);
+  }
+
+  html[data-theme="dark"] .event-detail-glass-button {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
   .events-search-input::-webkit-search-cancel-button,
   .events-search-input::-webkit-search-decoration,
   .events-search-input::-webkit-search-results-button,

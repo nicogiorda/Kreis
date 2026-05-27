@@ -14,6 +14,7 @@ type EventsScreenProps = {
   onFilter: (category: string) => void;
   onSearchChange: (query: string) => void;
   onCreateEvent: () => void;
+  onOpenEventDetails: (eventId: string) => void;
   onToggleTheme: () => void;
 };
 
@@ -33,6 +34,7 @@ export function EventsScreen({
   onFilter,
   onSearchChange,
   onCreateEvent,
+  onOpenEventDetails,
   onToggleTheme
 }: EventsScreenProps) {
   const filterButtonClass = (active: boolean) => cn(
@@ -97,7 +99,7 @@ export function EventsScreen({
       </div>
 
       <div className="mt-[13px] grid grid-cols-2 gap-x-[17px] gap-y-[15px]">
-        {events.length ? events.map((event) => <EventCard event={event} key={event.id} />) : (
+        {events.length ? events.map((event) => <EventCard event={event} key={event.id} onOpenEventDetails={onOpenEventDetails} />) : (
           <div className="col-span-full">
             <EmptyState text="Proba buscando otra categoria." />
           </div>

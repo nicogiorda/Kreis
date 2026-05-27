@@ -24,6 +24,9 @@ export type KreisEvent = {
   tone: EventTone;
   interested: boolean;
   description: string;
+  detailDescription?: string;
+  time?: string;
+  organizer?: string;
   official?: boolean;
 };
 

@@ -1,13 +1,10 @@
 import { CaretLeft, DotsThree, MapPin } from "@phosphor-icons/react";
-import { VerifiedCheck } from "@solar-icons/react";
-import heroDarkUrl from "../../assets/brand/fondo-uade-dark.webp";
-import heroLightUrl from "../../assets/brand/fondo-uade-light.webp";
-import type { KreisEvent, ThemeMode } from "../../types";
+import { CameraMinimalistic, VerifiedCheck } from "@solar-icons/react";
+import type { KreisEvent } from "../../types";
 import { cn } from "../../utils/cn";
 
 type EventDetailScreenProps = {
   event: KreisEvent;
-  themeMode: ThemeMode;
   onBack: () => void;
   onToggleInterest: (eventId: string) => void;
 };
@@ -42,25 +39,22 @@ function getEventOrganizer(event: KreisEvent): string {
   return event.organizer ?? (event.official ? "UADE" : "Kreis");
 }
 
-export function EventDetailScreen({ event, themeMode, onBack, onToggleInterest }: EventDetailScreenProps) {
-  const heroUrl = themeMode === "dark" ? heroDarkUrl : heroLightUrl;
+export function EventDetailScreen({ event, onBack, onToggleInterest }: EventDetailScreenProps) {
   const dateLabel = getEventDateLabel(event);
   const timeLabel = getEventTime(event);
   const organizerLabel = getEventOrganizer(event);
   const description = event.detailDescription ?? event.description;
+  const interestLabel = event.interested ? "Anotado" : "Me interesa";
 
   return (
     <section className="mx-auto grid min-h-dvh w-full max-w-[430px] animate-[rise_220ms_ease-out] overflow-hidden bg-[var(--app-bg)] text-kreis-ink" data-screen="event-detail">
-      <div className="relative h-[360px] overflow-hidden bg-[#cfe4db]">
-        <img
-          className="event-detail-hero-image absolute left-1/2 top-0 h-[122vw] max-h-[525px] w-[122%] max-w-none -translate-x-1/2 select-none object-cover"
-          src={heroUrl}
-          alt=""
-          draggable={false}
-        />
+      <div className="event-detail-photo-placeholder relative h-[360px] overflow-hidden bg-kreis-event-surface">
+        <div className="absolute inset-x-[31px] bottom-[40px] grid h-[188px] place-items-center rounded-[24px] bg-[var(--event-photo-placeholder)] text-[var(--event-photo-glyph)]">
+          <CameraMinimalistic className="size-[54px]" weight="LineDuotone" aria-hidden="true" />
+        </div>
         <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/5 to-transparent" aria-hidden="true" />
 
-        <div className="absolute inset-x-0 top-[calc(64px+env(safe-area-inset-top))] z-[2] flex items-center justify-between px-[13px]">
+        <div className="absolute inset-x-0 top-[calc(20px+env(safe-area-inset-top))] z-[2] flex items-center justify-between px-[13px]">
           <button
             className="event-detail-glass-button grid size-[37px] place-items-center rounded-[12px] border-0 p-0 text-kreis-cream shadow-none transition-[transform,background-color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95"
             type="button"
@@ -125,7 +119,7 @@ export function EventDetailScreen({ event, themeMode, onBack, onToggleInterest }
             aria-pressed={event.interested}
             onClick={() => onToggleInterest(event.id)}
           >
-            Me interesa
+            {interestLabel}
           </button>
         </div>
       </article>

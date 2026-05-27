@@ -6,13 +6,16 @@
   "scripts": {
     "dev": "vite --config apps/web/vite.config.ts",
     "dev:api": "tsx watch apps/api/src/platform/server.ts",
-    "build": "tsc -b && vite build --config apps/web/vite.config.ts",
+    "build": "npm run build:web",
+    "build:web": "tsc -p apps/web/tsconfig.json --noEmit && vite build --config apps/web/vite.config.ts",
+    "build:full": "tsc -b && vite build --config apps/web/vite.config.ts",
     "lint": "eslint .",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "test": "vitest run --config vitest.config.ts --configLoader runner --passWithNoTests",
     "test:watch": "vitest --config vitest.config.ts --configLoader runner",
     "typecheck": "tsc -b",
+    "typecheck:web": "tsc -p apps/web/tsconfig.json --noEmit",
     "typecheck:api": "tsc -p apps/api/tsconfig.json",
     "preview": "vite preview --config apps/web/vite.config.ts"
   },

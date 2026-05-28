@@ -25,6 +25,7 @@ export type KreisEvent = {
   interested: boolean;
   description: string;
   detailDescription?: string;
+  imageUrl?: string;
   time?: string;
   organizer?: string;
   official?: boolean;

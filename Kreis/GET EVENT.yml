@@ -1,0 +1,14 @@
+info:
+  name: GET EVENT
+  type: http
+
+http:
+  method: GET
+  url: http://localhost:4000/api/v1/events/1
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

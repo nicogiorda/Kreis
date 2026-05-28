@@ -1,12 +1,53 @@
+import { createClient } from "@supabase/supabase-js";
 import { Router } from "express";
 import { z } from "zod";
-import { findAcceptedEventById, listAcceptedEvents, listAcceptedEventsLimit } from "../data/events-repository";
+import { config } from "../../../core/config";
+import {
+  createPendingEvent,
+  findAcceptedEventById,
+  findUserByAuthId,
+  listAcceptedEvents,
+  listAcceptedEventsLimit
+} from "../data/events-repository";
 import { serializeEvent } from "./serialize-event";
 import { serializeEventSummary } from "./serialize-event-summary";
-//Todos esos imports son necesarios para poder utilizar las funciones y tipos que se encuentran en esos archivos, como la función serializeEvent que se utiliza para convertir los objetos de tipo EventWithRelations a un formato que pueda ser enviado a través de la API, y las funciones findAcceptedEventById y listAcceptedEvents que se utilizan para obtener los eventos aceptados desde el repositorio de eventos. Además, también se importa el tipo z de la librería zod para validar los parámetros de entrada en las rutas de la API.
 
+const ARGENTINA_TIMEZONE_OFFSET = "-03:00";
+const DATE_HAS_TIMEZONE = /(Z|[+-]\d{2}:\d{2})$/i;
+const LOCAL_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?$/;
 
-// El esquema eventIdParamsSchema se define utilizando la librería zod para validar que el parámetro id_evento sea una cadena de texto que contenga solo dígitos y que luego se transforme a un valor de tipo bigint. Esto es necesario para asegurarnos de que el id del evento sea válido antes de intentar buscarlo en la base de datos, ya que el id del evento es de tipo bigint en la base de datos y necesitamos convertirlo a ese tipo para poder realizar la consulta correctamente.
+const supabaseAuth = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+});
+
+function parseArgentinaDateTime(value: string): Date | null {
+  const trimmedValue = value.trim();
+
+  if (!DATE_HAS_TIMEZONE.test(trimmedValue) && !LOCAL_DATE_TIME.test(trimmedValue)) {
+    return null;
+  }
+
+  const normalizedValue = DATE_HAS_TIMEZONE.test(trimmedValue)
+    ? trimmedValue
+    : `${trimmedValue}${ARGENTINA_TIMEZONE_OFFSET}`;
+  const parsedDate = new Date(normalizedValue);
+
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+}
+
+function getBearerToken(authorizationHeader: string | undefined): string | null {
+  if (!authorizationHeader) return null;
+
+  const [scheme, token] = authorizationHeader.split(" ");
+
+  if (scheme?.toLowerCase() !== "bearer" || !token) return null;
+
+  return token;
+}
+
 const eventIdParamsSchema = z.object({
   id_evento: z
     .string()
@@ -15,11 +56,93 @@ const eventIdParamsSchema = z.object({
     .transform((id) => BigInt(id))
 });
 
-// La función createEventsRouter crea un router de Express que define las rutas para obtener la lista de eventos aceptados y para obtener un evento específico por su id. En cada ruta, se utilizan las funciones del repositorio de eventos para obtener los datos necesarios y luego se utiliza la función serializeEvent para convertir los objetos de tipo EventWithRelations a un formato que pueda ser enviado a través de la API. Además, también se manejan los errores y se envían respuestas con códigos de estado adecuados en caso de que ocurra algún error o si el evento no es encontrado o no está aceptado.
+const eventCreationSchema = z.object({
+  nombre: z.string().trim().min(1),
+  ubicacion: z.string().trim().min(1).optional(),
+  fecha_inicio: z.string().trim().transform((value, context) => {
+    const parsedDate = parseArgentinaDateTime(value);
+
+    if (!parsedDate) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "fecha_inicio debe ser ISO. Si no incluye timezone, se interpreta como hora de Argentina"
+      });
+      return z.NEVER;
+    }
+
+    return parsedDate;
+  }),
+  descripcion: z.string().trim().min(1).optional(),
+  topicos: z.array(z.coerce.number().int().positive()).default([])
+});
+
 export function createEventsRouter(): Router {
   const router = Router();
 
-  // ruta para traer 6 eventos más recientes aceptados ordenados por fecha de inicio de forma ascendente, mostrando un detalle resumido de dichos eventos!!
+  router.post("/", async (request, response, next) => {
+    try {
+      const accessToken = getBearerToken(request.headers.authorization);
+
+      if (!accessToken) {
+        response.status(401).json({
+          error: {
+            code: "missing_token",
+            message: "Authorization Bearer token is required"
+          }
+        });
+        return;
+      }
+
+      const { data: authData, error: authError } = await supabaseAuth.auth.getUser(accessToken);
+
+      if (authError || !authData.user) {
+        response.status(401).json({
+          error: {
+            code: "invalid_token",
+            message: authError?.message ?? "Invalid access token"
+          }
+        });
+        return;
+      }
+
+      const parsedBody = eventCreationSchema.safeParse(request.body);
+
+      if (!parsedBody.success) {
+        response.status(400).json({
+          error: {
+            code: "validation_error",
+            message: "Invalid event payload",
+            details: parsedBody.error.flatten().fieldErrors
+          }
+        });
+        return;
+      }
+
+      const user = await findUserByAuthId(authData.user.id);
+
+      if (!user) {
+        response.status(403).json({
+          error: {
+            code: "profile_not_found",
+            message: "Authenticated user does not have a Kreis profile"
+          }
+        });
+        return;
+      }
+
+      const event = await createPendingEvent({
+        ...parsedBody.data,
+        legajo: user.legajo
+      });
+
+      response.status(201).json({
+        event: serializeEvent(event)
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.get("/accepted/summary/limit", async (_request, response, next) => {
     try {
       const events = await listAcceptedEventsLimit();
@@ -32,7 +155,6 @@ export function createEventsRouter(): Router {
     }
   });
 
-  // ruta para traer todos los eventos aceptados ordenados por fecha de inicio de forma ascendente, mostrando un detalle resumido de dichos eventos!
   router.get("/accepted/summary/all", async (_request, response, next) => {
     try {
       const events = await listAcceptedEvents();
@@ -45,7 +167,6 @@ export function createEventsRouter(): Router {
     }
   });
 
-  // ruta para obtener los detalles completos de un evento específico al clickear el mismo tal que se recibe su evento_id -->
   router.get("/:id_evento", async (request, response, next) => {
     try {
       const parsedParams = eventIdParamsSchema.safeParse(request.params);
@@ -74,11 +195,12 @@ export function createEventsRouter(): Router {
       }
 
       response.json({
-        event: serializeEvent(event) // aquí mostramos todos los datos completos del evento al clickear el mismo!!
+        event: serializeEvent(event)
       });
     } catch (error) {
       next(error);
     }
   });
+
   return router;
 }

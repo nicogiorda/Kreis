@@ -1,6 +1,7 @@
 import { prisma } from "../../../core/database";
 
 const ACCEPTED_EVENT_STATUS = "Aceptado";
+const PENDING_EVENT_STATUS = "Pendiente";
 
 const userSelect = {
   legajo: true,
@@ -130,3 +131,42 @@ export async function findAcceptedEventById(id_evento: bigint): Promise<EventWit
     include: eventInclude 
   });
 }
+export type CreateEventInput = {
+  legajo: number;
+  nombre: string;
+  ubicacion?: string;
+  fecha_inicio: Date;
+  descripcion?: string;
+  topicos: number[];
+};
+
+export async function createPendingEvent(input: CreateEventInput): Promise<EventWithRelations> {
+  return prisma.evento.create({
+    data: {
+      legajo: input.legajo,
+      nombre: input.nombre,
+      ubicacion: input.ubicacion,
+      fecha_inicio: input.fecha_inicio,
+      descripcion: input.descripcion,
+      estado: PENDING_EVENT_STATUS,
+      evento_topico: {
+        create: input.topicos.map((id_topico) => ({
+          topico: {
+            connect: {
+              id_topico: BigInt(id_topico)
+            }
+          }
+        }))
+      }
+    },
+    include: eventInclude
+  });
+}
+
+export async function findUserByAuthId(auth_id: string): Promise<{ legajo: number } | null> {
+  return prisma.usuario.findUnique({
+    where: { auth_id },
+    select: { legajo: true }
+  });
+}
+

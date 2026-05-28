@@ -27,10 +27,6 @@ function serializeUser(user: EventUser) {
     legajo: user.legajo,
     nombre: user.nombre,
     apellido: user.apellido,
-    id_facultad: serializeBigInt(user.id_facultad),
-    rol: user.rol,
-    verificado: user.verificado,
-    created_at: serializeDate(user.created_at),
     facultad: {
       id_facultad: serializeBigInt(user.facultad.id_facultad),
       nombre: user.facultad.nombre
@@ -60,3 +56,4 @@ export function serializeEvent(event: EventWithRelations) {
     cantidad_interesados: usuariosInteresados.length
   };
 }
+

@@ -25,6 +25,18 @@ function getCategoryLabel(category: string): string {
   return category;
 }
 
+const eventCategoryImages: Record<string, string> = {
+  Todos: "/event-images/juegos-uade.png",
+  Academico: "/event-images/expo-uade.png",
+  Deporte: "/event-images/torneo-futbol-5.png",
+  Cultural: "/event-images/noche-de-cine.png",
+  Social: "/event-images/noche-estudiantil.png"
+};
+
+function getCategoryImage(category: string): string {
+  return eventCategoryImages[category] ?? eventCategoryImages.Todos;
+}
+
 export function EventsScreen({
   events,
   eventFilter,
@@ -87,7 +99,9 @@ export function EventsScreen({
         <div className="mt-[7px] flex gap-[13px] overflow-x-auto px-[9px] py-[2px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Filtrar eventos por categoria">
           {eventCategories.map((category) => (
             <button className={filterButtonClass(eventFilter === category)} type="button" key={category} onClick={() => onFilter(category)}>
-              <span className="event-category-dot block size-[39px] rounded-full bg-kreis-event-surface transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]" aria-hidden="true" />
+              <span className="event-category-dot block size-[39px] overflow-hidden rounded-full bg-kreis-event-surface transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]" aria-hidden="true">
+                <img className="size-full object-cover" src={getCategoryImage(category)} alt="" draggable={false} />
+              </span>
               <span className="block max-w-[52px] overflow-hidden text-ellipsis whitespace-nowrap">{getCategoryLabel(category)}</span>
             </button>
           ))}

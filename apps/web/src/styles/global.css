@@ -95,6 +95,7 @@
   --radius-small: 12px;
   --home-hero-height: min(100vw, 430px);
   --nav-height: 64px;
+  --bottom-nav-clearance: calc(var(--nav-height) + env(safe-area-inset-bottom) + 44px);
   --header-main-height: calc(64px + env(safe-area-inset-top));
   --page-gutter: 18px;
   color-scheme: light;
@@ -144,6 +145,7 @@ html[data-theme="dark"] {
     min-height: 100%;
     background: var(--app-bg);
     overscroll-behavior-x: none;
+    scroll-padding-bottom: var(--bottom-nav-clearance);
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-text-size-adjust: 100%;
@@ -162,6 +164,7 @@ html[data-theme="dark"] {
     margin: 0;
     overflow-x: hidden;
     overscroll-behavior-x: none;
+    scroll-padding-bottom: var(--bottom-nav-clearance);
     background: var(--app-bg);
     color: var(--ink);
     font-family: var(--font-sans);

@@ -65,7 +65,6 @@ export default function App() {
   const [activity, setActivity] = useState(initialActivity);
   const [homeTab, setHomeTab] = useState<HomeTab>("events");
   const [eventFilter, setEventFilter] = useState("Todos");
-  const [communityFilter, setCommunityFilter] = useState("Todos");
   const [globalQuery, setGlobalQuery] = useState("");
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerMode, setComposerMode] = useState<ComposerMode>("post");
@@ -82,7 +81,6 @@ export default function App() {
   const matchesQuery = (text: string): boolean => !query || normalize(text).includes(query);
 
   const eventCategories = useMemo<string[]>(() => ["Todos", ...new Set(events.map((event) => event.category))], [events]);
-  const communityCategories = useMemo<string[]>(() => ["Todos", ...new Set(communities.map((community) => community.category))], [communities]);
 
   const homeEvents = events.filter((event) => matchesQuery(`${event.title} ${event.category} ${event.place} ${event.description}`));
 
@@ -92,8 +90,7 @@ export default function App() {
   });
 
   const discoverCommunities = communities.filter((community) => {
-    const categoryMatch = communityFilter === "Todos" || community.category === communityFilter;
-    return !community.joined && categoryMatch && matchesQuery(`${community.name} ${community.category} ${community.pulse} ${community.description ?? ""}`);
+    return !community.joined && matchesQuery(`${community.name} ${community.category} ${community.pulse} ${community.description ?? ""}`);
   });
 
   useEffect(() => {
@@ -245,7 +242,7 @@ export default function App() {
       <div
         className={cn(
           "app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden md:px-6",
-          screen === "home" || isEventDetail ? "pb-0 md:pb-0" : "pb-[calc(var(--nav-height)+18px)] md:pb-[calc(var(--nav-height)+28px)]"
+          isEventDetail ? "pb-0" : "pb-[var(--bottom-nav-clearance)]"
         )}
       >
         {screen !== "profile" && screen !== "home" && screen !== "events" ? (
@@ -270,11 +267,8 @@ export default function App() {
               events={homeEvents}
               communities={discoverCommunities}
               homeTab={homeTab}
-              communityFilter={communityFilter}
-              communityCategories={communityCategories}
               themeMode={themeMode}
               onHomeTab={setHomeTab}
-              onCommunityFilter={setCommunityFilter}
               onOpenEvents={openEventsFromHome}
               onOpenEventDetails={openEventDetails}
               onToggleTheme={toggleTheme}

@@ -1,12 +1,19 @@
+// Convierte el perfil de usuario con relaciones a un objeto JSON-seguro.
+// Misma razón que en events: bigint y Date no se pueden serializar con JSON.stringify.
+
 import type { UserProfileWithRelations } from "../data/users-repository";
 
+// Tipos auxiliares derivados del repositorio para tipar las funciones helper
+// sin repetir la forma completa del objeto en cada firma.
 type EventSummary = UserProfileWithRelations["evento"][number];
 type ComunidadSummary = UserProfileWithRelations["comunidad"][number];
 
+// bigint → string porque JSON no soporta bigint de forma nativa.
 function serializeBigInt(value: bigint): string {
   return value.toString();
 }
 
+// Date → ISO 8601 para que el cliente parsee sin ambigüedad de timezone.
 function serializeDate(value: Date): string {
   return value.toISOString();
 }
@@ -54,6 +61,9 @@ export function serializeUserProfile(user: UserProfileWithRelations) {
       id_facultad: serializeBigInt(user.facultad.id_facultad),
       nombre: user.facultad.nombre
     },
+    // La distinción creados/anotado y creadas/miembro viene de las dos tablas
+    // intermedias del schema: un usuario puede crear un evento sin anotarse,
+    // o anotarse a uno que creó otro usuario.
     eventos_creados: user.evento.map(serializeEvent),
     eventos_anotado: user.user_evento.map((ue) => serializeEvent(ue.evento)),
     comunidades_creadas: user.comunidad.map(serializeComunidad),

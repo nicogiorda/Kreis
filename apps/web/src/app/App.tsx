@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { AuthFlow } from "../components/auth/AuthFlow";
 import { ComposerModal } from "../components/composer/ComposerModal";
 import { CommunitiesScreen } from "../components/communities/CommunitiesScreen";
 import { EventDetailScreen } from "../components/events/EventDetailScreen";
@@ -60,6 +61,7 @@ function getInitialThemeMode(): ThemeMode {
 }
 
 export default function App() {
+  const [authComplete, setAuthComplete] = useState(false);
   const [events, setEvents] = useState(initialEvents);
   const [communities, setCommunities] = useState(initialCommunities);
   const [activity, setActivity] = useState(initialActivity);
@@ -239,77 +241,83 @@ export default function App() {
   return (
     <>
       <SplashScreen />
-      <div
-        className={cn(
-          "app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden md:px-6",
-          isEventDetail ? "pb-0" : "pb-[var(--bottom-nav-clearance)]"
-        )}
-      >
-        {screen !== "profile" && screen !== "home" && screen !== "events" ? (
-          <Header
-            globalQuery={globalQuery}
-            themeMode={themeMode}
-            onQueryChange={setGlobalQuery}
-            onToggleTheme={toggleTheme}
-          />
-        ) : null}
+      {authComplete ? (
+        <>
+          <div
+            className={cn(
+              "app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden md:px-6",
+              isEventDetail ? "pb-0" : "pb-[var(--bottom-nav-clearance)]"
+            )}
+          >
+            {screen !== "profile" && screen !== "home" && screen !== "events" ? (
+              <Header
+                globalQuery={globalQuery}
+                themeMode={themeMode}
+                onQueryChange={setGlobalQuery}
+                onToggleTheme={toggleTheme}
+              />
+            ) : null}
 
-        <main className={cn(screen === "home" || isEventDetail ? "px-0" : "px-[var(--page-gutter)] md:px-0")} tabIndex={-1}>
-          {isEventDetail && activeEvent && (
-            <EventDetailScreen
-              event={activeEvent}
-              onBack={closeEventDetails}
-              onToggleInterest={toggleEventInterest}
-            />
-          )}
-          {!isEventDetail && screen === "home" && (
-            <HomeScreen
-              events={homeEvents}
-              communities={discoverCommunities}
-              homeTab={homeTab}
-              themeMode={themeMode}
-              onHomeTab={setHomeTab}
-              onOpenEvents={openEventsFromHome}
-              onOpenEventDetails={openEventDetails}
-              onToggleTheme={toggleTheme}
-              onToggleJoin={toggleJoin}
-            />
-          )}
-          {!isEventDetail && screen === "events" && (
-            <EventsScreen
-              events={visibleEvents}
-              eventFilter={eventFilter}
-              eventCategories={eventCategories}
-              searchQuery={globalQuery}
-              themeMode={themeMode}
-              onFilter={setEventFilter}
-              onSearchChange={setGlobalQuery}
-              onCreateEvent={() => openComposer("event")}
-              onOpenEventDetails={openEventDetails}
-              onToggleTheme={toggleTheme}
-            />
-          )}
-          {!isEventDetail && screen === "communities" && <CommunitiesScreen communities={communities} discover={discoverCommunities} posts={activity} onToggleJoin={toggleJoin} />}
-          {!isEventDetail && screen === "profile" && (
-            <ProfileScreen
+            <main className={cn(screen === "home" || isEventDetail ? "px-0" : "px-[var(--page-gutter)] md:px-0")} tabIndex={-1}>
+              {isEventDetail && activeEvent && (
+                <EventDetailScreen
+                  event={activeEvent}
+                  onBack={closeEventDetails}
+                  onToggleInterest={toggleEventInterest}
+                />
+              )}
+              {!isEventDetail && screen === "home" && (
+                <HomeScreen
+                  events={homeEvents}
+                  communities={discoverCommunities}
+                  homeTab={homeTab}
+                  themeMode={themeMode}
+                  onHomeTab={setHomeTab}
+                  onOpenEvents={openEventsFromHome}
+                  onOpenEventDetails={openEventDetails}
+                  onToggleTheme={toggleTheme}
+                  onToggleJoin={toggleJoin}
+                />
+              )}
+              {!isEventDetail && screen === "events" && (
+                <EventsScreen
+                  events={visibleEvents}
+                  eventFilter={eventFilter}
+                  eventCategories={eventCategories}
+                  searchQuery={globalQuery}
+                  themeMode={themeMode}
+                  onFilter={setEventFilter}
+                  onSearchChange={setGlobalQuery}
+                  onCreateEvent={() => openComposer("event")}
+                  onOpenEventDetails={openEventDetails}
+                  onToggleTheme={toggleTheme}
+                />
+              )}
+              {!isEventDetail && screen === "communities" && <CommunitiesScreen communities={communities} discover={discoverCommunities} posts={activity} onToggleJoin={toggleJoin} />}
+              {!isEventDetail && screen === "profile" && (
+                <ProfileScreen
+                  communities={communities}
+                  events={events}
+                  activity={activity}
+                />
+              )}
+            </main>
+
+            <ComposerModal
+              open={composerOpen}
+              mode={composerMode}
               communities={communities}
-              events={events}
-              activity={activity}
+              onClose={() => setComposerOpen(false)}
+              onCreateCommunity={createCommunity}
+              onCreateEvent={createEvent}
+              onCreatePost={createPost}
             />
-          )}
-        </main>
-
-        <ComposerModal
-          open={composerOpen}
-          mode={composerMode}
-          communities={communities}
-          onClose={() => setComposerOpen(false)}
-          onCreateCommunity={createCommunity}
-          onCreateEvent={createEvent}
-          onCreatePost={createPost}
-        />
-      </div>
-      {!isEventDetail && <BottomNav screen={screen} onNavigate={navigate} />}
+          </div>
+          {!isEventDetail && <BottomNav screen={screen} onNavigate={navigate} />}
+        </>
+      ) : (
+        <AuthFlow onComplete={() => setAuthComplete(true)} />
+      )}
     </>
   );
 }

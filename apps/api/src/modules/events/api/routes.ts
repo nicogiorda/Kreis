@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { Router } from "express";
+import { type Request, Router } from "express";
 import { z } from "zod";
 import { config } from "../../../core/config";
 import {
@@ -7,7 +7,8 @@ import {
   findAcceptedEventById,
   findUserByAuthId,
   listAcceptedEvents,
-  listAcceptedEventsLimit
+  listAcceptedEventsLimit,
+  registerEventInterest
 } from "../data/events-repository";
 import { serializeEvent } from "./serialize-event";
 import { serializeEventSummary } from "./serialize-event-summary";
@@ -48,6 +49,53 @@ function getBearerToken(authorizationHeader: string | undefined): string | null 
   return token;
 }
 
+type AuthenticatedEventUser =
+  | { ok: true; user: { legajo: number } }
+  | { ok: false; status: number; error: { code: string; message: string } };
+
+async function authenticateEventUser(request: Request): Promise<AuthenticatedEventUser> {
+  const accessToken = getBearerToken(request.headers.authorization);
+
+  if (!accessToken) {
+    return {
+      ok: false,
+      status: 401,
+      error: {
+        code: "missing_token",
+        message: "Authorization Bearer token is required"
+      }
+    };
+  }
+
+  const { data: authData, error: authError } = await supabaseAuth.auth.getUser(accessToken);
+
+  if (authError || !authData.user) {
+    return {
+      ok: false,
+      status: 401,
+      error: {
+        code: "invalid_token",
+        message: authError?.message ?? "Invalid access token"
+      }
+    };
+  }
+
+  const user = await findUserByAuthId(authData.user.id);
+
+  if (!user) {
+    return {
+      ok: false,
+      status: 403,
+      error: {
+        code: "profile_not_found",
+        message: "Authenticated user does not have a Kreis profile"
+      }
+    };
+  }
+
+  return { ok: true, user };
+}
+
 const eventIdParamsSchema = z.object({
   id_evento: z
     .string()
@@ -59,19 +107,22 @@ const eventIdParamsSchema = z.object({
 const eventCreationSchema = z.object({
   nombre: z.string().trim().min(1),
   ubicacion: z.string().trim().min(1).optional(),
-  fecha_inicio: z.string().trim().transform((value, context) => {
-    const parsedDate = parseArgentinaDateTime(value);
+  fecha_inicio: z
+    .string()
+    .trim()
+    .transform((value, context) => {
+      const parsedDate = parseArgentinaDateTime(value);
 
-    if (!parsedDate) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "fecha_inicio debe ser ISO. Si no incluye timezone, se interpreta como hora de Argentina"
-      });
-      return z.NEVER;
-    }
+      if (!parsedDate) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "fecha_inicio debe ser ISO. Si no incluye timezone, se interpreta como hora de Argentina"
+        });
+        return z.NEVER;
+      }
 
-    return parsedDate;
-  }),
+      return parsedDate;
+    }),
   descripcion: z.string().trim().min(1).optional(),
   topicos: z.array(z.coerce.number().int().positive()).default([])
 });
@@ -81,26 +132,11 @@ export function createEventsRouter(): Router {
 
   router.post("/", async (request, response, next) => {
     try {
-      const accessToken = getBearerToken(request.headers.authorization);
+      const authenticatedUser = await authenticateEventUser(request);
 
-      if (!accessToken) {
-        response.status(401).json({
-          error: {
-            code: "missing_token",
-            message: "Authorization Bearer token is required"
-          }
-        });
-        return;
-      }
-
-      const { data: authData, error: authError } = await supabaseAuth.auth.getUser(accessToken);
-
-      if (authError || !authData.user) {
-        response.status(401).json({
-          error: {
-            code: "invalid_token",
-            message: authError?.message ?? "Invalid access token"
-          }
+      if (!authenticatedUser.ok) {
+        response.status(authenticatedUser.status).json({
+          error: authenticatedUser.error
         });
         return;
       }
@@ -118,21 +154,9 @@ export function createEventsRouter(): Router {
         return;
       }
 
-      const user = await findUserByAuthId(authData.user.id);
-
-      if (!user) {
-        response.status(403).json({
-          error: {
-            code: "profile_not_found",
-            message: "Authenticated user does not have a Kreis profile"
-          }
-        });
-        return;
-      }
-
       const event = await createPendingEvent({
         ...parsedBody.data,
-        legajo: user.legajo
+        legajo: authenticatedUser.user.legajo
       });
 
       response.status(201).json({
@@ -143,6 +167,56 @@ export function createEventsRouter(): Router {
     }
   });
 
+  // esta ruta sirve para que un usuario se interese en un evento (o deje de estar interesado si ya lo estaba).
+  router.post("/:id_evento/interes", async (request, response, next) => {
+    try {
+      const parsedParams = eventIdParamsSchema.safeParse(request.params);
+
+      if (!parsedParams.success) {
+        response.status(400).json({
+          error: {
+            code: "validation_error",
+            message: "Invalid event id",
+            details: parsedParams.error.flatten().fieldErrors
+          }
+        });
+        return;
+      }
+
+      const authenticatedUser = await authenticateEventUser(request);
+
+      if (!authenticatedUser.ok) {
+        response.status(authenticatedUser.status).json({
+          error: authenticatedUser.error
+        });
+        return;
+      }
+
+      const interest = await registerEventInterest(authenticatedUser.user.legajo, parsedParams.data.id_evento);
+
+      if (!interest) {
+        response.status(404).json({
+          error: {
+            code: "event_not_found",
+            message: "Evento no encontrado o no aceptado"
+          }
+        });
+        return;
+      }
+
+      response.status(interest.alreadyRegistered ? 200 : 201).json({
+        interest: {
+          legajo: interest.legajo,
+          id_evento: interest.id_evento.toString(),
+          already_registered: interest.alreadyRegistered
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // sirve para traer el detalle resumido de los eventos mas recientes. 
   router.get("/accepted/summary/limit", async (_request, response, next) => {
     try {
       const events = await listAcceptedEventsLimit();
@@ -154,7 +228,8 @@ export function createEventsRouter(): Router {
       next(error);
     }
   });
-
+  
+  // sirve para traer el detalle resumido de todos los eventos.
   router.get("/accepted/summary/all", async (_request, response, next) => {
     try {
       const events = await listAcceptedEvents();

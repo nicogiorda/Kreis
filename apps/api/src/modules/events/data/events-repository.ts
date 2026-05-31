@@ -92,7 +92,6 @@ export type EventWithRelations = {
   }>;
 };
 
-
 // Versión reducida del evento para listar en el home.
 // No incluye relaciones para mantener la respuesta liviana.
 export type EventSummary = {
@@ -100,6 +99,12 @@ export type EventSummary = {
   nombre: string;
   ubicacion: string | null;
   fecha_inicio: Date;
+};
+
+export type EventInterestRegistration = {
+  legajo: number;
+  id_evento: bigint;
+  alreadyRegistered: boolean;
 };
 
 // Devuelve los 6 próximos eventos aceptados. El límite de 6 es para el rail
@@ -136,7 +141,7 @@ export async function listAcceptedEvents(): Promise<EventSummary[]> {
     },
     orderBy: {
       fecha_inicio: "asc"
-    },
+    }
   });
 }
 
@@ -148,7 +153,7 @@ export async function findAcceptedEventById(id_evento: bigint): Promise<EventWit
       id_evento,
       estado: ACCEPTED_EVENT_STATUS
     },
-    include: eventInclude 
+    include: eventInclude
   });
 }
 export type CreateEventInput = {
@@ -164,6 +169,8 @@ export type CreateEventInput = {
 // El flujo de moderación es: usuario crea → admin acepta o rechaza.
 // Los tópicos se vinculan en la misma operación via evento_topico.
 export async function createPendingEvent(input: CreateEventInput): Promise<EventWithRelations> {
+  const uniqueTopicos = Array.from(new Set(input.topicos));
+
   return prisma.evento.create({
     data: {
       legajo: input.legajo,
@@ -173,7 +180,7 @@ export async function createPendingEvent(input: CreateEventInput): Promise<Event
       descripcion: input.descripcion,
       estado: PENDING_EVENT_STATUS,
       evento_topico: {
-        create: input.topicos.map((id_topico) => ({
+        create: uniqueTopicos.map((id_topico) => ({
           topico: {
             connect: {
               id_topico: BigInt(id_topico)
@@ -196,3 +203,33 @@ export async function findUserByAuthId(auth_id: string): Promise<{ legajo: numbe
   });
 }
 
+export async function registerEventInterest(
+  legajo: number,
+  id_evento: bigint
+): Promise<EventInterestRegistration | null> {
+  const event = await prisma.evento.findFirst({
+    where: {
+      id_evento,
+      estado: ACCEPTED_EVENT_STATUS
+    },
+    select: {
+      id_evento: true
+    }
+  });
+
+  if (!event) return null;
+
+  const createdInterest = await prisma.user_evento.createMany({
+    data: {
+      legajo,
+      id_evento: event.id_evento
+    },
+    skipDuplicates: true
+  });
+
+  return {
+    legajo,
+    id_evento: event.id_evento,
+    alreadyRegistered: createdInterest.count === 0
+  };
+}

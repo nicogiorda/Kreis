@@ -49,18 +49,9 @@ export function EventDetailScreen({ event, onBack, onToggleInterest }: EventDeta
   return (
     <section className="mx-auto grid min-h-dvh w-full max-w-[430px] animate-[rise_220ms_ease-out] overflow-hidden bg-[var(--app-bg)] text-kreis-ink" data-screen="event-detail">
       <div className="event-detail-photo-placeholder relative h-[360px] overflow-hidden bg-kreis-event-surface">
-        {event.imageUrl ? (
-          <img
-            className="absolute inset-0 size-full object-cover"
-            src={event.imageUrl}
-            alt=""
-            decoding="async"
-          />
-        ) : (
-          <div className="absolute inset-x-[31px] bottom-[40px] grid h-[188px] place-items-center rounded-[24px] bg-[var(--event-photo-placeholder)] text-[var(--event-photo-glyph)]">
-            <CameraMinimalistic className="size-[54px]" weight="LineDuotone" aria-hidden="true" />
-          </div>
-        )}
+        <div className="absolute inset-x-[31px] bottom-[40px] grid h-[188px] place-items-center rounded-[24px] bg-[var(--event-photo-placeholder)] text-[var(--event-photo-glyph)]">
+          <CameraMinimalistic className="size-[54px]" weight="LineDuotone" aria-hidden="true" />
+        </div>
         <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/5 to-transparent" aria-hidden="true" />
 
         <div className="absolute inset-x-0 top-[calc(20px+env(safe-area-inset-top))] z-[2] flex items-center justify-between px-[13px]">

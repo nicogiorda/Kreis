@@ -15,7 +15,6 @@ export const initialEvents: KreisEvent[] = [
     time: "9:00",
     organizer: "UADE",
     detailDescription: "Expo UADE es un evento anual de orientacion vocacional organizado por la Universidad Argentina de la Empresa (UADE), disenado para estudiantes secundarios y futuros ingresantes. Funciona como una muestra de su oferta academica, ofreciendo charlas, stands de carreras, actividades inmersivas y asesoramiento para conocer la vida universitaria y el futuro profesional.",
-    imageUrl: "/event-images/expo-uade.png",
     official: true,
     description: "Del 27 al 29 de Mayo, estudiantes de colegios secundarios podrán participar en charlas en vivo y diversas actividades para tener un acercamiento a la vida universitaria."
   },
@@ -30,7 +29,6 @@ export const initialEvents: KreisEvent[] = [
     icon: "F5",
     tone: "orange",
     interested: false,
-    imageUrl: "/event-images/torneo-futbol-5.png",
     description: "Torneo relampago para equipos de cinco, con fixture corto y cruces mixtos durante la tarde."
   },
   {
@@ -44,7 +42,6 @@ export const initialEvents: KreisEvent[] = [
     icon: "NC",
     tone: "green",
     interested: false,
-    imageUrl: "/event-images/noche-de-cine.png",
     description: "Proyeccion compartida y charla abierta para cortar la semana con estudiantes de distintas carreras."
   },
   {
@@ -58,7 +55,6 @@ export const initialEvents: KreisEvent[] = [
     icon: "JU",
     tone: "orange",
     interested: false,
-    imageUrl: "/event-images/juegos-uade.png",
     official: true,
     description: "Jornada de juegos, equipos y actividades cortas para conocer gente nueva dentro del campus."
   },
@@ -73,7 +69,6 @@ export const initialEvents: KreisEvent[] = [
     icon: "NE",
     tone: "pumpkin",
     interested: true,
-    imageUrl: "/event-images/noche-estudiantil.png",
     description: "Salida grupal para estudiantes, con lista Kreis y punto de encuentro cerca del campus."
   },
   {
@@ -87,7 +82,6 @@ export const initialEvents: KreisEvent[] = [
     icon: "CT",
     tone: "green",
     interested: false,
-    imageUrl: "/event-images/torneo-catan.png",
     description: "Mesas rotativas de Catan para jugadores nuevos y avanzados, con cupos limitados."
   }
 ];

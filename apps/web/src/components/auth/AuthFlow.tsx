@@ -43,7 +43,7 @@ function BrandLogo({ login = false }: { login?: boolean }) {
 }
 
 function CharacterBackground({ src, top = 0 }: { src: string; top?: number }) {
-  return <img className="auth-character-bg" style={{ top }} src={src} alt="" aria-hidden="true" />;
+  return <img className="auth-character-bg" style={{ top: `${(top / 852) * 100}%` }} src={src} alt="" aria-hidden="true" />;
 }
 
 function ContinueButton({ children = "Continuar", className, disabled = false, onClick }: { children?: React.ReactNode; className?: string; disabled?: boolean; onClick: () => void }) {
@@ -88,6 +88,7 @@ function LoginScreen({ onContinue }: { onContinue: () => void }) {
 
 function UniversityScreen({ onContinue }: { onContinue: () => void }) {
   const [university, setUniversity] = useState("");
+  const [studentId, setStudentId] = useState("");
 
   return (
     <AuthScreen tone="green">
@@ -95,13 +96,16 @@ function UniversityScreen({ onContinue }: { onContinue: () => void }) {
       <Progress step="university" />
       <BrandLogo />
       <h1 className="auth-title auth-title--university">ELIGE TU<br />UNIVERSIDAD</h1>
-      <select className="auth-field auth-select" value={university} onChange={(event) => setUniversity(event.target.value)} aria-label="Selecciona una universidad">
-        <option value="">Selecciona una universidad</option>
-        <option value="uade">UADE</option>
-        <option value="uba">UBA</option>
-        <option value="utn">UTN</option>
-      </select>
-      <ContinueButton className="auth-continue-button--bottom" onClick={onContinue} />
+      <div className="auth-university-fields">
+        <select className="auth-field auth-select" value={university} onChange={(event) => setUniversity(event.target.value)} aria-label="Selecciona una universidad">
+          <option value="">Selecciona una universidad</option>
+          <option value="uade">UADE</option>
+          <option value="uba">UBA</option>
+          <option value="utn">UTN</option>
+        </select>
+        <input className="auth-field" type="text" inputMode="numeric" autoComplete="off" value={studentId} onChange={(event) => setStudentId(event.target.value)} placeholder="Legajo" aria-label="Legajo" />
+      </div>
+      <ContinueButton className="auth-continue-button--bottom" disabled={!university || !studentId.trim()} onClick={onContinue} />
     </AuthScreen>
   );
 }

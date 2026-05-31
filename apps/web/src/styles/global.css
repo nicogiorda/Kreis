@@ -621,18 +621,18 @@ html[data-theme="dark"] {
 @layer components {
   .auth-flow-shell {
     display: grid;
+    width: 100%;
     min-height: 100vh;
     min-height: 100dvh;
-    place-items: center;
     overflow: hidden;
     background: #f7edda;
   }
 
   .auth-screen {
     position: relative;
-    width: min(100vw, 393px);
-    height: min(100dvh, 852px);
-    min-height: min(100dvh, 667px);
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     animation: auth-screen-enter 180ms ease-out both;
   }
@@ -665,7 +665,7 @@ html[data-theme="dark"] {
 
   .auth-progress {
     position: absolute;
-    top: 60px;
+    top: 7.04%;
     left: 22px;
     right: 31px;
     z-index: 3;
@@ -686,7 +686,7 @@ html[data-theme="dark"] {
 
   .auth-brand-logo {
     position: absolute;
-    top: 80px;
+    top: 9.39%;
     left: 22px;
     z-index: 3;
     width: 128px;
@@ -695,7 +695,7 @@ html[data-theme="dark"] {
   }
 
   .auth-brand-logo--login {
-    top: 97px;
+    top: 11.38%;
     left: 42px;
   }
 
@@ -714,51 +714,54 @@ html[data-theme="dark"] {
   }
 
   .auth-title--university {
-    top: 519px;
+    top: 60.92%;
   }
 
   .auth-title--interests {
-    top: 504px;
+    top: 59.15%;
     font-size: 42px;
   }
 
   .auth-title--profile {
-    top: 130px;
+    top: 15.26%;
   }
 
   .auth-title--password {
-    top: 141px;
+    top: 16.55%;
   }
 
   .auth-title--certificate {
-    top: 160px;
+    top: 18.78%;
   }
 
   .auth-title--login {
-    top: 150px;
+    top: 17.61%;
   }
 
   .auth-field-stack {
     position: absolute;
     z-index: 4;
     display: grid;
-    width: 310px;
+    width: min(calc(100vw - 84px), 310px);
     gap: 11px;
   }
 
   .auth-field-stack--login {
-    top: 225px;
-    left: 42px;
+    top: 26.41%;
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   .auth-field-stack--profile {
-    top: 248px;
-    left: 42px;
+    top: 29.11%;
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   .auth-field-stack--password {
-    top: 262px;
-    left: 42px;
+    top: 30.75%;
+    left: 50%;
+    transform: translateX(-50%);
   }
 
   .auth-field {
@@ -786,12 +789,18 @@ html[data-theme="dark"] {
     background: rgba(247, 237, 218, 0.3);
   }
 
-  .auth-select {
+  .auth-university-fields {
     position: absolute;
-    right: 41px;
-    bottom: 151px;
+    bottom: 15.38%;
+    left: 50%;
     z-index: 4;
-    width: 310px;
+    display: grid;
+    width: min(calc(100vw - 84px), 310px);
+    gap: 11px;
+    transform: translateX(-50%);
+  }
+
+  .auth-select {
     background: rgba(247, 237, 218, 0.31);
   }
 
@@ -828,38 +837,40 @@ html[data-theme="dark"] {
 
   .auth-continue-button--bottom {
     right: 32px;
-    bottom: 47px;
+    bottom: 5.52%;
   }
 
   .auth-continue-button--profile {
-    top: 388px;
+    top: 45.54%;
     right: 39px;
   }
 
   .auth-continue-button--password {
-    top: 361px;
+    top: 42.37%;
     right: 37px;
     background: #2e4b3c;
     color: #f7edda;
   }
 
   .auth-continue-button--login {
-    top: 325px;
+    top: 38.15%;
     right: 32px;
   }
 
   .auth-interest-grid {
     position: absolute;
-    top: 616px;
-    left: 36px;
+    top: 72.3%;
+    left: 50%;
     z-index: 4;
     display: grid;
-    grid-template-columns: repeat(3, 101px);
+    width: min(calc(100vw - 72px), 321px);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 11px 9px;
+    transform: translateX(-50%);
   }
 
   .auth-interest-pill {
-    width: 101px;
+    width: 100%;
     height: 22px;
     border: 0;
     border-radius: 50px;
@@ -877,7 +888,7 @@ html[data-theme="dark"] {
 
   .auth-interest-note {
     position: absolute;
-    top: 718px;
+    top: 84.27%;
     left: 0;
     z-index: 4;
     width: 100%;
@@ -891,8 +902,8 @@ html[data-theme="dark"] {
 
   .auth-certificate-button {
     position: absolute;
-    top: 410px;
-    left: 104px;
+    top: 48.12%;
+    left: 50%;
     z-index: 4;
     width: 185px;
     height: 31px;
@@ -903,27 +914,30 @@ html[data-theme="dark"] {
     font-size: 16px;
     font-weight: 500;
     line-height: 31px;
+    transform: translateX(-50%);
     transition: transform 150ms ease-out;
   }
 
   .auth-certificate-button:active {
-    transform: scale(0.97);
+    transform: translateX(-50%) scale(0.97);
   }
 
   .auth-validated-check {
     position: absolute;
-    top: 339px;
-    left: 110px;
+    top: 39.79%;
+    left: 50%;
     width: 173px;
     height: 173px;
+    transform: translateX(-50%);
   }
 
   .auth-welcome-character {
     position: absolute;
-    top: 158px;
-    left: 104px;
+    top: 18.54%;
+    left: 50%;
     width: 185px;
     height: 185px;
+    transform: translateX(-50%);
   }
 
   .auth-welcome-character img {
@@ -948,16 +962,17 @@ html[data-theme="dark"] {
 
   .auth-welcome-wordmark {
     position: absolute;
-    top: 354px;
-    left: 139px;
+    top: 41.55%;
+    left: 50%;
     width: 114px;
     height: 35px;
     object-fit: contain;
+    transform: translateX(-50%);
   }
 
   .auth-welcome-tagline {
     position: absolute;
-    top: 389px;
+    top: 45.66%;
     left: 0;
     width: 100%;
     margin: 0;
@@ -970,11 +985,12 @@ html[data-theme="dark"] {
 
   .auth-welcome-actions {
     position: absolute;
-    bottom: 118px;
-    left: 41px;
+    bottom: 13.85%;
+    left: 50%;
     display: grid;
-    width: 310px;
+    width: min(calc(100% - 82px), 310px);
     gap: 9px;
+    transform: translateX(-50%);
   }
 
   .auth-welcome-button {
@@ -1002,15 +1018,6 @@ html[data-theme="dark"] {
     color: #0a0a0a;
   }
 
-  @media (max-width: 392px) {
-    .auth-screen {
-      width: 100vw;
-    }
-
-    .auth-screen > * {
-      transform-origin: top left;
-    }
-  }
 }
 
 @keyframes auth-screen-enter {

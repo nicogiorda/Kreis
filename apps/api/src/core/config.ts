@@ -3,6 +3,7 @@ import { z } from "zod";
 
 const environmentSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  PORT: z.coerce.number().int().positive().optional(),
   API_PORT: z.coerce.number().int().positive().default(4000),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
   DATABASE_URL: z.string().min(1),
@@ -12,4 +13,9 @@ const environmentSchema = z.object({
   SUPABASE_ANON_KEY: z.string().min(1)
 });
 
-export const config = environmentSchema.parse(process.env);
+const environment = environmentSchema.parse(process.env);
+
+export const config = {
+  ...environment,
+  API_PORT: environment.PORT ?? environment.API_PORT
+};

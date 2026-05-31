@@ -21,7 +21,7 @@
 import { Router } from "express";
 import { createClient } from "@supabase/supabase-js";
 import { config } from "../../../core/config";
-import { findUserProfileByAuthId } from "../data/users-repository";
+import { findUserProfileByAuthId, listFacultades, listTopicos } from "../data/users-repository";
 import { serializeUserProfile } from "./serialize-user-profile";
 
 // Cliente Supabase con la anon key, usado unicamente para verificar el JWT
@@ -33,6 +33,36 @@ const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY, {
 export function createUsersRouter(): Router {
   const router = Router();
 
+
+  router.get("/topicos", async (_request, response, next) => {
+    try {
+      const topicos = await listTopicos();
+
+      response.json({
+        topicos: topicos.map((topico) => ({
+          id_topico: topico.id_topico.toString(),
+          topico: topico.topico
+        }))
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get("/facultades", async (_request, response, next) => {
+    try {
+      const facultades = await listFacultades();
+
+      response.json({
+        facultades: facultades.map((facultad) => ({
+          id_facultad: facultad.id_facultad.toString(),
+          nombre: facultad.nombre
+        }))
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
   // GET /users/me
   // Devuelve el perfil completo del usuario que esta haciendo el request.
   // Requiere header: Authorization: Bearer <jwt>
@@ -90,3 +120,4 @@ export function createUsersRouter(): Router {
 
   return router;
 }
+

@@ -1,11 +1,24 @@
 info:
   name: GET EVENT
   type: http
+  seq: 1
 
 http:
-  method: GET
-  url: http://localhost:4000/api/v1/events/1
-  auth: inherit
+  method: POST
+  url: http://localhost:4000/api/v1/events/
+  body:
+    type: json
+    data: |-
+      {
+        "nombre": "Evento Test",
+        "ubicacion": "Microestadio",
+        "fecha_inicio": "2026-05-28T12:17:43",
+        "descripcion": "ESTO ES UNA PRUEBA DE KREIS",
+        "topicos": [5,3]
+      }
+  auth:
+    type: bearer
+    token: eyJhbGciOiJFUzI1NiIsImtpZCI6IjYzZTQ5MDZkLWVlMWQtNDgzMi1hNzg0LTgzYWQyNTE3NTVjYSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2dkZmN2eGNtYW9udm9kZHB1amZ5LnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiIzYzYwZDI0ZC02MWVmLTRlNDctYWQ1Ni04ZTAyYzI5OGZiMDgiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzgwMjQ1NTM2LCJpYXQiOjE3ODAyNDE5MzYsImVtYWlsIjoidm1hbm5pbm9AdWFkZS5lZHUuYXIiLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7ImVtYWlsX3ZlcmlmaWVkIjp0cnVlfSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJwYXNzd29yZCIsInRpbWVzdGFtcCI6MTc4MDI0MTkzNn1dLCJzZXNzaW9uX2lkIjoiNDJjMjFkM2QtMmZmZC00OGZjLTg1YWUtNTAxMDBkM2ZmN2JiIiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.5LfzSAObdszh1mIBLVCn9X8B7gASRepTYFOr6GEe8B7Kal5exhyyYA_0ohjy4TthLhqLi_-KaOulMHGfIByTgw
 
 settings:
   encodeUrl: true

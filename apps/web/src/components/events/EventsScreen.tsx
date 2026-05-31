@@ -2,11 +2,13 @@ import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { EmptyState } from "../common/EmptyState";
 import { ThemeToggleIcon } from "../common/Icons";
 import { EventCard } from "./EventCard";
-import type { KreisEvent, ThemeMode } from "../../types";
+import type { EventLoadStatus, KreisEvent, ThemeMode } from "../../types";
 import { cn } from "../../utils/cn";
+import { normalize } from "../../utils/text";
 
 type EventsScreenProps = {
   events: KreisEvent[];
+  eventLoadStatus: EventLoadStatus;
   eventFilter: string;
   eventCategories: string[];
   searchQuery: string;
@@ -15,18 +17,20 @@ type EventsScreenProps = {
   onSearchChange: (query: string) => void;
   onCreateEvent: () => void;
   onOpenEventDetails: (eventId: string) => void;
+  onRetryEvents: () => void;
   onToggleTheme: () => void;
 };
 
 function getCategoryLabel(category: string): string {
   if (category === "Todos") return "Todos";
-  if (category === "Academico") return "Acad.";
+  if (normalize(category) === "academico") return "Acad.";
 
   return category;
 }
 
 export function EventsScreen({
   events,
+  eventLoadStatus,
   eventFilter,
   eventCategories,
   searchQuery,
@@ -35,6 +39,7 @@ export function EventsScreen({
   onSearchChange,
   onCreateEvent,
   onOpenEventDetails,
+  onRetryEvents,
   onToggleTheme
 }: EventsScreenProps) {
   const filterButtonClass = (active: boolean) => cn(
@@ -99,7 +104,15 @@ export function EventsScreen({
       </div>
 
       <div className="mt-[13px] grid grid-cols-2 gap-x-[17px] gap-y-[15px]">
-        {events.length ? events.map((event) => <EventCard event={event} key={event.id} onOpenEventDetails={onOpenEventDetails} />) : (
+        {events.length ? events.map((event) => <EventCard event={event} key={event.id} onOpenEventDetails={onOpenEventDetails} />) : eventLoadStatus === "loading" ? (
+          <div className="col-span-full">
+            <EmptyState title="Cargando eventos" text="Estamos buscando todos los eventos." />
+          </div>
+        ) : eventLoadStatus === "error" ? (
+          <div className="col-span-full">
+            <EmptyState title="No pudimos cargar los eventos" text="Intentá nuevamente en unos segundos." actionLabel="Reintentar" onAction={onRetryEvents} />
+          </div>
+        ) : (
           <div className="col-span-full">
             <EmptyState text="Proba buscando otra categoria." />
           </div>

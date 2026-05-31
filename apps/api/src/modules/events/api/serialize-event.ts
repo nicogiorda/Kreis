@@ -30,7 +30,7 @@ function serializeUser(user: EventUser) {
   };
 }
 
-export function serializeEvent(event: EventWithRelations) {
+export function serializeEvent(event: EventWithRelations, authenticatedLegajo?: number) {
   const usuariosInteresados = event.user_evento.map((userEvent) => serializeUser(userEvent.usuario));
 
   return {
@@ -49,7 +49,10 @@ export function serializeEvent(event: EventWithRelations) {
     })),
     usuarios_interesados: usuariosInteresados,
     // Calculado acá para que el cliente no tenga que hacer .length en cada render.
-    cantidad_interesados: usuariosInteresados.length
+    cantidad_interesados: usuariosInteresados.length,
+    interested: authenticatedLegajo
+      ? event.user_evento.some((userEvent) => userEvent.usuario.legajo === authenticatedLegajo)
+      : false
   };
 }
 

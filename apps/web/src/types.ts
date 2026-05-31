@@ -10,6 +10,8 @@ export type EventTone = "orange" | "green" | "beige" | "pumpkin";
 
 export type EventCategory = "Todos" | string;
 
+export type EventLoadStatus = "loading" | "ready" | "error";
+
 export type CommunityCategory = "Todos" | string;
 
 export type KreisEvent = {
@@ -20,6 +22,7 @@ export type KreisEvent = {
   month: string;
   place: string;
   category: string;
+  categoryId?: string;
   icon: string;
   tone: EventTone;
   interested: boolean;

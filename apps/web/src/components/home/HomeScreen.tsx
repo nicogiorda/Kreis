@@ -3,7 +3,7 @@ import { CommunityCard } from "../communities/CommunityCard";
 import { EmptyState } from "../common/EmptyState";
 import { EventCard } from "../events/EventCard";
 import { HeroBanner } from "./HeroBanner";
-import type { Community, HomeTab, KreisEvent, ThemeMode } from "../../types";
+import type { Community, EventLoadStatus, HomeTab, KreisEvent, ThemeMode } from "../../types";
 import { cn } from "../../utils/cn";
 
 function pairItems<T>(items: T[]): T[][] {
@@ -45,24 +45,28 @@ function CommunityShelf({ title, communities, onToggleJoin }: CommunityShelfProp
 
 type HomeScreenProps = {
   events: KreisEvent[];
+  eventLoadStatus: EventLoadStatus;
   communities: Community[];
   homeTab: HomeTab;
   themeMode: ThemeMode;
   onHomeTab: (tab: HomeTab) => void;
   onOpenEvents: () => void;
   onOpenEventDetails: (eventId: string) => void;
+  onRetryEvents: () => void;
   onToggleTheme: () => void;
   onToggleJoin: (communityId: string) => void;
 };
 
 export function HomeScreen({
   events,
+  eventLoadStatus,
   communities,
   homeTab,
   themeMode,
   onHomeTab,
   onOpenEvents,
   onOpenEventDetails,
+  onRetryEvents,
   onToggleTheme,
   onToggleJoin
 }: HomeScreenProps) {
@@ -141,7 +145,13 @@ export function HomeScreen({
                         onOpenEvents={onOpenEvents}
                         onOpenEventDetails={onOpenEventDetails}
                       />
-                    )) : <EmptyState text="No hay próximos eventos con esa búsqueda." />}
+                    )) : eventLoadStatus === "loading" ? (
+                      <EmptyState title="Cargando eventos" text="Estamos buscando los próximos eventos." />
+                    ) : eventLoadStatus === "error" ? (
+                      <EmptyState title="No pudimos cargar los eventos" text="Intentá nuevamente en unos segundos." actionLabel="Reintentar" onAction={onRetryEvents} />
+                    ) : (
+                      <EmptyState text="No hay próximos eventos con esa búsqueda." />
+                    )}
                   </div>
                 </div>
 

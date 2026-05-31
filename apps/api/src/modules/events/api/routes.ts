@@ -8,7 +8,7 @@ import {
   findUserByAuthId,
   listAcceptedEvents,
   listAcceptedEventsLimit,
-  registerEventInterest
+  toggleEventInterest
 } from "../data/events-repository";
 import { serializeEvent } from "./serialize-event";
 import { serializeEventSummary } from "./serialize-event-summary";
@@ -94,6 +94,16 @@ async function authenticateEventUser(request: Request): Promise<AuthenticatedEve
   }
 
   return { ok: true, user };
+}
+
+async function authenticateOptionalEventUser(
+  request: Request
+): Promise<AuthenticatedEventUser | { ok: true; user: null }> {
+  if (!getBearerToken(request.headers.authorization)) {
+    return { ok: true, user: null };
+  }
+
+  return authenticateEventUser(request);
 }
 
 const eventIdParamsSchema = z.object({
@@ -192,7 +202,7 @@ export function createEventsRouter(): Router {
         return;
       }
 
-      const interest = await registerEventInterest(authenticatedUser.user.legajo, parsedParams.data.id_evento);
+      const interest = await toggleEventInterest(authenticatedUser.user.legajo, parsedParams.data.id_evento);
 
       if (!interest) {
         response.status(404).json({
@@ -204,11 +214,11 @@ export function createEventsRouter(): Router {
         return;
       }
 
-      response.status(interest.alreadyRegistered ? 200 : 201).json({
+      response.status(200).json({
         interest: {
           legajo: interest.legajo,
           id_evento: interest.id_evento.toString(),
-          already_registered: interest.alreadyRegistered
+          interested: interest.interested
         }
       });
     } catch (error) {
@@ -219,7 +229,16 @@ export function createEventsRouter(): Router {
   // sirve para traer el detalle resumido de los eventos mas recientes. 
   router.get("/accepted/summary/limit", async (_request, response, next) => {
     try {
-      const events = await listAcceptedEventsLimit();
+      const authenticatedUser = await authenticateOptionalEventUser(_request);
+
+      if (!authenticatedUser.ok) {
+        response.status(authenticatedUser.status).json({
+          error: authenticatedUser.error
+        });
+        return;
+      }
+
+      const events = await listAcceptedEventsLimit(authenticatedUser.user?.legajo);
 
       response.json({
         events: events.map(serializeEventSummary)
@@ -232,7 +251,16 @@ export function createEventsRouter(): Router {
   // sirve para traer el detalle resumido de todos los eventos.
   router.get("/accepted/summary/all", async (_request, response, next) => {
     try {
-      const events = await listAcceptedEvents();
+      const authenticatedUser = await authenticateOptionalEventUser(_request);
+
+      if (!authenticatedUser.ok) {
+        response.status(authenticatedUser.status).json({
+          error: authenticatedUser.error
+        });
+        return;
+      }
+
+      const events = await listAcceptedEvents(authenticatedUser.user?.legajo);
 
       response.json({
         events: events.map(serializeEventSummary)
@@ -257,6 +285,15 @@ export function createEventsRouter(): Router {
         return;
       }
 
+      const authenticatedUser = await authenticateOptionalEventUser(request);
+
+      if (!authenticatedUser.ok) {
+        response.status(authenticatedUser.status).json({
+          error: authenticatedUser.error
+        });
+        return;
+      }
+
       const event = await findAcceptedEventById(parsedParams.data.id_evento);
 
       if (!event) {
@@ -270,7 +307,7 @@ export function createEventsRouter(): Router {
       }
 
       response.json({
-        event: serializeEvent(event)
+        event: serializeEvent(event, authenticatedUser.user?.legajo)
       });
     } catch (error) {
       next(error);

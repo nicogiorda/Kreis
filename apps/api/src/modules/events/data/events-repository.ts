@@ -99,17 +99,27 @@ export type EventSummary = {
   nombre: string;
   ubicacion: string | null;
   fecha_inicio: Date;
+  descripcion: string | null;
+  evento_topico: Array<{
+    topico: {
+      id_topico: bigint;
+      topico: string;
+    };
+  }>;
+  user_evento: Array<{
+    legajo: number;
+  }>;
 };
 
 export type EventInterestRegistration = {
   legajo: number;
   id_evento: bigint;
-  alreadyRegistered: boolean;
+  interested: boolean;
 };
 
 // Devuelve los 6 próximos eventos aceptados. El límite de 6 es para el rail
 // del home — no tiene sentido cargar más hasta que el usuario abra la pantalla completa.
-export async function listAcceptedEventsLimit(): Promise<EventSummary[]> {
+export async function listAcceptedEventsLimit(legajo?: number): Promise<EventSummary[]> {
   return prisma.evento.findMany({
     where: {
       estado: ACCEPTED_EVENT_STATUS
@@ -118,7 +128,24 @@ export async function listAcceptedEventsLimit(): Promise<EventSummary[]> {
       id_evento: true,
       nombre: true,
       ubicacion: true,
-      fecha_inicio: true
+      fecha_inicio: true,
+      descripcion: true,
+      evento_topico: {
+        include: {
+          topico: {
+            select: {
+              id_topico: true,
+              topico: true
+            }
+          }
+        }
+      },
+      user_evento: {
+        where: { legajo: legajo ?? -1 },
+        select: {
+          legajo: true
+        }
+      }
     },
     orderBy: {
       fecha_inicio: "asc"
@@ -128,7 +155,7 @@ export async function listAcceptedEventsLimit(): Promise<EventSummary[]> {
 }
 
 // Devuelve todos los eventos aceptados para la pantalla de eventos completa.
-export async function listAcceptedEvents(): Promise<EventSummary[]> {
+export async function listAcceptedEvents(legajo?: number): Promise<EventSummary[]> {
   return prisma.evento.findMany({
     where: {
       estado: ACCEPTED_EVENT_STATUS
@@ -137,7 +164,24 @@ export async function listAcceptedEvents(): Promise<EventSummary[]> {
       id_evento: true,
       nombre: true,
       ubicacion: true,
-      fecha_inicio: true
+      fecha_inicio: true,
+      descripcion: true,
+      evento_topico: {
+        include: {
+          topico: {
+            select: {
+              id_topico: true,
+              topico: true
+            }
+          }
+        }
+      },
+      user_evento: {
+        where: { legajo: legajo ?? -1 },
+        select: {
+          legajo: true
+        }
+      }
     },
     orderBy: {
       fecha_inicio: "asc"
@@ -203,7 +247,7 @@ export async function findUserByAuthId(auth_id: string): Promise<{ legajo: numbe
   });
 }
 
-export async function registerEventInterest(
+export async function toggleEventInterest(
   legajo: number,
   id_evento: bigint
 ): Promise<EventInterestRegistration | null> {
@@ -219,17 +263,42 @@ export async function registerEventInterest(
 
   if (!event) return null;
 
-  const createdInterest = await prisma.user_evento.createMany({
+  const existingInterest = await prisma.user_evento.findUnique({
+    where: {
+      legajo_id_evento: {
+        legajo,
+        id_evento: event.id_evento
+      }
+    }
+  });
+
+  if (existingInterest) {
+    await prisma.user_evento.delete({
+      where: {
+        legajo_id_evento: {
+          legajo,
+          id_evento: event.id_evento
+        }
+      }
+    });
+
+    return {
+      legajo,
+      id_evento: event.id_evento,
+      interested: false
+    };
+  }
+
+  await prisma.user_evento.create({
     data: {
       legajo,
       id_evento: event.id_evento
-    },
-    skipDuplicates: true
+    }
   });
 
   return {
     legajo,
     id_evento: event.id_evento,
-    alreadyRegistered: createdInterest.count === 0
+    interested: true
   };
 }

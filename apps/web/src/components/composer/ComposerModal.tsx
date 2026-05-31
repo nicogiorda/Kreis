@@ -5,6 +5,8 @@ type ComposerModalProps = {
   open: boolean;
   mode: ComposerMode;
   communities: Community[];
+  submitting?: boolean;
+  error?: string | null;
   onClose: () => void;
   onCreateCommunity: (input: CreateCommunityInput) => void;
   onCreateEvent: (input: CreateEventInput) => void;
@@ -15,7 +17,7 @@ function getFormValue(formData: FormData, name: string): string {
   return String(formData.get(name) ?? "").trim();
 }
 
-export function ComposerModal({ open, mode, communities, onClose, onCreateCommunity, onCreateEvent, onCreatePost }: ComposerModalProps) {
+export function ComposerModal({ open, mode, communities, submitting = false, error, onClose, onCreateCommunity, onCreateEvent, onCreatePost }: ComposerModalProps) {
   if (!open) return null;
 
   const joined = communities.filter((community) => community.joined);
@@ -121,7 +123,10 @@ export function ComposerModal({ open, mode, communities, onClose, onCreateCommun
               </label>
             </>
           )}
-          <button className="min-h-[42px] rounded-[14px] border-0 bg-kreis-orange px-4 font-black text-white shadow-none" type="submit">{submitLabel}</button>
+          {error ? <p className="m-0 text-[0.84rem] font-bold leading-[1.35] text-kreis-orange">{error}</p> : null}
+          <button className="min-h-[42px] rounded-[14px] border-0 bg-kreis-orange px-4 font-black text-white shadow-none disabled:opacity-60" type="submit" disabled={submitting}>
+            {submitting && isEvent ? "Enviando..." : submitLabel}
+          </button>
         </form>
       </section>
     </div>

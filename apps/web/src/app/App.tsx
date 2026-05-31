@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
+import type { AuthResult } from "../api/auth";
 import { AuthFlow } from "../components/auth/AuthFlow";
 import { ComposerModal } from "../components/composer/ComposerModal";
 import { CommunitiesScreen } from "../components/communities/CommunitiesScreen";
@@ -61,7 +62,7 @@ function getInitialThemeMode(): ThemeMode {
 }
 
 export default function App() {
-  const [authComplete, setAuthComplete] = useState(false);
+  const [authSession, setAuthSession] = useState<AuthResult | null>(null);
   const [events, setEvents] = useState(initialEvents);
   const [communities, setCommunities] = useState(initialCommunities);
   const [activity, setActivity] = useState(initialActivity);
@@ -241,7 +242,7 @@ export default function App() {
   return (
     <>
       <SplashScreen />
-      {authComplete ? (
+      {authSession ? (
         <>
           <div
             className={cn(
@@ -316,7 +317,7 @@ export default function App() {
           {!isEventDetail && <BottomNav screen={screen} onNavigate={navigate} />}
         </>
       ) : (
-        <AuthFlow onComplete={() => setAuthComplete(true)} />
+        <AuthFlow onComplete={setAuthSession} />
       )}
     </>
   );

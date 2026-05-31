@@ -872,9 +872,17 @@ html[data-theme="dark"] {
   .auth-interest-pill {
     width: 100%;
     height: 22px;
+    overflow: hidden;
+    padding: 0 6px;
     border: 0;
     border-radius: 50px;
     background: rgba(247, 237, 218, 0.31);
+    color: #2e4b3c;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 22px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     transition: background-color 150ms ease-out, transform 150ms ease-out;
   }
 
@@ -900,6 +908,31 @@ html[data-theme="dark"] {
     text-align: center;
   }
 
+  .auth-form-error {
+    position: absolute;
+    left: 50%;
+    z-index: 6;
+    width: min(calc(100vw - 84px), 310px);
+    margin: 0;
+    transform: translateX(-50%);
+    color: #f7edda;
+    font-size: 12px;
+    line-height: 1.25;
+    text-align: center;
+  }
+
+  .auth-form-error--login {
+    top: 43%;
+  }
+
+  .auth-form-error--profile {
+    top: 44%;
+  }
+
+  .auth-form-error--certificate {
+    top: 55%;
+  }
+
   .auth-certificate-button {
     position: absolute;
     top: 48.12%;
@@ -920,6 +953,11 @@ html[data-theme="dark"] {
 
   .auth-certificate-button:active {
     transform: translateX(-50%) scale(0.97);
+  }
+
+  .auth-certificate-button:disabled {
+    cursor: default;
+    opacity: 0.62;
   }
 
   .auth-validated-check {

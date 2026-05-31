@@ -12,6 +12,7 @@ export type RegisterInput = {
   nombre: string;
   apellido: string;
   id_facultad: number;
+  topicos: number[];
 };
 
 // Datos necesarios para autenticar un usuario existente.
@@ -62,3 +63,4 @@ export interface IAuthProvider {
   // Se usa para rollback si la creación del perfil de BD falla.
   deleteUser(id: string): Promise<void>;
 }
+

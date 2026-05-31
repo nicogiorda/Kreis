@@ -26,7 +26,8 @@ export class RegisterUseCase {
         legajo: input.legajo,
         nombre: input.nombre,
         apellido: input.apellido,
-        id_facultad: input.id_facultad
+        id_facultad: input.id_facultad,
+        topicos: input.topicos
       });
     } catch (error) {
       if (error instanceof ProfileCreationError) {
@@ -47,3 +48,4 @@ export class RegisterUseCase {
     };
   }
 }
+

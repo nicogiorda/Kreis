@@ -25,7 +25,8 @@ const registerRequestSchema = z.object({
   legajo: z.coerce.number().int().positive(),
   nombre: z.string().min(1),
   apellido: z.string().min(1),
-  id_facultad: z.coerce.number().int().positive()
+  id_facultad: z.coerce.number().int().positive(),
+  topicos: z.array(z.coerce.number().int().positive()).default([])
 });
 
 // Instanciamos las implementaciones concretas de infrastructure e inyectamos
@@ -121,3 +122,4 @@ export function createAuthRouter(): Router {
 
   return router;
 }
+

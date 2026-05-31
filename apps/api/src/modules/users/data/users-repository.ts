@@ -181,3 +181,37 @@ export async function findUserProfileByAuthId(authId: string): Promise<UserProfi
     include: userProfileInclude
   });
 }
+export type TopicoCatalogItem = {
+  id_topico: bigint;
+  topico: string;
+};
+
+export type FacultadCatalogItem = {
+  id_facultad: bigint;
+  nombre: string;
+};
+
+export async function listTopicos(): Promise<TopicoCatalogItem[]> {
+  return prisma.topico.findMany({
+    select: {
+      id_topico: true,
+      topico: true
+    },
+    orderBy: {
+      topico: "asc"
+    }
+  });
+}
+
+export async function listFacultades(): Promise<FacultadCatalogItem[]> {
+  return prisma.facultad.findMany({
+    select: {
+      id_facultad: true,
+      nombre: true
+    },
+    orderBy: {
+      nombre: "asc"
+    }
+  });
+}
+

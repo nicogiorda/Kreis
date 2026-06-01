@@ -16,6 +16,7 @@ docs/
   architecture/         Decisiones tecnicas y limites de modulos
   design/               Direccion visual del producto
   product/              Contexto de producto
+  updates/              Registros fechados de implementacion y deploy
   brand-assets/         Originales y exports de marca que no se importan en runtime
 codex-skills/           Skills locales del proyecto
 ```
@@ -51,3 +52,5 @@ npm.cmd run dev -- --host 0.0.0.0
 La guia de ownership de carpetas esta en `docs/architecture/project-structure.md`.
 
 Para incorporar nuevos colaboradores, usar `docs/onboarding/repo-handbook.md` o la version imprimible `docs/onboarding/repo-handbook.html`.
+
+El registro tecnico de la integracion de auth, eventos y deploy del 31 de mayo de 2026 esta en `docs/updates/2026-05-31-auth-events-deploy.md`.

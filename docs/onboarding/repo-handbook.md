@@ -2,7 +2,7 @@
 
 Guia rapida para cualquier persona que vaya a modificar este repo sin romper la arquitectura.
 
-Ultima revision: 2026-05-17.
+Ultima revision: 2026-05-31.
 
 ## 1. Que es este repo
 
@@ -25,6 +25,7 @@ docs/
   design/               Direccion visual
   product/              Contexto funcional
   onboarding/           Esta guia y material para colaboradores
+  updates/              Registros fechados de implementacion y deploy
 codex-skills/           Skills locales para agentes/Codex
 ```
 

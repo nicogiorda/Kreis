@@ -14,6 +14,7 @@ docs/
   architecture/         Decisiones tecnicas
   design/               Direccion visual del producto
   product/              Contexto funcional
+  updates/              Registros fechados de implementacion y deploy
   brand-assets/         Originales de marca que no se importan en runtime
 codex-skills/           Skills locales para Codex y agentes del proyecto
 ```

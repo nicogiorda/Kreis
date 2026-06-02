@@ -58,3 +58,9 @@ export async function login(email: string, password: string): Promise<AuthResult
     body: JSON.stringify({ email, password })
   });
 }
+
+export async function logout(): Promise<void> {
+  await requestJson("/api/v1/auth/logout", {
+    method: "POST"
+  });
+}

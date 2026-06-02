@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { listTopics } from "../api/auth";
+import { listTopics, logout } from "../api/auth";
 import type { AuthResult } from "../api/auth";
 import { createPendingEvent, getEventDetail, listAllEvents, listUpcomingEvents, toggleEventInterest as persistEventInterest } from "../api/events";
+import { getMyProfile } from "../api/users";
+import type { KreisUserProfile } from "../api/users";
 import { AuthFlow } from "../components/auth/AuthFlow";
 import { ComposerModal } from "../components/composer/ComposerModal";
 import { CommunitiesScreen } from "../components/communities/CommunitiesScreen";
@@ -70,6 +72,8 @@ export default function App() {
   const [eventLoadStatus, setEventLoadStatus] = useState<EventLoadStatus>("loading");
   const [eventReloadKey, setEventReloadKey] = useState(0);
   const [eventTopics, setEventTopics] = useState<KreisTopic[]>([]);
+  const [userProfile, setUserProfile] = useState<KreisUserProfile | null>(null);
+  const [profileLoadStatus, setProfileLoadStatus] = useState<"loading" | "ready" | "error">("loading");
   const [communities, setCommunities] = useState(initialCommunities);
   const [activity, setActivity] = useState(initialActivity);
   const [homeTab, setHomeTab] = useState<HomeTab>("events");
@@ -156,6 +160,24 @@ export default function App() {
 
   useEffect(() => {
     const accessToken = authSession?.session.access_token;
+    if (!accessToken) return;
+
+    const controller = new AbortController();
+
+    void getMyProfile(accessToken, controller.signal)
+      .then((profile) => {
+        setUserProfile(profile);
+        setProfileLoadStatus("ready");
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setProfileLoadStatus("error");
+      });
+
+    return () => controller.abort();
+  }, [authSession]);
+
+  useEffect(() => {
+    const accessToken = authSession?.session.access_token;
     if (!eventDetailId || !accessToken) return;
 
     const controller = new AbortController();
@@ -217,6 +239,18 @@ export default function App() {
 
   function toggleTheme(): void {
     setThemeMode((current) => current === "dark" ? "light" : "dark");
+  }
+
+  function logoutUser(): void {
+    void logout().catch(() => undefined);
+    setAuthSession(null);
+    setUserProfile(null);
+    setProfileLoadStatus("loading");
+    setEvents([]);
+    setUpcomingEvents([]);
+    setEventLoadStatus("loading");
+    setComposerOpen(false);
+    routerNavigate(screenRoutes.home, { replace: true });
   }
 
   function openComposer(mode: ComposerMode): void {
@@ -380,9 +414,11 @@ export default function App() {
               {!isEventDetail && screen === "communities" && <CommunitiesScreen communities={communities} discover={discoverCommunities} posts={activity} onToggleJoin={toggleJoin} />}
               {!isEventDetail && screen === "profile" && (
                 <ProfileScreen
-                  communities={communities}
-                  events={events}
-                  activity={activity}
+                  profile={userProfile}
+                  profileLoadStatus={profileLoadStatus}
+                  themeMode={themeMode}
+                  onToggleTheme={toggleTheme}
+                  onLogout={logoutUser}
                 />
               )}
             </main>

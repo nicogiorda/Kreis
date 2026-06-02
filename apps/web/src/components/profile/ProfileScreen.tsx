@@ -1,73 +1,98 @@
-import { profile } from "../../data/profile";
-import type { ActivityPost, Community, KreisEvent } from "../../types";
+import { CaretRight, SignOut, UserCircle } from "@phosphor-icons/react";
+import { CalendarAdd, Ticket, UsersGroupRounded } from "@solar-icons/react";
+import type { KreisUserProfile } from "../../api/users";
+import type { ThemeMode } from "../../types";
+import { ThemeToggleIcon } from "../common/Icons";
 
 type ProfileScreenProps = {
-  communities: Community[];
-  events: KreisEvent[];
-  activity?: ActivityPost[];
+  profile: KreisUserProfile | null;
+  profileLoadStatus: "loading" | "ready" | "error";
+  themeMode: ThemeMode;
+  onToggleTheme: () => void;
+  onLogout: () => void;
 };
 
-export function ProfileScreen({ communities, events }: ProfileScreenProps) {
-  const joined = communities.filter((community) => community.joined);
-  const signedEvents = events.filter((event) => event.interested);
+const socialItems = [
+  { label: "Mis eventos", tone: "bg-kreis-green", Icon: CalendarAdd },
+  { label: "Eventos inscriptos", tone: "bg-kreis-pumpkin", Icon: Ticket },
+  { label: "Mis comunidades", tone: "bg-kreis-orange", Icon: UsersGroupRounded }
+];
+
+export function ProfileScreen({
+  profile,
+  profileLoadStatus,
+  themeMode,
+  onToggleTheme,
+  onLogout
+}: ProfileScreenProps) {
+  const displayName = profile?.name || (profileLoadStatus === "loading" ? "Cargando perfil..." : "Mi perfil");
+  const facultyLabel = profile?.faculty ? `UADE | ${profile.faculty}` : "UADE";
+  const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
 
   return (
-    <section className="pt-[18px] animate-[rise_220ms_ease-out]" data-screen="profile">
-      <article className="overflow-hidden rounded-kreis-card border border-kreis-line bg-kreis-orange text-[#fff5e5] shadow-kreis-soft">
-        <div className="grid grid-cols-[auto_1fr] items-center gap-4 p-5">
-          <img className="size-[78px] rounded-[18px] border-4 border-[rgba(247,237,218,0.88)] object-cover" src={profile.photo} alt={`Foto de ${profile.name}`} />
-          <div>
-            <h1 className="m-0 text-[1.55rem]">{profile.name}</h1>
-            <p className="mb-0 mt-[5px] text-[rgba(247,237,218,0.78)]">{profile.career}</p>
-          </div>
+    <section className="mx-auto w-full max-w-[393px] animate-[rise_220ms_ease-out] pb-6 pt-[53px] text-kreis-ink" data-screen="profile">
+      <section className="grid grid-cols-[106px_minmax(0,1fr)] items-center gap-[26px]" aria-label="Datos de perfil">
+        <div className="grid h-[116px] w-[106px] place-items-center rounded-[26px] bg-[rgba(10,10,10,0.1)] text-kreis-muted">
+          <UserCircle className="size-[56px] opacity-35" weight="thin" aria-hidden="true" />
         </div>
-        <div className="grid grid-cols-3 border-t border-[rgba(247,237,218,0.15)]">
-          <div className="px-2 py-3.5 text-center">
-            <strong className="block text-[1.1rem]">{joined.length}</strong>
-            <span className="mt-0.5 block text-[0.78rem] font-bold text-[rgba(247,237,218,0.72)]">comunidades</span>
-          </div>
-          <div className="px-2 py-3.5 text-center">
-            <strong className="block text-[1.1rem]">{signedEvents.length}</strong>
-            <span className="mt-0.5 block text-[0.78rem] font-bold text-[rgba(247,237,218,0.72)]">eventos</span>
-          </div>
-          <div className="px-2 py-3.5 text-center">
-            <strong className="block text-[1.1rem]">UADE</strong>
-            <span className="mt-0.5 block text-[0.78rem] font-bold text-[rgba(247,237,218,0.72)]">campus</span>
-          </div>
+        <div className="min-w-0">
+          <h2 className="m-0 truncate text-[24px] font-medium leading-[30px]">{displayName}</h2>
+          <p className="m-0 mt-[1px] truncate text-[16px] font-medium leading-[19px] text-kreis-muted">{facultyLabel}</p>
+          <button
+            className="mt-[12px] h-[29px] rounded-[10px] border-0 bg-kreis-orange px-[17px] text-[14px] font-medium leading-[29px] text-kreis-cream shadow-none disabled:cursor-default"
+            type="button"
+            disabled
+            title="La edición de perfil estará disponible próximamente"
+          >
+            Editar Perfil
+          </button>
         </div>
-      </article>
+      </section>
 
-      <section className="my-[22px]">
-        <div className="mb-3 flex items-end justify-between gap-3">
-          <div>
-            <h2 className="m-0 text-[1.23rem] leading-[1.02] tracking-normal">Mis comunidades</h2>
-            <p className="mt-[5px] text-kreis-muted leading-[1.45]">Espacios donde ya participas.</p>
-          </div>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          {joined.map((community) => (
-            <article className="rounded-kreis-card border border-kreis-line bg-kreis-surface p-[15px] shadow-kreis-soft" key={community.id}>
-              <strong className="mb-[5px] block">{community.name}</strong>
-              <span className="mt-[5px] text-kreis-muted leading-[1.45]">{community.category} - {community.members} miembros</span>
-            </article>
+      {profileLoadStatus === "error" ? <p className="m-0 mt-2 text-[12px] leading-[15px] text-kreis-muted">No pudimos cargar todos tus datos.</p> : null}
+
+      <section className="mt-[18px]" aria-labelledby="profile-social-title">
+        <h2 id="profile-social-title" className="m-0 text-[22px] font-medium leading-[27px]">Social</h2>
+        <div className="mt-[13px] rounded-[20px] bg-kreis-event-surface px-[15px] py-[15px]">
+          {socialItems.map(({ label, tone, Icon }) => (
+            <div className="flex h-[50px] items-center gap-[12px]" key={label}>
+              <span className={`grid size-[39px] flex-none place-items-center rounded-full text-[#292620] ${tone}`} aria-hidden="true">
+                <Icon className="size-[20px]" weight="Outline" />
+              </span>
+              <span className="min-w-0 flex-1 text-[15px] font-medium leading-[19px]">{label}</span>
+              <CaretRight className="size-[16px] flex-none text-kreis-muted" weight="bold" aria-hidden="true" />
+            </div>
           ))}
         </div>
       </section>
 
-      <section className="my-[22px]">
-        <div className="mb-3 flex items-end justify-between gap-3">
-          <div>
-            <h2 className="m-0 text-[1.23rem] leading-[1.02] tracking-normal">Eventos anotados</h2>
-            <p className="mt-[5px] text-kreis-muted leading-[1.45]">Tu proxima excusa para cruzarte con gente nueva.</p>
-          </div>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          {signedEvents.map((event) => (
-            <article className="rounded-kreis-card border border-kreis-line bg-kreis-surface p-[15px] shadow-kreis-soft" key={event.id}>
-              <strong className="mb-[5px] block">{event.title}</strong>
-              <span className="mt-[5px] text-kreis-muted leading-[1.45]">{event.date} - {event.place}</span>
-            </article>
-          ))}
+      <section className="mt-[18px]" aria-labelledby="profile-settings-title">
+        <h2 id="profile-settings-title" className="m-0 text-[22px] font-medium leading-[27px]">Configuración</h2>
+        <div className="mt-[13px] rounded-[20px] bg-kreis-event-surface px-[15px] py-[10px]">
+          <button
+            className="flex h-[52px] w-full items-center gap-[12px] border-0 bg-transparent p-0 text-left text-[15px] font-medium text-kreis-ink shadow-none"
+            type="button"
+            aria-label={nextThemeLabel}
+            aria-pressed={themeMode === "dark"}
+            onClick={onToggleTheme}
+          >
+            <span className="grid size-[39px] flex-none place-items-center rounded-full bg-kreis-event-surface text-kreis-muted [&_svg]:size-[19px]">
+              <ThemeToggleIcon themeMode={themeMode} />
+            </span>
+            <span className="min-w-0 flex-1">{themeMode === "dark" ? "Modo claro" : "Modo oscuro"}</span>
+            <CaretRight className="size-[16px] flex-none text-kreis-muted" weight="bold" aria-hidden="true" />
+          </button>
+          <button
+            className="flex h-[52px] w-full items-center gap-[12px] border-0 bg-transparent p-0 text-left text-[15px] font-medium text-kreis-ink shadow-none"
+            type="button"
+            onClick={onLogout}
+          >
+            <span className="grid size-[39px] flex-none place-items-center rounded-full bg-kreis-event-surface text-kreis-muted">
+              <SignOut className="size-[19px]" weight="regular" aria-hidden="true" />
+            </span>
+            <span className="min-w-0 flex-1">Cerrar sesión</span>
+            <CaretRight className="size-[16px] flex-none text-kreis-muted" weight="bold" aria-hidden="true" />
+          </button>
         </div>
       </section>
     </section>

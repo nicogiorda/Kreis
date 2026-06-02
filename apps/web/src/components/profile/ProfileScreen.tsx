@@ -30,7 +30,7 @@ export function ProfileScreen({
   const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
 
   return (
-    <section className="mx-auto w-full max-w-[393px] animate-[rise_220ms_ease-out] pb-6 pt-[53px] text-kreis-ink" data-screen="profile">
+    <section className="mx-auto w-full max-w-[393px] animate-[rise_220ms_ease-out] pb-6 pt-[max(53px,calc(env(safe-area-inset-top)+12px))] text-kreis-ink" data-screen="profile">
       <section className="grid grid-cols-[106px_minmax(0,1fr)] items-center gap-[26px]" aria-label="Datos de perfil">
         <div className="grid h-[116px] w-[106px] place-items-center rounded-[26px] bg-[rgba(10,10,10,0.1)] text-kreis-muted">
           <UserCircle className="size-[56px] opacity-35" weight="thin" aria-hidden="true" />
@@ -56,7 +56,7 @@ export function ProfileScreen({
         <div className="mt-[13px] rounded-[20px] bg-kreis-event-surface px-[15px] py-[15px]">
           {socialItems.map(({ label, tone, Icon }) => (
             <div className="flex h-[50px] items-center gap-[12px]" key={label}>
-              <span className={`grid size-[39px] flex-none place-items-center rounded-full text-[#292620] ${tone}`} aria-hidden="true">
+              <span className={`grid size-[39px] flex-none place-items-center rounded-full text-kreis-cream ${tone}`} aria-hidden="true">
                 <Icon className="size-[20px]" weight="Outline" />
               </span>
               <span className="min-w-0 flex-1 text-[15px] font-medium leading-[19px]">{label}</span>

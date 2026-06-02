@@ -15,6 +15,16 @@ function getFormValue(formData: FormData, name: string): string {
   return String(formData.get(name) ?? "").trim();
 }
 
+const MONTHS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+
+function formatEventDate(iso: string): string {
+  const [datePart, timePart] = iso.split("T");
+  const [y, m, d] = (datePart ?? "").split("-").map(Number);
+  const month = MONTHS[(m ?? 1) - 1] ?? "";
+  const time = timePart ? ` a las ${timePart.slice(0, 5)}` : "";
+  return `${d ?? ""} ${month} ${y ?? ""}${time}`;
+}
+
 const descriptionMaxLength = 280;
 
 export function CreateEventScreen({
@@ -117,16 +127,20 @@ export function CreateEventScreen({
 
         <label className="create-event-field mt-[clamp(5px,1.29dvh,11px)] grid flex-none gap-[clamp(3px,0.58dvh,5px)] text-[16px] font-normal leading-[19px] text-kreis-muted">
           Fecha y hora de inicio
-          <span className="relative block min-w-0 w-full">
+          <span className="relative block">
             <input
-              className="create-event-input event-date-input relative block h-10 w-full min-w-0 max-w-full rounded-[15px] border-0 bg-kreis-event-surface px-4 pr-12 text-[16px] font-normal outline-0 focus:ring-2 focus:ring-kreis-orange/30"
+              className="absolute inset-0 h-full w-full cursor-pointer border-0 opacity-0"
               name="eventDate"
               required
               type="datetime-local"
               value={eventDate}
               onChange={(event) => setEventDate(event.target.value)}
             />
-            {!eventDate ? <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-kreis-muted">Elegí la fecha y hora</span> : null}
+            <span className="pointer-events-none flex h-10 items-center rounded-[15px] bg-kreis-event-surface px-4 pr-12">
+              {eventDate
+                ? <span className="text-[16px] font-normal text-kreis-ink">{formatEventDate(eventDate)}</span>
+                : <span className="text-[14px] text-kreis-muted">Elegí la fecha y hora</span>}
+            </span>
             <CalendarBlank className="pointer-events-none absolute right-4 top-1/2 size-[18px] -translate-y-1/2 text-kreis-muted" weight="regular" aria-hidden="true" />
           </span>
         </label>

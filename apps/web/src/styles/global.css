@@ -541,6 +541,52 @@ html[data-theme="dark"] {
     opacity: 0;
   }
 
+  @media (max-height: 720px) {
+    .create-event-form {
+      padding-top: max(16px, env(safe-area-inset-top)) !important;
+      padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    }
+
+    .create-event-name {
+      margin-top: 6px !important;
+      gap: 3px !important;
+    }
+
+    .create-event-input {
+      height: 38px !important;
+    }
+
+    .create-event-cover {
+      height: 88px !important;
+      margin-top: 5px !important;
+    }
+
+    .create-event-cover-label {
+      gap: 4px !important;
+    }
+
+    .create-event-cover-plus {
+      width: 36px !important;
+      height: 36px !important;
+      border-radius: 14px !important;
+    }
+
+    .create-event-field,
+    .create-event-topics {
+      margin-top: 5px !important;
+      gap: 3px !important;
+    }
+
+    .create-event-description {
+      height: 80px !important;
+    }
+
+    .create-event-topics-rail {
+      height: 38px !important;
+      margin-top: 3px !important;
+    }
+  }
+
   html[data-theme="dark"] .home-event-date-chip {
     border-color: transparent;
   }

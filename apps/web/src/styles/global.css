@@ -1026,29 +1026,34 @@ html[data-theme="dark"] {
   }
 
   .auth-welcome-character {
+    --welcome-character-size: min(65.4vw, 30.16dvh, 257px);
+
     position: absolute;
-    top: 18.54%;
+    top: 11.5%;
     left: 50%;
-    width: 185px;
-    height: 185px;
+    width: var(--welcome-character-size);
+    height: var(--welcome-character-size);
     transform: translateX(-50%);
   }
 
   .auth-welcome-character img {
-    position: relative;
+    position: absolute;
+    bottom: 8%;
+    left: 50%;
     z-index: 2;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    width: 82%;
+    height: 82%;
+    object-fit: contain;
+    transform: translateX(-50%);
   }
 
   .auth-welcome-shadow {
     position: absolute;
-    bottom: 12px;
+    bottom: 7%;
     left: 50%;
     z-index: 1;
-    width: 113px;
-    height: 21px;
+    width: 61%;
+    height: 11.5%;
     border-radius: 50%;
     background: rgba(10, 10, 10, 0.14);
     transform: translateX(-50%);
@@ -1056,34 +1061,35 @@ html[data-theme="dark"] {
 
   .auth-welcome-wordmark {
     position: absolute;
-    top: 41.55%;
+    top: 44.25%;
     left: 50%;
     width: 114px;
-    height: 35px;
+    height: 34.657px;
     object-fit: contain;
     transform: translateX(-50%);
   }
 
   .auth-welcome-tagline {
     position: absolute;
-    top: 45.66%;
-    left: 0;
-    width: 100%;
+    top: 50.7%;
+    left: 50%;
+    width: min(calc(100% - 104px), 288px);
     margin: 0;
     color: #0a0a0a;
     font-size: 15px;
-    font-weight: 500;
-    line-height: 50px;
+    font-weight: 400;
+    line-height: normal;
     text-align: center;
+    transform: translateX(-50%);
   }
 
   .auth-welcome-actions {
     position: absolute;
-    bottom: 13.85%;
+    top: 73.36%;
     left: 50%;
     display: grid;
     width: min(calc(100% - 82px), 310px);
-    gap: 9px;
+    gap: 11px;
     transform: translateX(-50%);
   }
 
@@ -1091,7 +1097,7 @@ html[data-theme="dark"] {
     height: 44px;
     border: 0;
     border-radius: 50px;
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 500;
     line-height: 44px;
     text-align: center;
@@ -1108,7 +1114,7 @@ html[data-theme="dark"] {
   }
 
   .auth-welcome-button--secondary {
-    background: #ffffff;
+    background: rgba(10, 10, 10, 0.1);
     color: #0a0a0a;
   }
 

@@ -95,10 +95,10 @@ function WelcomeScreen({ onBegin, onLogin }: { onBegin: () => void; onLogin: () 
         <img src={greetingCharacterUrl} alt="" aria-hidden="true" />
       </div>
       <img className="auth-welcome-wordmark" src={wordmarkUrl} alt="Kreis" />
-      <p className="auth-welcome-tagline">Conectar es parte.</p>
+      <p className="auth-welcome-tagline">Conecta con otros estudiantes y viví la vida universitaria que tanto soñaste.</p>
       <div className="auth-welcome-actions">
         <button className="auth-welcome-button auth-welcome-button--primary" type="button" onClick={onBegin}>Comenzar</button>
-        <button className="auth-welcome-button auth-welcome-button--secondary" type="button" onClick={onLogin}>Ya tengo una cuenta</button>
+        <button className="auth-welcome-button auth-welcome-button--secondary" type="button" onClick={onLogin}>Ya tengo cuenta</button>
       </div>
     </AuthScreen>
   );

@@ -1,10 +1,12 @@
 import type { FormEvent } from "react";
-import type { Community, ComposerMode, CreateCommunityInput, CreateEventInput, CreatePostInput } from "../../types";
+import type { Community, ComposerMode, CreateCommunityInput, CreateEventInput, CreatePostInput, KreisTopic } from "../../types";
+import { CreateEventScreen } from "../events/CreateEventScreen";
 
 type ComposerModalProps = {
   open: boolean;
   mode: ComposerMode;
   communities: Community[];
+  eventTopics: KreisTopic[];
   submitting?: boolean;
   error?: string | null;
   onClose: () => void;
@@ -17,16 +19,27 @@ function getFormValue(formData: FormData, name: string): string {
   return String(formData.get(name) ?? "").trim();
 }
 
-export function ComposerModal({ open, mode, communities, submitting = false, error, onClose, onCreateCommunity, onCreateEvent, onCreatePost }: ComposerModalProps) {
+export function ComposerModal({ open, mode, communities, eventTopics, submitting = false, error, onClose, onCreateCommunity, onCreateEvent, onCreatePost }: ComposerModalProps) {
   if (!open) return null;
+
+  if (mode === "event") {
+    return (
+      <CreateEventScreen
+        topics={eventTopics}
+        submitting={submitting}
+        error={error}
+        onClose={onClose}
+        onCreateEvent={onCreateEvent}
+      />
+    );
+  }
 
   const joined = communities.filter((community) => community.joined);
   const isCommunity = mode === "community";
-  const isEvent = mode === "event";
-  const dialogLabel = isCommunity ? "Crear comunidad" : isEvent ? "Publicar evento" : "Crear post";
-  const kicker = isCommunity ? "Nuevo circulo" : isEvent ? "Nuevo evento" : "Nuevo post";
-  const title = isCommunity ? "Crear comunidad" : isEvent ? "Publicar un evento" : "Publicar en una comunidad";
-  const submitLabel = isCommunity ? "Crear comunidad" : isEvent ? "Publicar evento" : "Publicar";
+  const dialogLabel = isCommunity ? "Crear comunidad" : "Crear post";
+  const kicker = isCommunity ? "Nuevo circulo" : "Nuevo post";
+  const title = isCommunity ? "Crear comunidad" : "Publicar en una comunidad";
+  const submitLabel = isCommunity ? "Crear comunidad" : "Publicar";
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -36,17 +49,6 @@ export function ComposerModal({ open, mode, communities, submitting = false, err
       onCreateCommunity({
         name: getFormValue(formData, "communityName"),
         category: getFormValue(formData, "communityCategory")
-      });
-      return;
-    }
-
-    if (isEvent) {
-      onCreateEvent({
-        title: getFormValue(formData, "eventTitle"),
-        date: getFormValue(formData, "eventDate"),
-        place: getFormValue(formData, "eventPlace"),
-        category: getFormValue(formData, "eventCategory"),
-        description: getFormValue(formData, "eventDescription")
       });
       return;
     }
@@ -84,29 +86,6 @@ export function ComposerModal({ open, mode, communities, submitting = false, err
                 <input name="communityCategory" required placeholder="Cultura, deporte, tecnologia..." />
               </label>
             </>
-          ) : isEvent ? (
-            <>
-              <label>
-                Titulo
-                <input name="eventTitle" required placeholder="Ej: After office Kreis" />
-              </label>
-              <label>
-                Fecha
-                <input name="eventDate" required type="date" />
-              </label>
-              <label>
-                Lugar
-                <input name="eventPlace" required placeholder="Ej: Terraza Lima" />
-              </label>
-              <label>
-                Categoria
-                <input name="eventCategory" required placeholder="Social, cultura, deporte..." />
-              </label>
-              <label>
-                Descripcion
-                <textarea name="eventDescription" required placeholder="Conta que va a pasar y por que vale la pena sumarse..." />
-              </label>
-            </>
           ) : (
             <>
               <label>
@@ -125,7 +104,7 @@ export function ComposerModal({ open, mode, communities, submitting = false, err
           )}
           {error ? <p className="m-0 text-[0.84rem] font-bold leading-[1.35] text-kreis-orange">{error}</p> : null}
           <button className="min-h-[42px] rounded-[14px] border-0 bg-kreis-orange px-4 font-black text-white shadow-none disabled:opacity-60" type="submit" disabled={submitting}>
-            {submitting && isEvent ? "Enviando..." : submitLabel}
+            {submitLabel}
           </button>
         </form>
       </section>

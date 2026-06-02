@@ -1,6 +1,6 @@
 # Product
 
-## Register
+## Register & Login
 
 product
 

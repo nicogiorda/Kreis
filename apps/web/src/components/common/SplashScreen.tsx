@@ -1,16 +1,21 @@
 import { useEffect, useState } from "react";
+import type { AnimationEvent } from "react";
 import splashIsotypeUrl from "../../assets/brand/isotype-inverted-splash.svg";
 import splashLogoUrl from "../../assets/brand/logo-inverted.png";
 
 const SPLASH_DURATION_MS = 2180;
 const REDUCED_MOTION_DURATION_MS = 720;
 
+function clearFirstPaintFallback(): void {
+  document.getElementById("kreis-first-paint")?.remove();
+}
+
 export function SplashScreen() {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     const firstPaintFrame = window.requestAnimationFrame(() => {
-      document.getElementById("kreis-first-paint")?.remove();
+      clearFirstPaintFallback();
     });
 
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -22,14 +27,20 @@ export function SplashScreen() {
     return () => {
       window.cancelAnimationFrame(firstPaintFrame);
       window.clearTimeout(timeout);
-      document.getElementById("kreis-first-paint")?.remove();
+      clearFirstPaintFallback();
     };
   }, []);
 
   if (!visible) return null;
 
+  function handleExitAnimationEnd(event: AnimationEvent<HTMLElement>): void {
+    if (event.currentTarget !== event.target) return;
+
+    setVisible(false);
+  }
+
   return (
-    <section className="splash-screen fixed bottom-0 left-0 right-0 z-[100] grid w-full place-items-center overflow-hidden bg-kreis-orange pb-[calc(24px+env(safe-area-inset-bottom))] pl-[calc(22px+env(safe-area-inset-left))] pr-[calc(22px+env(safe-area-inset-right))] text-[oklch(97%_0.025_76)] pointer-events-auto isolate" role="status" aria-label="Cargando Kreis">
+    <section className="splash-screen fixed bottom-0 left-0 right-0 z-[100] grid w-full place-items-center overflow-hidden bg-kreis-orange pb-[calc(24px+env(safe-area-inset-bottom))] pl-[calc(22px+env(safe-area-inset-left))] pr-[calc(22px+env(safe-area-inset-right))] text-[oklch(97%_0.025_76)] pointer-events-auto isolate" role="status" aria-label="Cargando Kreis" onAnimationEnd={handleExitAnimationEnd}>
       <div className="hidden" aria-hidden="true">
         <span />
         <span />

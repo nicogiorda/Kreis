@@ -19,7 +19,10 @@ export default defineConfig({
         "icons/icono-app-512.png"
       ],
       workbox: {
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
         navigateFallback: "/index.html",
+        skipWaiting: true,
         globPatterns: ["**/*.{js,css,html,png,svg,webp,woff,woff2}"],
         runtimeCaching: [
           {

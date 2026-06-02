@@ -16,6 +16,12 @@
         background: #f0531c;
       }
     </style>
+    <script>
+      window.setTimeout(function () {
+        var firstPaint = document.getElementById("kreis-first-paint");
+        if (firstPaint) firstPaint.remove();
+      }, 3600);
+    </script>
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icono-app-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/icono-app-180.png" />

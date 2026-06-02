@@ -47,7 +47,8 @@ export class SupabaseAuthProvider implements IAuthProvider {
     return { id: data.user.id, email: data.user.email };
   }
 
-  // Autentica al usuario con email y contraseña.
+  // Autentica al usuario con email 
+  // con y contraseña.
   // Si las credenciales son inválidas, Supabase devuelve error y lanzamos AuthProviderError.
   async signIn(email: string, password: string): Promise<AuthSession> {
     const { data, error } = await supabaseAnon.auth.signInWithPassword({ email, password });

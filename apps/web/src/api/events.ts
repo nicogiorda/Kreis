@@ -35,7 +35,7 @@ type CreatePendingEventInput = {
   title: string;
   date: string;
   place: string;
-  categoryId?: string;
+  topicIds: string[];
   description: string;
 };
 
@@ -81,7 +81,11 @@ function adaptEvent(event: EventSummary): KreisEvent {
   const day = getDatePart(startDate, "day");
   const month = getDatePart(startDate, "month").replace(".", "").toUpperCase();
   const weekday = getDatePart(startDate, "weekday").replace(".", "");
-  const category = event.topicos[0]?.topico ?? "General";
+  const topics = event.topicos.map((topic) => ({
+    id: topic.id_topico,
+    name: topic.topico
+  }));
+  const category = topics[0]?.name ?? "General";
   const official = event.topicos.some((topic) => normalize(topic.topico) === "academico");
 
   return {
@@ -92,7 +96,7 @@ function adaptEvent(event: EventSummary): KreisEvent {
     month,
     place: event.ubicacion ?? "Ubicacion a confirmar",
     category,
-    categoryId: event.topicos[0]?.id_topico,
+    topics,
     icon: getEventIcon(event.nombre),
     tone: getEventTone(category),
     interested: event.interested,
@@ -151,15 +155,17 @@ export async function toggleEventInterest(eventId: string, accessToken: string):
 }
 
 export async function createPendingEvent(input: CreatePendingEventInput, accessToken: string): Promise<void> {
+  const startDateTime = input.date.includes("T") ? input.date : `${input.date}T09:00:00`;
+
   await requestJson("/api/v1/events", {
     method: "POST",
     headers: bearerTokenHeaders(accessToken),
     body: JSON.stringify({
       nombre: input.title,
       ubicacion: input.place,
-      fecha_inicio: `${input.date}T09:00:00`,
+      fecha_inicio: startDateTime,
       descripcion: input.description,
-      topicos: input.categoryId ? [Number(input.categoryId)] : []
+      topicos: input.topicIds.map(Number)
     })
   });
 }

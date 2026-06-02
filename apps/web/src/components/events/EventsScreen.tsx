@@ -51,7 +51,7 @@ export function EventsScreen({
   const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
 
   return (
-    <section className="grid w-full max-w-[430px] animate-[rise_220ms_ease-out] pt-[63px] sm:mx-auto" data-screen="events">
+    <section className="grid min-w-0 w-full max-w-[430px] animate-[rise_220ms_ease-out] pt-[63px] sm:mx-auto" data-screen="events">
       <div className="mb-[21px] flex h-[37px] items-center justify-end gap-[11px]">
         <button
           className="grid size-[37px] place-items-center rounded-[12px] border-0 bg-kreis-orange p-0 text-kreis-cream shadow-none transition-[transform,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95"
@@ -87,9 +87,9 @@ export function EventsScreen({
         />
       </label>
 
-      <section className="mt-4" aria-labelledby="event-category-title">
+      <section className="mt-4 min-w-0" aria-labelledby="event-category-title">
         <h2 id="event-category-title" className="m-0 text-[18px] font-medium leading-[22px] text-kreis-ink">Busca por categoría</h2>
-        <div className="mt-[7px] flex gap-[13px] overflow-x-auto px-[9px] py-[2px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Filtrar eventos por categoria">
+        <div className="mt-[7px] flex w-full min-w-0 gap-[13px] overflow-x-auto px-[9px] py-[2px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Filtrar eventos por categoria">
           {eventCategories.map((category) => (
             <button className={filterButtonClass(eventFilter === category)} type="button" key={category} onClick={() => onFilter(category)}>
               <span className="event-category-dot block size-[39px] rounded-full bg-kreis-event-surface transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]" aria-hidden="true" />
@@ -103,7 +103,7 @@ export function EventsScreen({
         <h2 className="m-0 text-[18px] font-medium leading-[22px] text-kreis-ink">Todos los eventos</h2>
       </div>
 
-      <div className="mt-[13px] grid grid-cols-2 gap-x-[17px] gap-y-[15px]">
+      <div className="mt-[13px] grid min-w-0 grid-cols-[repeat(2,minmax(0,1fr))] gap-x-[17px] gap-y-[15px]">
         {events.length ? events.map((event) => <EventCard event={event} key={event.id} onOpenEventDetails={onOpenEventDetails} />) : eventLoadStatus === "loading" ? (
           <div className="col-span-full">
             <EmptyState title="Cargando eventos" text="Estamos buscando todos los eventos." />

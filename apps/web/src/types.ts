@@ -14,6 +14,11 @@ export type EventLoadStatus = "loading" | "ready" | "error";
 
 export type CommunityCategory = "Todos" | string;
 
+export type KreisTopic = {
+  id: string;
+  name: string;
+};
+
 export type KreisEvent = {
   id: string;
   title: string;
@@ -22,7 +27,7 @@ export type KreisEvent = {
   month: string;
   place: string;
   category: string;
-  categoryId?: string;
+  topics: KreisTopic[];
   icon: string;
   tone: EventTone;
   interested: boolean;
@@ -74,7 +79,7 @@ export type CreateEventInput = {
   title: string;
   date: string;
   place: string;
-  category: string;
+  topicIds: string[];
   description: string;
 };
 

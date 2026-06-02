@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { listTopics } from "../api/auth";
 import type { AuthResult } from "../api/auth";
 import { createPendingEvent, getEventDetail, listAllEvents, listUpcomingEvents, toggleEventInterest as persistEventInterest } from "../api/events";
 import { AuthFlow } from "../components/auth/AuthFlow";
@@ -13,7 +14,7 @@ import { BottomNav } from "../components/navigation/BottomNav";
 import { Header } from "../components/navigation/Header";
 import { ProfileScreen } from "../components/profile/ProfileScreen";
 import { initialActivity, initialCommunities } from "../data/mockData";
-import type { ComposerMode, CreateCommunityInput, CreateEventInput, CreatePostInput, EventLoadStatus, HomeTab, KreisEvent, Screen, ThemeMode } from "../types";
+import type { ComposerMode, CreateCommunityInput, CreateEventInput, CreatePostInput, EventLoadStatus, HomeTab, KreisEvent, KreisTopic, Screen, ThemeMode } from "../types";
 import { cn } from "../utils/cn";
 import { scrollTop } from "../utils/navigation";
 import { normalize } from "../utils/text";
@@ -68,6 +69,7 @@ export default function App() {
   const [upcomingEvents, setUpcomingEvents] = useState<KreisEvent[]>([]);
   const [eventLoadStatus, setEventLoadStatus] = useState<EventLoadStatus>("loading");
   const [eventReloadKey, setEventReloadKey] = useState(0);
+  const [eventTopics, setEventTopics] = useState<KreisTopic[]>([]);
   const [communities, setCommunities] = useState(initialCommunities);
   const [activity, setActivity] = useState(initialActivity);
   const [homeTab, setHomeTab] = useState<HomeTab>("events");
@@ -89,13 +91,13 @@ export default function App() {
   const query = normalize(globalQuery.trim());
   const matchesQuery = (text: string): boolean => !query || normalize(text).includes(query);
 
-  const eventCategories = useMemo<string[]>(() => ["Todos", ...new Set(events.map((event) => event.category))], [events]);
+  const eventCategories = ["Todos", ...eventTopics.map((topic) => topic.name)];
 
   const homeEvents = upcomingEvents.filter((event) => matchesQuery(`${event.title} ${event.category} ${event.place} ${event.description}`));
 
   const visibleEvents = events.filter((event) => {
     const queryMatch = matchesQuery(`${event.title} ${event.category} ${event.place} ${event.description}`);
-    const categoryMatch = eventFilter === "Todos" || event.category === eventFilter;
+    const categoryMatch = eventFilter === "Todos" || event.topics.some((topic) => normalize(topic.name) === normalize(eventFilter));
     return queryMatch && categoryMatch;
   });
 
@@ -136,6 +138,21 @@ export default function App() {
 
     return () => controller.abort();
   }, [authSession, eventReloadKey]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void listTopics(controller.signal)
+      .then((topics) => setEventTopics(topics.map((topic) => ({
+        id: topic.id_topico,
+        name: topic.topico
+      }))))
+      .catch(() => {
+        if (!controller.signal.aborted) setEventTopics([]);
+      });
+
+    return () => controller.abort();
+  }, []);
 
   useEffect(() => {
     const accessToken = authSession?.session.access_token;
@@ -258,17 +275,16 @@ export default function App() {
     setComposerOpen(false);
   }
 
-  function createEvent({ title, date, place, category, description }: CreateEventInput): void {
-    if (!title || !date || !place || !category || !description) return;
+  function createEvent({ title, date, place, topicIds, description }: CreateEventInput): void {
+    if (!title || !date || !place || !topicIds.length || !description) return;
 
     const accessToken = authSession?.session.access_token;
     if (!accessToken) return;
 
-    const categoryId = events.find((event) => normalize(event.category) === normalize(category))?.categoryId;
     setComposerSubmitting(true);
     setComposerError(null);
 
-    void createPendingEvent({ title, date, place, categoryId, description }, accessToken)
+    void createPendingEvent({ title, date, place, topicIds, description }, accessToken)
       .then(() => {
         setHomeTab("events");
         setComposerOpen(false);
@@ -375,6 +391,7 @@ export default function App() {
               open={composerOpen}
               mode={composerMode}
               communities={communities}
+              eventTopics={eventTopics}
               submitting={composerSubmitting}
               error={composerError}
               onClose={closeComposer}

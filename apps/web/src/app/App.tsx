@@ -353,6 +353,8 @@ export default function App() {
       .then(() => {
         setHomeTab("events");
         setComposerOpen(false);
+        setEventLoadStatus("loading");
+        setEventReloadKey((current) => current + 1);
         navigate("events");
       })
       .catch((error) => {

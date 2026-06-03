@@ -40,6 +40,7 @@ export function serializeEvent(event: EventWithRelations, authenticatedLegajo?: 
     ubicacion: event.ubicacion,
     fecha_inicio: serializeDate(event.fecha_inicio),
     descripcion: event.descripcion,
+    imagen_url: event.imagen_url,
     estado: event.estado,
     created_at: serializeDate(event.created_at),
     creador: serializeUser(event.usuario),

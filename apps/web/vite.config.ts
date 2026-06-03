@@ -6,6 +6,7 @@ import path from "node:path";
 
 export default defineConfig({
   root: __dirname,
+  envDir: path.resolve(__dirname, "../.."),
   plugins: [
     tailwindcss(),
     react(),
@@ -68,3 +69,4 @@ export default defineConfig({
     }
   }
 });
+

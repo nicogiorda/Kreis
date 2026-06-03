@@ -73,6 +73,7 @@ model evento {
   ubicacion    String?
   fecha_inicio DateTime           @db.Timestamptz(6)
   descripcion  String?
+  imagen_url   String?
   estado       publication_status @default(Pendiente)
   created_at   DateTime           @default(now()) @db.Timestamptz(6)
   usuario      usuario            @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_creador")
@@ -177,3 +178,4 @@ enum user_role {
 
   @@schema("public")
 }
+

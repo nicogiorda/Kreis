@@ -134,6 +134,7 @@ const eventCreationSchema = z.object({
       return parsedDate;
     }),
   descripcion: z.string().trim().min(1).optional(),
+  imagen_url: z.string().trim().url().optional(),
   topicos: z.array(z.coerce.number().int().positive()).default([])
 });
 
@@ -316,3 +317,4 @@ export function createEventsRouter(): Router {
 
   return router;
 }
+

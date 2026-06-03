@@ -14,6 +14,7 @@ export function serializeEventSummary(event: EventSummary) {
       ? event.fecha_inicio.toISOString()
       : event.fecha_inicio,
     descripcion: event.descripcion,
+    imagen_url: event.imagen_url,
     topicos: event.evento_topico.map((eventTopico) => ({
       id_topico: eventTopico.topico.id_topico.toString(),
       topico: eventTopico.topico.topico
@@ -21,3 +22,4 @@ export function serializeEventSummary(event: EventSummary) {
     interested: event.user_evento.length > 0
   };
 }
+

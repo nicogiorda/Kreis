@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router";
 import { listTopics, logout } from "../api/auth";
 import type { AuthResult } from "../api/auth";
 import { createPendingEvent, getEventDetail, listAllEvents, listUpcomingEvents, toggleEventInterest as persistEventInterest } from "../api/events";
+import { uploadEventImage } from "../api/event-images";
 import { getMyProfile } from "../api/users";
 import type { KreisUserProfile } from "../api/users";
 import { AuthFlow } from "../components/auth/AuthFlow";
@@ -50,6 +51,14 @@ function getEventDetailId(pathname: string): string | null {
   } catch {
     return eventId;
   }
+}
+
+function getComposerErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "No pudimos enviar el evento. Intentá nuevamente.";
 }
 
 function getInitialThemeMode(): ThemeMode {
@@ -327,7 +336,7 @@ export default function App() {
     setComposerOpen(false);
   }
 
-  function createEvent({ title, date, place, topicIds, description }: CreateEventInput): void {
+  function createEvent({ title, date, place, topicIds, description, coverFile }: CreateEventInput): void {
     if (!title || !date || !place || !topicIds.length || !description) return;
 
     const accessToken = authSession?.session.access_token;
@@ -336,13 +345,20 @@ export default function App() {
     setComposerSubmitting(true);
     setComposerError(null);
 
-    void createPendingEvent({ title, date, place, topicIds, description }, accessToken)
+    void (async () => {
+      const imageUrl = coverFile ? await uploadEventImage(coverFile, accessToken) : undefined;
+
+      await createPendingEvent({ title, date, place, topicIds, description, imageUrl }, accessToken);
+    })()
       .then(() => {
         setHomeTab("events");
         setComposerOpen(false);
         navigate("events");
       })
-      .catch(() => setComposerError("No pudimos enviar el evento. IntentÃ¡ nuevamente."))
+      .catch((error) => {
+        console.error("Create event failed", error);
+        setComposerError(getComposerErrorMessage(error));
+      })
       .finally(() => setComposerSubmitting(false));
   }
 
@@ -464,3 +480,4 @@ export default function App() {
     </>
   );
 }
+

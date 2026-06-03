@@ -81,7 +81,11 @@ export function EventCard({ event, variant = "full", onOpenEvents, onOpenEventDe
   return (
     <article className="grid h-[160px] min-w-0 content-start overflow-hidden rounded-[17px] bg-kreis-event-surface pt-2 text-kreis-ink transition-[background-color,color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none">
       <div className="event-photo-placeholder relative mx-[9px] h-[72px] overflow-hidden rounded-[12px]">
-        <CameraMinimalistic className="absolute left-1/2 top-1/2 size-[24px] -translate-x-1/2 -translate-y-1/2" weight="LineDuotone" aria-hidden="true" />
+        {event.imageUrl ? (
+          <img className="absolute inset-0 size-full object-cover" src={event.imageUrl} alt="" loading="lazy" decoding="async" />
+        ) : (
+          <CameraMinimalistic className="absolute left-1/2 top-1/2 size-[24px] -translate-x-1/2 -translate-y-1/2" weight="LineDuotone" aria-hidden="true" />
+        )}
       </div>
       <div className="grid min-h-0 content-start gap-[3px] px-[9px] pb-2.5 pt-[9px]">
         <div className="flex min-w-0 items-center justify-between gap-1.5">
@@ -110,3 +114,4 @@ export function EventCard({ event, variant = "full", onOpenEvents, onOpenEventDe
     </article>
   );
 }
+

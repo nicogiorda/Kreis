@@ -1,13 +1,15 @@
-import { CalendarBlank, Plus, X } from "@phosphor-icons/react";
-import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
+import { CalendarBlank, X } from "@phosphor-icons/react";
+import { type FocusEvent, type FormEvent, type MouseEvent, useState } from "react";
 import type { CreateEventInput, KreisTopic } from "../../types";
 import { cn } from "../../utils/cn";
 
 type CreateEventScreenProps = {
   topics: KreisTopic[];
+  topicsStatus: "loading" | "ready" | "error";
   submitting?: boolean;
   error?: string | null;
   onClose: () => void;
+  onRetryTopics: () => void;
   onCreateEvent: (input: CreateEventInput) => void;
 };
 
@@ -29,31 +31,16 @@ const descriptionMaxLength = 280;
 
 export function CreateEventScreen({
   topics,
+  topicsStatus,
   submitting = false,
   error,
   onClose,
+  onRetryTopics,
   onCreateEvent
 }: CreateEventScreenProps) {
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [eventDate, setEventDate] = useState("");
   const [description, setDescription] = useState("");
-
-  useEffect(() => {
-    return () => {
-      if (coverPreview) URL.revokeObjectURL(coverPreview);
-    };
-  }, [coverPreview]);
-
-  function handleCoverChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-
-    setCoverPreview((currentPreview) => {
-      if (currentPreview) URL.revokeObjectURL(currentPreview);
-
-      return file ? URL.createObjectURL(file) : null;
-    });
-  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,6 +63,14 @@ export function CreateEventScreen({
         ? currentTopicIds.filter((currentTopicId) => currentTopicId !== topicId)
         : [...currentTopicIds, topicId]
     ));
+  }
+
+  function openDatePicker(event: FocusEvent<HTMLInputElement> | MouseEvent<HTMLInputElement>): void {
+    try {
+      event.currentTarget.showPicker?.();
+    } catch {
+      // Some browsers only allow the picker from a direct click; focus still keeps the input usable.
+    }
   }
 
   return (
@@ -104,7 +99,7 @@ export function CreateEventScreen({
         </header>
 
         <label className="create-event-name mt-[clamp(8px,2.46dvh,21px)] grid flex-none gap-[clamp(4px,0.82dvh,7px)] text-[16px] font-normal leading-[19px] text-kreis-muted">
-          Nombre
+          Nombre del evento
           <input
             className="create-event-input h-10 min-w-0 rounded-[15px] border-0 bg-kreis-event-surface px-4 text-[16px] font-normal text-kreis-ink outline-0 placeholder:text-kreis-muted focus:ring-2 focus:ring-kreis-orange/30"
             name="eventTitle"
@@ -114,26 +109,17 @@ export function CreateEventScreen({
           />
         </label>
 
-        <label className="create-event-cover relative mt-[clamp(6px,1.18dvh,10px)] grid h-[clamp(92px,16.78dvh,143px)] flex-none cursor-pointer place-items-center overflow-hidden rounded-[20px] bg-kreis-event-surface text-kreis-muted">
-          <input className="sr-only" type="file" accept="image/*" onChange={handleCoverChange} />
-          {coverPreview ? <img className="absolute inset-0 size-full object-cover" src={coverPreview} alt="" /> : null}
-          <span className={cn("create-event-cover-label relative grid justify-items-center gap-[clamp(7px,1.4dvh,12px)]", coverPreview && "rounded-[17px] bg-[rgba(10,10,10,0.38)] px-5 py-3 text-kreis-cream")}>
-            <span className="create-event-cover-plus grid size-[clamp(40px,5.63dvh,48px)] place-items-center rounded-[18px] bg-kreis-orange text-kreis-cream">
-              <Plus className="size-[clamp(24px,3.28dvh,28px)]" weight="bold" aria-hidden="true" />
-            </span>
-            <span className="text-[16px] font-normal leading-[19px]">{coverPreview ? "Cambiar portada" : "Subí una portada"}</span>
-          </span>
-        </label>
-
         <label className="create-event-field mt-[clamp(5px,1.29dvh,11px)] grid flex-none gap-[clamp(3px,0.58dvh,5px)] text-[16px] font-normal leading-[19px] text-kreis-muted">
           Fecha y hora de inicio
           <span className="relative block">
             <input
-              className="absolute inset-0 h-full w-full cursor-pointer border-0 opacity-0"
+              className="absolute inset-0 z-10 h-full w-full cursor-pointer border-0 opacity-0"
               name="eventDate"
               required
               type="datetime-local"
               value={eventDate}
+              onClick={openDatePicker}
+              onFocus={openDatePicker}
               onChange={(event) => setEventDate(event.target.value)}
             />
             <span className="pointer-events-none flex h-10 items-center rounded-[15px] bg-kreis-event-surface px-4 pr-12">
@@ -191,7 +177,16 @@ export function CreateEventScreen({
                 {topic.name}
               </button>
             ))}
-            {!topics.length ? <span className="text-[12px] leading-5 text-kreis-muted">No pudimos cargar los tópicos.</span> : null}
+            {!topics.length && topicsStatus === "loading" ? <span className="text-[12px] leading-5 text-kreis-muted">Cargando tópicos...</span> : null}
+            {!topics.length && topicsStatus === "error" ? (
+              <button
+                className="h-5 rounded-[15px] border-0 bg-kreis-orange px-[10px] text-[11px] font-medium leading-5 text-kreis-cream shadow-none transition-transform duration-150 ease-out active:scale-95"
+                type="button"
+                onClick={onRetryTopics}
+              >
+                Reintentar tópicos
+              </button>
+            ) : null}
           </div>
         </fieldset>
 

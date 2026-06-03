@@ -161,7 +161,7 @@ function UniversityScreen({ draft, onChange, onContinue }: { draft: SignupDraft;
   );
 }
 
-function InterestsScreen({ draft, topics, status, onChange, onContinue }: { draft: SignupDraft; topics: TopicCatalogItem[]; status: CatalogStatus; onChange: (updates: Partial<SignupDraft>) => void; onContinue: () => void }) {
+function InterestsScreen({ draft, topics, status, onChange, onContinue, onRetry }: { draft: SignupDraft; topics: TopicCatalogItem[]; status: CatalogStatus; onChange: (updates: Partial<SignupDraft>) => void; onContinue: () => void; onRetry: () => void }) {
   function toggleInterest(topicId: string): void {
     onChange({
       topicIds: draft.topicIds.includes(topicId)
@@ -175,6 +175,9 @@ function InterestsScreen({ draft, topics, status, onChange, onContinue }: { draf
     : status === "error"
       ? "No pudimos cargar los intereses."
       : "Seleccione mínimo 3 categorías.";
+  const actionLabel = status === "error" ? "Reintentar" : "Continuar";
+  const actionDisabled = status === "loading" || (status === "ready" && draft.topicIds.length < 3);
+  const handleAction = status === "error" ? onRetry : onContinue;
 
   return (
     <AuthScreen tone="pumpkin">
@@ -198,14 +201,17 @@ function InterestsScreen({ draft, topics, status, onChange, onContinue }: { draf
         ))}
       </div>
       <p className="auth-interest-note">{note}</p>
-      <ContinueButton className="auth-continue-button--bottom" disabled={status !== "ready" || draft.topicIds.length < 3} onClick={onContinue} />
+      <ContinueButton className="auth-continue-button--bottom" disabled={actionDisabled} onClick={handleAction}>{actionLabel}</ContinueButton>
     </AuthScreen>
   );
 }
 
-function ProfileScreen({ draft, faculties, status, onChange, onContinue }: { draft: SignupDraft; faculties: FacultyCatalogItem[]; status: CatalogStatus; onChange: (updates: Partial<SignupDraft>) => void; onContinue: () => void }) {
+function ProfileScreen({ draft, faculties, status, onChange, onContinue, onRetry }: { draft: SignupDraft; faculties: FacultyCatalogItem[]; status: CatalogStatus; onChange: (updates: Partial<SignupDraft>) => void; onContinue: () => void; onRetry: () => void }) {
   const hasFullName = draft.fullName.trim().split(/\s+/).length >= 2;
   const hasEmail = /^\S+@\S+\.\S+$/.test(draft.email.trim());
+  const actionLabel = status === "error" ? "Reintentar" : "Continuar";
+  const actionDisabled = status === "loading" || (status === "ready" && (!hasFullName || !hasEmail || !draft.facultyId));
+  const handleAction = status === "error" ? onRetry : onContinue;
 
   return (
     <AuthScreen tone="green">
@@ -222,7 +228,7 @@ function ProfileScreen({ draft, faculties, status, onChange, onContinue }: { dra
         </select>
       </div>
       {status === "error" && <p className="auth-form-error auth-form-error--profile">No pudimos cargar las facultades.</p>}
-      <ContinueButton className="auth-continue-button--profile" disabled={!hasFullName || !hasEmail || !draft.facultyId} onClick={onContinue} />
+      <ContinueButton className="auth-continue-button--profile" disabled={actionDisabled} onClick={handleAction}>{actionLabel}</ContinueButton>
     </AuthScreen>
   );
 }
@@ -275,7 +281,9 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
   const [draft, setDraft] = useState<SignupDraft>(emptySignupDraft);
   const [topics, setTopics] = useState<TopicCatalogItem[]>([]);
   const [faculties, setFaculties] = useState<FacultyCatalogItem[]>([]);
-  const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>("loading");
+  const [topicsStatus, setTopicsStatus] = useState<CatalogStatus>("loading");
+  const [facultiesStatus, setFacultiesStatus] = useState<CatalogStatus>("loading");
+  const [catalogReloadKey, setCatalogReloadKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [authenticated, setAuthenticated] = useState<AuthResult | null>(null);
@@ -283,26 +291,41 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
   useEffect(() => {
     const controller = new AbortController();
 
-    async function loadCatalogs(): Promise<void> {
-      setCatalogStatus("loading");
+    async function loadTopics(): Promise<void> {
+      setTopicsStatus("loading");
 
       try {
-        const [nextTopics, nextFaculties] = await Promise.all([listTopics(controller.signal), listFaculties(controller.signal)]);
+        const nextTopics = await listTopics(controller.signal);
 
         if (controller.signal.aborted) return;
 
         setTopics(nextTopics);
-        setFaculties(nextFaculties);
-        setCatalogStatus("ready");
+        setTopicsStatus("ready");
       } catch {
-        if (!controller.signal.aborted) setCatalogStatus("error");
+        if (!controller.signal.aborted) setTopicsStatus("error");
       }
     }
 
-    void loadCatalogs();
+    async function loadFaculties(): Promise<void> {
+      setFacultiesStatus("loading");
+
+      try {
+        const nextFaculties = await listFaculties(controller.signal);
+
+        if (controller.signal.aborted) return;
+
+        setFaculties(nextFaculties);
+        setFacultiesStatus("ready");
+      } catch {
+        if (!controller.signal.aborted) setFacultiesStatus("error");
+      }
+    }
+
+    void loadTopics();
+    void loadFaculties();
 
     return () => controller.abort();
-  }, []);
+  }, [catalogReloadKey]);
 
   function updateDraft(updates: Partial<SignupDraft>): void {
     setDraft((current) => ({ ...current, ...updates }));
@@ -341,8 +364,8 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
       {step === "welcome" && <WelcomeScreen onBegin={() => setStep("university")} onLogin={() => setStep("login")} />}
       {step === "login" && <LoginScreen onComplete={onComplete} />}
       {step === "university" && <UniversityScreen draft={draft} onChange={updateDraft} onContinue={() => setStep("interests")} />}
-      {step === "interests" && <InterestsScreen draft={draft} topics={topics} status={catalogStatus} onChange={updateDraft} onContinue={() => setStep("profile")} />}
-      {step === "profile" && <ProfileScreen draft={draft} faculties={faculties} status={catalogStatus} onChange={updateDraft} onContinue={() => setStep("password")} />}
+      {step === "interests" && <InterestsScreen draft={draft} topics={topics} status={topicsStatus} onChange={updateDraft} onContinue={() => setStep("profile")} onRetry={() => setCatalogReloadKey((current) => current + 1)} />}
+      {step === "profile" && <ProfileScreen draft={draft} faculties={faculties} status={facultiesStatus} onChange={updateDraft} onContinue={() => setStep("password")} onRetry={() => setCatalogReloadKey((current) => current + 1)} />}
       {step === "password" && <PasswordScreen draft={draft} onChange={updateDraft} onContinue={() => setStep("certificate")} />}
       {step === "certificate" && <CertificateScreen error={submissionError} submitting={submitting} onValidate={() => void handleSignup()} />}
       {step === "validated" && authenticated && <ValidatedScreen auth={authenticated} onComplete={onComplete} />}

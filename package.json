@@ -16,9 +16,12 @@
                     "test:watch":  "vitest --config vitest.config.ts --configLoader runner",
                     "typecheck":  "tsc -b",
                     "typecheck:web":  "tsc -p apps/web/tsconfig.json --noEmit",
+                    "pretypecheck:api":  "npm run db:generate",
                     "typecheck:api":  "tsc -p apps/api/tsconfig.json",
                     "preview":  "vite preview --config apps/web/vite.config.ts",
+                    "prestart:api":  "npm run db:generate",
                     "start:api":  "tsx apps/api/src/platform/server.ts",
+                    "predev:api":  "npm run db:generate",
                     "db:generate":  "prisma generate"
                 },
     "dependencies":  {

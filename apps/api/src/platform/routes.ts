@@ -8,6 +8,21 @@ import { createPostsRouter } from "../modules/posts/api/routes";
 import { createUsersRouter } from "../modules/users/api/routes";
 
 export function registerRoutes(app: Application): void {
+  app.get("/", (_request: Request, response: Response) => {
+    response.json({
+      status: "ok",
+      service: "kreis-api",
+      message: "Kreis API is running. Use /health or /api/v1 routes.",
+      endpoints: {
+        health: "/health",
+        topics: "/api/v1/users/topicos",
+        faculties: "/api/v1/users/facultades",
+        profile: "/api/v1/users/me",
+        events: "/api/v1/events"
+      }
+    });
+  });
+
   app.get("/health", (_request: Request, response: Response) => {
     response.json({
       status: "ok",

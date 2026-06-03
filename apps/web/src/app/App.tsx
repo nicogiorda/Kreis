@@ -72,6 +72,8 @@ export default function App() {
   const [eventLoadStatus, setEventLoadStatus] = useState<EventLoadStatus>("loading");
   const [eventReloadKey, setEventReloadKey] = useState(0);
   const [eventTopics, setEventTopics] = useState<KreisTopic[]>([]);
+  const [eventTopicsStatus, setEventTopicsStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [eventTopicsReloadKey, setEventTopicsReloadKey] = useState(0);
   const [userProfile, setUserProfile] = useState<KreisUserProfile | null>(null);
   const [profileLoadStatus, setProfileLoadStatus] = useState<"loading" | "ready" | "error">("loading");
   const [communities, setCommunities] = useState(initialCommunities);
@@ -147,16 +149,22 @@ export default function App() {
     const controller = new AbortController();
 
     void listTopics(controller.signal)
-      .then((topics) => setEventTopics(topics.map((topic) => ({
-        id: topic.id_topico,
-        name: topic.topico
-      }))))
+      .then((topics) => {
+        setEventTopics(topics.map((topic) => ({
+          id: topic.id_topico,
+          name: topic.topico
+        })));
+        setEventTopicsStatus("ready");
+      })
       .catch(() => {
-        if (!controller.signal.aborted) setEventTopics([]);
+        if (!controller.signal.aborted) {
+          setEventTopics([]);
+          setEventTopicsStatus("error");
+        }
       });
 
     return () => controller.abort();
-  }, []);
+  }, [eventTopicsReloadKey]);
 
   useEffect(() => {
     const accessToken = authSession?.session.access_token;
@@ -253,9 +261,15 @@ export default function App() {
     routerNavigate(screenRoutes.home, { replace: true });
   }
 
+  function reloadEventTopics(): void {
+    setEventTopicsStatus("loading");
+    setEventTopicsReloadKey((current) => current + 1);
+  }
+
   function openComposer(mode: ComposerMode): void {
     setComposerMode(mode);
     setComposerError(null);
+    if (mode === "event" && !eventTopics.length) reloadEventTopics();
     setComposerOpen(true);
   }
 
@@ -264,6 +278,10 @@ export default function App() {
 
     setComposerError(null);
     setComposerOpen(false);
+  }
+
+  function retryEventTopics(): void {
+    reloadEventTopics();
   }
 
   function toggleJoin(communityId: string): void {
@@ -428,9 +446,11 @@ export default function App() {
               mode={composerMode}
               communities={communities}
               eventTopics={eventTopics}
+              eventTopicsStatus={eventTopicsStatus}
               submitting={composerSubmitting}
               error={composerError}
               onClose={closeComposer}
+              onRetryEventTopics={retryEventTopics}
               onCreateCommunity={createCommunity}
               onCreateEvent={createEvent}
               onCreatePost={createPost}

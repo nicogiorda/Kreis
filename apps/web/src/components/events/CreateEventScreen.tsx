@@ -1,7 +1,8 @@
 import { CalendarBlank, Plus, X } from "@phosphor-icons/react";
-import { type ChangeEvent, type FocusEvent, type FormEvent, type MouseEvent, useEffect, useState } from "react";
+import { type ChangeEvent, type FocusEvent, type FormEvent, type MouseEvent, useEffect, useMemo, useState } from "react";
 import type { CreateEventInput, KreisTopic } from "../../types";
 import { cn } from "../../utils/cn";
+import { normalize } from "../../utils/text";
 
 type CreateEventScreenProps = {
   topics: KreisTopic[];
@@ -29,6 +30,10 @@ function formatEventDate(iso: string): string {
 
 const descriptionMaxLength = 280;
 
+function isAcademicTopic(topic: KreisTopic): boolean {
+  return normalize(topic.name) === "academico";
+}
+
 export function CreateEventScreen({
   topics,
   topicsStatus,
@@ -43,6 +48,10 @@ export function CreateEventScreen({
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [eventDate, setEventDate] = useState("");
   const [description, setDescription] = useState("");
+  const creatableTopics = useMemo(() => topics.filter((topic) => !isAcademicTopic(topic)), [topics]);
+  const creatableTopicIds = useMemo(() => new Set(creatableTopics.map((topic) => topic.id)), [creatableTopics]);
+  const selectedCreatableTopicIds = selectedTopicIds.filter((topicId) => creatableTopicIds.has(topicId));
+  const hasSelectedCreatableTopic = selectedCreatableTopicIds.length > 0;
 
   useEffect(() => {
     return () => {
@@ -66,13 +75,13 @@ export function CreateEventScreen({
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
 
-    if (!selectedTopicIds.length) return;
+    if (!selectedCreatableTopicIds.length) return;
 
     onCreateEvent({
       title: getFormValue(formData, "eventTitle"),
       date: getFormValue(formData, "eventDate"),
       place: getFormValue(formData, "eventPlace"),
-      topicIds: selectedTopicIds,
+      topicIds: selectedCreatableTopicIds,
       description: getFormValue(formData, "eventDescription"),
       coverFile: coverFile ?? undefined
     });
@@ -195,7 +204,7 @@ export function CreateEventScreen({
         <fieldset className="create-event-topics mt-[clamp(5px,1.29dvh,11px)] min-w-0 flex-none border-0 p-0">
           <legend className="text-[16px] font-normal leading-[19px] text-kreis-muted">Topicos</legend>
           <div className="create-event-topics-rail mt-[clamp(3px,0.58dvh,5px)] grid h-[clamp(38px,5.28dvh,45px)] w-full min-w-0 grid-flow-col grid-rows-2 auto-cols-max content-start gap-x-[6px] gap-y-[5px] overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {topics.map((topic) => (
+            {creatableTopics.map((topic) => (
               <button
                 className={cn(
                   "h-5 rounded-[15px] border-0 px-[10px] text-[11px] font-medium leading-5 shadow-none transition-[background-color,color,transform] duration-150 ease-out active:scale-95",
@@ -209,14 +218,15 @@ export function CreateEventScreen({
                 {topic.name}
               </button>
             ))}
-            {!topics.length && topicsStatus === "loading" ? <span className="text-[12px] leading-5 text-kreis-muted">Cargando tópicos...</span> : null}
-            {!topics.length && topicsStatus === "error" ? (
+            {!creatableTopics.length && topicsStatus === "loading" ? <span className="text-[12px] leading-5 text-kreis-muted">Cargando topicos...</span> : null}
+            {!creatableTopics.length && topicsStatus === "ready" ? <span className="text-[12px] leading-5 text-kreis-muted">No hay topicos disponibles.</span> : null}
+            {!creatableTopics.length && topicsStatus === "error" ? (
               <button
                 className="h-5 rounded-[15px] border-0 bg-kreis-orange px-[10px] text-[11px] font-medium leading-5 text-kreis-cream shadow-none transition-transform duration-150 ease-out active:scale-95"
                 type="button"
                 onClick={onRetryTopics}
               >
-                Reintentar tópicos
+                Reintentar topicos
               </button>
             ) : null}
           </div>
@@ -227,7 +237,7 @@ export function CreateEventScreen({
         <button
           className="create-event-submit relative -left-[3px] mx-auto mt-auto grid h-[37px] w-[159px] flex-none place-items-center rounded-[19px] border-0 bg-kreis-orange px-4 text-[16px] font-normal leading-[19px] text-kreis-cream shadow-none transition-[transform,filter] duration-150 ease-out active:scale-[0.97] disabled:opacity-60"
           type="submit"
-          disabled={submitting || !selectedTopicIds.length}
+          disabled={submitting || !hasSelectedCreatableTopic}
         >
           {submitting ? "Creando..." : "Crear"}
         </button>

@@ -2,6 +2,7 @@ import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { EmptyState } from "../common/EmptyState";
 import { ThemeToggleIcon } from "../common/Icons";
 import { EventCard } from "./EventCard";
+import { EventTopicIcon } from "./EventTopicIcon";
 import type { EventLoadStatus, KreisEvent, ThemeMode } from "../../types";
 import { cn } from "../../utils/cn";
 import { normalize } from "../../utils/text";
@@ -45,8 +46,8 @@ export function EventsScreen({
   const filterButtonClass = (active: boolean) => cn(
     "grid w-[39px] flex-none justify-items-center gap-[5px] border-0 bg-transparent p-0 text-center text-[10px] font-normal leading-[14px] text-kreis-muted shadow-none transition-[color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95",
     active
-      ? "text-kreis-ink [&_.event-category-dot]:bg-kreis-orange/20 [&_.event-category-dot]:ring-1 [&_.event-category-dot]:ring-kreis-orange/40"
-      : "text-kreis-muted"
+      ? "text-kreis-ink [&_.event-category-dot]:bg-kreis-orange/20 [&_.event-category-dot]:text-kreis-orange [&_.event-category-dot]:ring-1 [&_.event-category-dot]:ring-kreis-orange/40"
+      : "text-kreis-muted [&_.event-category-dot]:text-kreis-muted"
   );
   const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
 
@@ -92,7 +93,9 @@ export function EventsScreen({
         <div className="mt-[7px] flex w-full min-w-0 gap-[13px] overflow-x-auto px-[9px] py-[2px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Filtrar eventos por categoria">
           {eventCategories.map((category) => (
             <button className={filterButtonClass(eventFilter === category)} type="button" key={category} onClick={() => onFilter(category)}>
-              <span className="event-category-dot block size-[39px] rounded-full bg-kreis-event-surface transition-[background-color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]" aria-hidden="true" />
+              <span className="event-category-dot grid size-[39px] place-items-center rounded-full bg-kreis-event-surface transition-[background-color,box-shadow,color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]" aria-hidden="true">
+                <EventTopicIcon category={category} />
+              </span>
               <span className="block max-w-[52px] overflow-hidden text-ellipsis whitespace-nowrap">{getCategoryLabel(category)}</span>
             </button>
           ))}

@@ -289,6 +289,14 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
   const [authenticated, setAuthenticated] = useState<AuthResult | null>(null);
 
   useEffect(() => {
+    document.documentElement.classList.add("auth-scroll-lock");
+
+    return () => {
+      document.documentElement.classList.remove("auth-scroll-lock");
+    };
+  }, []);
+
+  useEffect(() => {
     const controller = new AbortController();
 
     async function loadTopics(): Promise<void> {

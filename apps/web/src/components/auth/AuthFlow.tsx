@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { ApiRequestError, listFaculties, listTopics, login, register } from "../../api/auth";
 import type { AuthResult, FacultyCatalogItem, TopicCatalogItem } from "../../api/auth";
 import wordmarkUrl from "../../assets/auth/welcome-wordmark.svg";
@@ -30,6 +30,16 @@ type SignupDraft = {
 };
 
 const signUpSteps: AuthStep[] = ["university", "interests", "profile", "password", "certificate"];
+const authSafeAreaBackgrounds: Record<AuthStep, string> = {
+  welcome: "#f7edda",
+  login: "#f0531c",
+  university: "#f0531c",
+  interests: "#f0531c",
+  profile: "#f0531c",
+  password: "#f0531c",
+  certificate: "#f0531c",
+  validated: "#f0531c"
+};
 const emptySignupDraft: SignupDraft = {
   university: "",
   legajo: "",
@@ -289,12 +299,28 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
   const [authenticated, setAuthenticated] = useState<AuthResult | null>(null);
 
   useEffect(() => {
+    function preventViewportScroll(event: Event): void {
+      event.preventDefault();
+    }
+
     document.documentElement.classList.add("auth-scroll-lock");
+    window.addEventListener("touchmove", preventViewportScroll, { passive: false });
+    window.addEventListener("wheel", preventViewportScroll, { passive: false });
 
     return () => {
       document.documentElement.classList.remove("auth-scroll-lock");
+      window.removeEventListener("touchmove", preventViewportScroll);
+      window.removeEventListener("wheel", preventViewportScroll);
     };
   }, []);
+
+  useLayoutEffect(() => {
+    document.documentElement.style.setProperty("--auth-safe-area-bg", authSafeAreaBackgrounds[step]);
+
+    return () => {
+      document.documentElement.style.removeProperty("--auth-safe-area-bg");
+    };
+  }, [step]);
 
   useEffect(() => {
     const controller = new AbortController();

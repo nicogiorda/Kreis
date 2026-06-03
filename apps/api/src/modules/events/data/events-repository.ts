@@ -78,6 +78,7 @@ export type EventWithRelations = {
   ubicacion: string | null;
   fecha_inicio: Date;
   descripcion: string | null;
+  imagen_url: string | null;
   estado: string;
   created_at: Date;
   usuario: EventUser;
@@ -100,6 +101,7 @@ export type EventSummary = {
   ubicacion: string | null;
   fecha_inicio: Date;
   descripcion: string | null;
+  imagen_url: string | null;
   evento_topico: Array<{
     topico: {
       id_topico: bigint;
@@ -130,6 +132,7 @@ export async function listAcceptedEventsLimit(legajo?: number): Promise<EventSum
       ubicacion: true,
       fecha_inicio: true,
       descripcion: true,
+      imagen_url: true,
       evento_topico: {
         include: {
           topico: {
@@ -166,6 +169,7 @@ export async function listAcceptedEvents(legajo?: number): Promise<EventSummary[
       ubicacion: true,
       fecha_inicio: true,
       descripcion: true,
+      imagen_url: true,
       evento_topico: {
         include: {
           topico: {
@@ -206,10 +210,11 @@ export type CreateEventInput = {
   ubicacion?: string;
   fecha_inicio: Date;
   descripcion?: string;
+  imagen_url?: string;
   topicos: number[];
 };
 
-// Crea el evento siempre en estado Pendiente — nunca Aceptado directamente.
+// Crea el evento siempre en estado Pendiente — nunca Aceptado directamente (cuando haya moderacion).
 // El flujo de moderación es: usuario crea → admin acepta o rechaza.
 // Los tópicos se vinculan en la misma operación via evento_topico.
 export async function createPendingEvent(input: CreateEventInput): Promise<EventWithRelations> {
@@ -222,7 +227,9 @@ export async function createPendingEvent(input: CreateEventInput): Promise<Event
       ubicacion: input.ubicacion,
       fecha_inicio: input.fecha_inicio,
       descripcion: input.descripcion,
-      estado: PENDING_EVENT_STATUS,
+      imagen_url: input.imagen_url,
+      // AL PRINCIPIO PONEMOS QUE SE CREE EN "ACEPTADO" PERO CUANDO HAYA MODERACIÓN SE CAMBIA A "PENDIENTE" '>
+      estado: ACCEPTED_EVENT_STATUS,
       evento_topico: {
         create: uniqueTopicos.map((id_topico) => ({
           topico: {
@@ -302,3 +309,4 @@ export async function toggleEventInterest(
     interested: true
   };
 }
+

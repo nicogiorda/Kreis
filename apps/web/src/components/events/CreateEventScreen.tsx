@@ -40,6 +40,7 @@ export function CreateEventScreen({
 }: CreateEventScreenProps) {
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [eventDate, setEventDate] = useState("");
   const [description, setDescription] = useState("");
 
@@ -51,6 +52,8 @@ export function CreateEventScreen({
 
   function handleCoverChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
+
+    setCoverFile(file ?? null);
 
     setCoverPreview((currentPreview) => {
       if (currentPreview) URL.revokeObjectURL(currentPreview);
@@ -70,7 +73,8 @@ export function CreateEventScreen({
       date: getFormValue(formData, "eventDate"),
       place: getFormValue(formData, "eventPlace"),
       topicIds: selectedTopicIds,
-      description: getFormValue(formData, "eventDescription")
+      description: getFormValue(formData, "eventDescription"),
+      coverFile: coverFile ?? undefined
     });
   }
 
@@ -231,3 +235,4 @@ export function CreateEventScreen({
     </section>
   );
 }
+

@@ -36,6 +36,7 @@ export type KreisEvent = {
   time?: string;
   organizer?: string;
   official?: boolean;
+  imageUrl?: string;
 };
 
 export type Community = {
@@ -81,6 +82,7 @@ export type CreateEventInput = {
   place: string;
   topicIds: string[];
   description: string;
+  coverFile?: File;
 };
 
 export type CreatePostInput = {

@@ -13,6 +13,7 @@ type EventSummary = {
   ubicacion: string | null;
   fecha_inicio: string;
   descripcion: string | null;
+  imagen_url?: string | null;
   topicos: EventTopic[];
   interested: boolean;
 };
@@ -37,6 +38,7 @@ type CreatePendingEventInput = {
   place: string;
   topicIds: string[];
   description: string;
+  imageUrl?: string;
 };
 
 const argentinaTimezone = "America/Argentina/Buenos_Aires";
@@ -102,7 +104,8 @@ function adaptEvent(event: EventSummary): KreisEvent {
     interested: event.interested,
     description: event.descripcion ?? "Todavia no hay una descripcion para este evento.",
     time: timeFormatter.format(startDate),
-    official
+    official,
+    imageUrl: event.imagen_url ?? undefined
   };
 }
 
@@ -165,6 +168,7 @@ export async function createPendingEvent(input: CreatePendingEventInput, accessT
       ubicacion: input.place,
       fecha_inicio: startDateTime,
       descripcion: input.description,
+      imagen_url: input.imageUrl,
       topicos: input.topicIds.map(Number)
     })
   });

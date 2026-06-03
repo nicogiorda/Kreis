@@ -35,7 +35,6 @@ export function ProfileScreen({
   const profileFacts = [
     profile ? { label: "Legajo", value: String(profile.legajo) } : null,
     profile?.role ? { label: "Rol", value: profile.role } : null,
-    profile && profile.verified !== undefined ? { label: "Estado", value: profile.verified ? "Verificado" : "Sin verificar" } : null,
     profile?.topics.length ? { label: "Intereses", value: profile.topics.join(", ") } : null
   ].filter((fact): fact is { label: string; value: string } => Boolean(fact));
 

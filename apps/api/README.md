@@ -15,7 +15,7 @@ apps/api/
     modules/     Dominios de Kreis
 ```
 
-## Regla de trabajo
+## Reglas de trabajo
 
 - Un modulo no importa `infrastructure` de otro modulo.
 - Las lecturas que combinan varios dominios viven en `discovery` o en un caso de uso explicito.

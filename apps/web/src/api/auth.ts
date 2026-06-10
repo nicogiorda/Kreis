@@ -1,4 +1,4 @@
-import { requestFormData, requestJson } from "./client";
+﻿import { requestFormData, requestJson } from "./client";
 export { ApiRequestError } from "./client";
 
 export type TopicCatalogItem = {
@@ -17,12 +17,63 @@ export type CertificateClassification = {
   confidence: number;
 };
 
+export type CertificateExtractedField = {
+  type: string;
+  text: string | null;
+  normalizedText: string | null;
+  confidence: number;
+};
+
+export type CertificateExtractionResult = {
+  institutionName: string | null;
+  studentName: string | null;
+  studentId: string | null;
+  academicYear: string | null;
+  studentRegistrationNumber: string | null;
+  degreeProgram: string | null;
+  facultyName: string | null;
+  issueLocation: string | null;
+  issueDate: string | null;
+  observations: string | null;
+  certificateNumber: string | null;
+  fields: Record<string, CertificateExtractedField | null>;
+};
+
+export type CertificateValidationCheck = {
+  valid: boolean;
+  expected: string;
+  actual: string | null;
+  field: string;
+};
+
+export type CertificateExtractionValidation = {
+  valid: boolean;
+  currentYear: number;
+  errors: string[];
+  checks: {
+    legajo: CertificateValidationCheck;
+    studentName: CertificateValidationCheck;
+    issueDateYear: CertificateValidationCheck;
+  };
+  degreeProgram: string | null;
+  facultyName: string | null;
+};
+
 export type CertificateClassificationResult = {
   valid: boolean;
+  classificationValid: boolean;
   expectedType: string;
   minConfidence: number;
   classification: CertificateClassification | null;
   classifications: CertificateClassification[];
+  extraction: CertificateExtractionResult | null;
+  validation: CertificateExtractionValidation | null;
+};
+
+export type CertificateValidationInput = {
+  legajo: number;
+  nombre: string;
+  apellido: string;
 };
 
 export type RegisterInput = {
@@ -59,9 +110,12 @@ export async function listFaculties(signal?: AbortSignal): Promise<FacultyCatalo
   return response.facultades;
 }
 
-export async function classifyCertificate(certificate: File): Promise<CertificateClassificationResult> {
+export async function classifyCertificate(certificate: File, input: CertificateValidationInput): Promise<CertificateClassificationResult> {
   const formData = new FormData();
   formData.append("certificate", certificate);
+  formData.append("legajo", String(input.legajo));
+  formData.append("nombre", input.nombre);
+  formData.append("apellido", input.apellido);
 
   const response = await requestFormData<{ certificate: CertificateClassificationResult }>("/api/v1/auth/certificate/classify", formData);
   return response.certificate;

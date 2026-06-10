@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { ApiRequestError, classifyCertificate, listFaculties, listTopics, login, register } from "../../api/auth";
-import type { AuthResult, FacultyCatalogItem, TopicCatalogItem } from "../../api/auth";
+import type { AuthResult, CertificateClassificationResult, FacultyCatalogItem, TopicCatalogItem } from "../../api/auth";
 import wordmarkUrl from "../../assets/auth/welcome-wordmark.svg";
 import validatedCheckUrl from "../../assets/auth/validated-check.svg";
 import signUpOneUrl from "../../assets/auth/signup-1.webp";
@@ -92,9 +92,22 @@ function getAuthErrorMessage(error: unknown): string {
     if (error.code === "invalid_credentials") return "El mail o la contraseña no coinciden.";
     if (error.code === "register_failed") return "No pudimos crear la cuenta. Revisá si el mail o el legajo ya están registrados.";
     if (error.code === "validation_error") return "Revisá los datos ingresados antes de continuar.";
+    if (error.code === "certificate_too_large") return "El certificado no puede superar los 5 MB.";
+    if (error.code === "invalid_certificate_file") return "El certificado debe ser un PDF.";
+    if (error.code === "document_ai_config_error" || error.code === "document_ai_request_failed") return "No pudimos validar el certificado en este momento.";
   }
 
   return "No pudimos conectar con el servidor. Intentá nuevamente.";
+}
+
+function getDraftProfile(draft: SignupDraft): { nombre: string; apellido: string } {
+  const nameParts = draft.fullName.trim().split(/\s+/).filter(Boolean);
+  const apellido = nameParts.pop() ?? "";
+
+  return {
+    nombre: nameParts.join(" "),
+    apellido
+  };
 }
 
 function WelcomeScreen({ onBegin, onLogin }: { onBegin: () => void; onLogin: () => void }) {
@@ -261,16 +274,26 @@ function PasswordScreen({ draft, onChange, onContinue }: { draft: SignupDraft; o
   );
 }
 
-function getInvalidCertificateMessage(type: string | undefined): string {
-  if (type === "formato_invalido_con_datos") {
-    return "El archivo tiene datos, pero no cumple el formato esperado del certificado.";
+function getInvalidCertificateMessage(certificate: CertificateClassificationResult): string {
+  if (!certificate.classificationValid) {
+    const type = certificate.classification?.type;
+
+    if (type === "formato_invalido_con_datos") {
+      return "El archivo tiene datos, pero no cumple el formato esperado del certificado.";
+    }
+
+    if (type === "otro_documento_universitario") {
+      return "El documento parece universitario, pero no es un certificado de alumno regular.";
+    }
+
+    return "Adjuntá una constancia de alumno regular válida.";
   }
 
-  if (type === "otro_documento_universitario") {
-    return "El documento parece universitario, pero no es un certificado de alumno regular.";
+  if (certificate.validation?.errors.length) {
+    return certificate.validation.errors[0];
   }
 
-  return "Adjunt� una constancia de alumno regular v�lida.";
+  return "Los datos del certificado no coinciden con los datos ingresados.";
 }
 
 function CertificateScreen({ error, fileName, submitting, onFileChange, onValidate }: { error: string | null; fileName: string | null; submitting: boolean; onFileChange: (file: File | null) => void; onValidate: () => void }) {
@@ -387,7 +410,7 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
 
   async function handleCertificateValidationAndSignup(): Promise<void> {
     if (!certificateFile) {
-      setSubmissionError("Adjunt� tu certificado en PDF.");
+      setSubmissionError("Adjuntá tu certificado en PDF.");
       return;
     }
 
@@ -395,12 +418,22 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
     setSubmissionError(null);
 
     try {
-      const certificate = await classifyCertificate(certificateFile);
+      const profile = getDraftProfile(draft);
+      const certificate = await classifyCertificate(certificateFile, {
+        legajo: Number(draft.legajo),
+        nombre: profile.nombre,
+        apellido: profile.apellido
+      });
 
       if (!certificate.valid) {
-        setSubmissionError(getInvalidCertificateMessage(certificate.classification?.type));
+        setSubmissionError(getInvalidCertificateMessage(certificate));
         return;
       }
+
+      console.info("Certificado validado", {
+        carrera: certificate.validation?.degreeProgram ?? certificate.extraction?.degreeProgram ?? null,
+        facultad: certificate.validation?.facultyName ?? certificate.extraction?.facultyName ?? null
+      });
 
       await handleSignup();
     } catch (requestError) {
@@ -410,8 +443,7 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
     }
   }
   async function handleSignup(): Promise<void> {
-    const nameParts = draft.fullName.trim().split(/\s+/);
-    const apellido = nameParts.pop() ?? "";
+    const profile = getDraftProfile(draft);
 
     setSubmitting(true);
     setSubmissionError(null);
@@ -421,8 +453,8 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
         email: draft.email.trim(),
         password: draft.password,
         legajo: Number(draft.legajo),
-        nombre: nameParts.join(" "),
-        apellido,
+        nombre: profile.nombre,
+        apellido: profile.apellido,
         id_facultad: Number(draft.facultyId),
         topicos: draft.topicIds.map(Number)
       });

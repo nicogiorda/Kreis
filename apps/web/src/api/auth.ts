@@ -1,4 +1,4 @@
-import { requestJson } from "./client";
+import { requestFormData, requestJson } from "./client";
 export { ApiRequestError } from "./client";
 
 export type TopicCatalogItem = {
@@ -9,6 +9,20 @@ export type TopicCatalogItem = {
 export type FacultyCatalogItem = {
   id_facultad: string;
   nombre: string;
+};
+
+export type CertificateClassification = {
+  type: string;
+  mentionText: string | null;
+  confidence: number;
+};
+
+export type CertificateClassificationResult = {
+  valid: boolean;
+  expectedType: string;
+  minConfidence: number;
+  classification: CertificateClassification | null;
+  classifications: CertificateClassification[];
 };
 
 export type RegisterInput = {
@@ -43,6 +57,14 @@ export async function listTopics(signal?: AbortSignal): Promise<TopicCatalogItem
 export async function listFaculties(signal?: AbortSignal): Promise<FacultyCatalogItem[]> {
   const response = await requestJson<{ facultades: FacultyCatalogItem[] }>("/api/v1/users/facultades", { signal });
   return response.facultades;
+}
+
+export async function classifyCertificate(certificate: File): Promise<CertificateClassificationResult> {
+  const formData = new FormData();
+  formData.append("certificate", certificate);
+
+  const response = await requestFormData<{ certificate: CertificateClassificationResult }>("/api/v1/auth/certificate/classify", formData);
+  return response.certificate;
 }
 
 export async function register(input: RegisterInput): Promise<void> {

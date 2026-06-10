@@ -10,7 +10,16 @@ const environmentSchema = z.object({
   DIRECT_URL: z.string().min(1),
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  SUPABASE_ANON_KEY: z.string().min(1)
+  SUPABASE_ANON_KEY: z.string().min(1),
+  GOOGLE_CLOUD_PROJECT_ID: z.string().optional(),
+  GOOGLE_DOCUMENT_AI_LOCATION: z.string().default("us"),
+  GOOGLE_DOCUMENT_AI_CLASSIFIER_PROCESSOR_ID: z.string().optional(),
+  GOOGLE_DOCUMENT_AI_CLASSIFIER_VERSION_ID: z.string().optional(),
+  GOOGLE_DOCUMENT_AI_CERTIFICATE_CLASS: z.string().default("certificado_alumno_regular"),
+  GOOGLE_DOCUMENT_AI_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.8),
+  GOOGLE_SERVICE_ACCOUNT_JSON: z.string().optional(),
+  GOOGLE_SERVICE_ACCOUNT_JSON_BASE64: z.string().optional(),
+  GOOGLE_APPLICATION_CREDENTIALS: z.string().optional()
 });
 
 const environment = environmentSchema.parse(process.env);

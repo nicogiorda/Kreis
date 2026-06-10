@@ -1,6 +1,6 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider        = "prisma-client"
+  output          = "../generated/prisma"
 }
 
 datasource db {
@@ -33,14 +33,14 @@ model usuario {
   rol            user_role        @default(Estudiante)
   verificado     Boolean          @default(false)
   created_at     DateTime         @default(now()) @db.Timestamptz(6)
-  authUser       users            @relation(fields: [auth_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_usuario_auth")
-  facultad       facultad         @relation(fields: [id_facultad], references: [id_facultad], onDelete: Cascade, onUpdate: NoAction, map: "fk_usuario_facultad")
   comentario     comentario[]
   comunidad      comunidad[]
   evento         evento[]
   post           post[]
   user_comunidad user_comunidad[]
   user_evento    user_evento[]
+  authUser       users            @relation(fields: [auth_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_usuario_auth")
+  facultad       facultad         @relation(fields: [id_facultad], references: [id_facultad], onDelete: Cascade, onUpdate: NoAction, map: "fk_usuario_facultad")
   usuario_topico usuario_topico[]
 
   @@schema("public")
@@ -67,16 +67,16 @@ model usuario_topico {
 }
 
 model evento {
-  id_evento    BigInt             @id @default(autoincrement())
-  legajo       Int
-  nombre       String
-  ubicacion    String?
-  fecha_inicio DateTime           @db.Timestamptz(6)
-  descripcion  String?
-  imagen_url   String?
-  estado       publication_status @default(Pendiente)
-  created_at   DateTime           @default(now()) @db.Timestamptz(6)
-  usuario      usuario            @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_creador")
+  id_evento     BigInt             @id @default(autoincrement())
+  legajo        Int
+  nombre        String
+  ubicacion     String?
+  fecha_inicio  DateTime           @db.Timestamptz(6)
+  descripcion   String?
+  estado        publication_status @default(Pendiente)
+  created_at    DateTime           @default(now()) @db.Timestamptz(6)
+  imagen_url    String?
+  usuario       usuario            @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_evento_creador")
   evento_topico evento_topico[]
   user_evento   user_evento[]
 
@@ -104,13 +104,13 @@ model evento_topico {
 }
 
 model comunidad {
-  id_comunidad   BigInt             @id @default(autoincrement())
-  legajo         Int
-  nombre         String
-  descripcion    String?
-  estado         publication_status @default(Pendiente)
-  created_at     DateTime           @default(now()) @db.Timestamptz(6)
-  usuario        usuario            @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_comunidad_creador")
+  id_comunidad     BigInt             @id @default(autoincrement())
+  legajo           Int
+  nombre           String
+  descripcion      String?
+  estado           publication_status @default(Pendiente)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  usuario          usuario            @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_comunidad_creador")
   comunidad_topico comunidad_topico[]
   post             post[]
   user_comunidad   user_comunidad[]
@@ -144,24 +144,28 @@ model post {
   id_comunidad BigInt
   cuerpo       String
   created_at   DateTime     @default(now()) @db.Timestamptz(6)
+  comentario   comentario[]
   comunidad    comunidad    @relation(fields: [id_comunidad], references: [id_comunidad], onDelete: Cascade, onUpdate: NoAction, map: "fk_post_comunidad")
   usuario      usuario      @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_post_usuario")
-  comentario   comentario[]
 
   @@schema("public")
 }
 
 model comentario {
-  id_comentario BigInt   @id @default(autoincrement())
-  legajo        Int
-  id_post       BigInt
-  cuerpo        String
-  created_at    DateTime @default(now()) @db.Timestamptz(6)
-  post          post     @relation(fields: [id_post], references: [id_post], onDelete: Cascade, onUpdate: NoAction, map: "fk_comentario_post")
-  usuario       usuario  @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_comentario_usuario")
+  id_comentario    BigInt       @id @default(autoincrement())
+  legajo           Int
+  id_post          BigInt
+  cuerpo           String
+  created_at       DateTime     @default(now()) @db.Timestamptz(6)
+  id_padre         BigInt?
+  comentario       comentario?  @relation("comentarioTocomentario", fields: [id_padre], references: [id_comentario], onDelete: Cascade, onUpdate: NoAction)
+  other_comentario comentario[] @relation("comentarioTocomentario")
+  post             post         @relation(fields: [id_post], references: [id_post], onDelete: Cascade, onUpdate: NoAction, map: "fk_comentario_post")
+  usuario          usuario      @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_comentario_usuario")
 
   @@schema("public")
 }
+
 
 enum publication_status {
   Pendiente

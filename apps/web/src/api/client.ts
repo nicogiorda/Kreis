@@ -21,6 +21,13 @@ export function bearerTokenHeaders(accessToken?: string): HeadersInit | undefine
   return accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined;
 }
 
+function getApiError(payload: ApiErrorPayload | null): ApiRequestError {
+  return new ApiRequestError(
+    payload?.error?.code ?? "request_failed",
+    payload?.error?.message ?? "No pudimos completar la solicitud."
+  );
+}
+
 export async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   headers.set("Content-Type", "application/json");
@@ -33,11 +40,23 @@ export async function requestJson<T>(path: string, init?: RequestInit): Promise<
   const payload = await response.json().catch(() => null) as ApiErrorPayload | T | null;
 
   if (!response.ok) {
-    const error = payload as ApiErrorPayload | null;
-    throw new ApiRequestError(
-      error?.error?.code ?? "request_failed",
-      error?.error?.message ?? "No pudimos completar la solicitud."
-    );
+    throw getApiError(payload as ApiErrorPayload | null);
+  }
+
+  return payload as T;
+}
+
+export async function requestFormData<T>(path: string, formData: FormData, init?: Omit<RequestInit, "body">): Promise<T> {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    ...init,
+    method: init?.method ?? "POST",
+    body: formData
+  });
+
+  const payload = await response.json().catch(() => null) as ApiErrorPayload | T | null;
+
+  if (!response.ok) {
+    throw getApiError(payload as ApiErrorPayload | null);
   }
 
   return payload as T;

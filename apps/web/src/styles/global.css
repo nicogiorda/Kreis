@@ -1052,6 +1052,63 @@ html[data-theme="dark"] {
     opacity: 0.62;
   }
 
+
+  .auth-certificate-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .auth-certificate-file-name {
+    position: absolute;
+    top: 52.2%;
+    left: 50%;
+    z-index: 5;
+    width: min(calc(100vw - 84px), 260px);
+    margin: 0;
+    overflow: hidden;
+    color: #f7edda;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 15px;
+    text-align: center;
+    text-overflow: ellipsis;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
+  .auth-certificate-submit-button {
+    position: absolute;
+    top: 56.7%;
+    left: 50%;
+    z-index: 4;
+    width: 185px;
+    height: 31px;
+    border: 0;
+    border-radius: 46px;
+    background: #f7edda;
+    color: #2e4b3c;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 31px;
+    transform: translateX(-50%);
+    transition: transform 150ms ease-out;
+  }
+
+  .auth-certificate-submit-button:active {
+    transform: translateX(-50%) scale(0.97);
+  }
+
+  .auth-certificate-submit-button:disabled {
+    cursor: default;
+    opacity: 0.62;
+  }
+
   .auth-validated-check {
     position: absolute;
     top: 39.79%;
@@ -1165,3 +1222,4 @@ html[data-theme="dark"] {
     opacity: 1;
   }
 }
+

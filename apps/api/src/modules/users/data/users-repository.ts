@@ -203,6 +203,31 @@ export async function listTopicos(): Promise<TopicoCatalogItem[]> {
   });
 }
 
+// Actualiza el rol de un usuario por legajo.
+// Solo se usa desde la ruta de dev — no exponer en producción.
+export async function updateUserRol(
+  legajo: number,
+  rol: "Estudiante" | "Moderador" | "Administrador"
+): Promise<{ legajo: number; rol: string } | null> {
+  try {
+    return await prisma.usuario.update({
+      where: { legajo },
+      data: { rol },
+      select: { legajo: true, rol: true }
+    });
+  } catch (error) {
+    // P2025: registro no encontrado
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      (error as { code: string }).code === "P2025"
+    ) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 export async function listFacultades(): Promise<FacultadCatalogItem[]> {
   return prisma.facultad.findMany({
     select: {

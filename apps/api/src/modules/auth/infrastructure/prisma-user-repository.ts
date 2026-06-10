@@ -1,5 +1,5 @@
-// CAPA INFRASTRUCTURE � Repositorio de usuarios
-// Implementa IUserRepository usando Prisma para persistir el perfil de aplicaci�n.
+// CAPA INFRASTRUCTURE � Repositorio de usuarios
+// Implementa IUserRepository usando Prisma para persistir el perfil de aplicaci�n.
 
 import { prisma } from "../../../core/database";
 import { ProfileCreationError } from "../domain/auth-errors";
@@ -8,25 +8,27 @@ import type { IUserRepository, RegisterInput } from "../domain/auth.types";
 export class PrismaUserRepository implements IUserRepository {
   async createProfile(authId: string, input: Omit<RegisterInput, "email" | "password">) {
     try {
-      await prisma.$transaction(async (transaction) => {
-        await transaction.usuario.create({
-          data: {
-            auth_id: authId,
-            legajo: input.legajo,
-            nombre: input.nombre,
-            apellido: input.apellido,
-            id_facultad: BigInt(input.id_facultad)
-          }
-        });
-
-        if (input.topicos.length > 0) {
-          await transaction.usuario_topico.createMany({
-            data: input.topicos.map((id_topico) => ({
-              legajo: input.legajo,
-              id_topico: BigInt(id_topico)
-            })),
-            skipDuplicates: true
-          });
+      // Usamos nested write en lugar de $transaction() interactivo.
+      // $transaction(async fn) requiere una conexión persistente que PgBouncer
+      // (el pooler de Supabase) no puede garantizar en transaction mode.
+      // Un nested write corre en una transacción implícita que sí es compatible.
+      await prisma.usuario.create({
+        data: {
+          auth_id: authId,
+          legajo: input.legajo,
+          nombre: input.nombre,
+          apellido: input.apellido,
+          id_facultad: BigInt(input.id_facultad),
+          usuario_topico: input.topicos.length > 0
+            ? {
+                createMany: {
+                  data: input.topicos.map((id_topico) => ({
+                    id_topico: BigInt(id_topico)
+                  })),
+                  skipDuplicates: true
+                }
+              }
+            : undefined
         }
       });
     } catch (error) {

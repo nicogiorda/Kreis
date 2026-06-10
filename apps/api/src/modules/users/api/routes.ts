@@ -21,7 +21,7 @@
 import { Router } from "express";
 import { createClient } from "@supabase/supabase-js";
 import { config } from "../../../core/config";
-import { findUserProfileByAuthId, listFacultades, listTopicos } from "../data/users-repository";
+import { findUserProfileByAuthId, listFacultades, listTopicos, updateUserRol } from "../data/users-repository";
 import { serializeUserProfile } from "./serialize-user-profile";
 
 // Cliente Supabase con la anon key, usado unicamente para verificar el JWT
@@ -114,6 +114,56 @@ export function createUsersRouter(): Router {
       response.json({ user: serializeUserProfile(user) });
     } catch (error) {
       // Delegamos cualquier error inesperado al middleware de errores global de Express
+      next(error);
+    }
+  });
+
+  // [DEV ONLY] Cambia el rol de un usuario por legajo.
+  // Esta ruta NO existe en producción — devuelve 404 si NODE_ENV es "production".
+  // Sirve para testear rutas protegidas por rol sin tocar la base de datos manualmente.
+  //
+  // PATCH /users/:legajo/rol
+  // Body: { rol: "Estudiante" | "Moderador" | "Administrador" }
+  router.patch("/:legajo/rol", async (request, response, next) => {
+    // Bloqueamos en producción para que no quede expuesto accidentalmente
+    if (config.NODE_ENV === "production") {
+      response.status(404).json({ error: { code: "not_found", message: "Not found" } });
+      return;
+    }
+
+    try {
+      const legajo = Number(request.params.legajo);
+      const { rol } = (request.body as { rol?: unknown } | undefined) ?? {};
+      const VALID_ROLES = ["Estudiante", "Moderador", "Administrador"] as const;
+
+      if (!Number.isInteger(legajo) || legajo <= 0) {
+        response.status(400).json({
+          error: { code: "validation_error", message: "El parámetro 'legajo' debe ser un entero positivo" }
+        });
+        return;
+      }
+
+      if (!VALID_ROLES.includes(rol as (typeof VALID_ROLES)[number])) {
+        response.status(400).json({
+          error: {
+            code: "validation_error",
+            message: `El campo 'rol' debe ser uno de: ${VALID_ROLES.join(", ")}`
+          }
+        });
+        return;
+      }
+
+      const updated = await updateUserRol(legajo, rol as (typeof VALID_ROLES)[number]);
+
+      if (!updated) {
+        response.status(404).json({
+          error: { code: "not_found", message: "Usuario no encontrado" }
+        });
+        return;
+      }
+
+      response.json({ legajo: updated.legajo, rol: updated.rol });
+    } catch (error) {
       next(error);
     }
   });

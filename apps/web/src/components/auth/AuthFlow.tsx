@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from "react";
-import { ApiRequestError, listFaculties, listTopics, login, register } from "../../api/auth";
+import { ApiRequestError, classifyCertificate, listFaculties, listTopics, login, register } from "../../api/auth";
 import type { AuthResult, FacultyCatalogItem, TopicCatalogItem } from "../../api/auth";
 import wordmarkUrl from "../../assets/auth/welcome-wordmark.svg";
 import validatedCheckUrl from "../../assets/auth/validated-check.svg";
@@ -261,13 +261,32 @@ function PasswordScreen({ draft, onChange, onContinue }: { draft: SignupDraft; o
   );
 }
 
-function CertificateScreen({ error, submitting, onValidate }: { error: string | null; submitting: boolean; onValidate: () => void }) {
+function getInvalidCertificateMessage(type: string | undefined): string {
+  if (type === "formato_invalido_con_datos") {
+    return "El archivo tiene datos, pero no cumple el formato esperado del certificado.";
+  }
+
+  if (type === "otro_documento_universitario") {
+    return "El documento parece universitario, pero no es un certificado de alumno regular.";
+  }
+
+  return "Adjuntá una constancia de alumno regular válida.";
+}
+
+function CertificateScreen({ error, fileName, submitting, onFileChange, onValidate }: { error: string | null; fileName: string | null; submitting: boolean; onFileChange: (file: File | null) => void; onValidate: () => void }) {
   return (
     <AuthScreen tone="orange">
       <Progress step="certificate" />
       <BrandLogo />
       <h1 className="auth-title auth-title--certificate">ADJUNTA TU<br />CERTIFICADO<br />DE ALUMNO<br />REGULAR</h1>
-      <button className="auth-certificate-button" type="button" disabled={submitting} onClick={onValidate}>{submitting ? "Validando..." : "Adjuntar"}</button>
+      <label className="auth-certificate-button">
+        <input className="auth-certificate-input" type="file" accept="application/pdf" disabled={submitting} onChange={(event) => onFileChange(event.target.files?.[0] ?? null)} />
+        {fileName ? "Cambiar PDF" : "Adjuntar PDF"}
+      </label>
+      {fileName ? <p className="auth-certificate-file-name">{fileName}</p> : null}
+      <button className="auth-certificate-submit-button" type="button" disabled={submitting || !fileName} onClick={onValidate}>
+        {submitting ? "Validando..." : "Validar"}
+      </button>
       {error && <p className="auth-form-error auth-form-error--certificate">{error}</p>}
     </AuthScreen>
   );
@@ -296,6 +315,7 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
   const [catalogReloadKey, setCatalogReloadKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const [authenticated, setAuthenticated] = useState<AuthResult | null>(null);
 
   useEffect(() => {
@@ -365,6 +385,30 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
     setDraft((current) => ({ ...current, ...updates }));
   }
 
+  async function handleCertificateValidationAndSignup(): Promise<void> {
+    if (!certificateFile) {
+      setSubmissionError("Adjuntá tu certificado en PDF.");
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmissionError(null);
+
+    try {
+      const certificate = await classifyCertificate(certificateFile);
+
+      if (!certificate.valid) {
+        setSubmissionError(getInvalidCertificateMessage(certificate.classification?.type));
+        return;
+      }
+
+      await handleSignup();
+    } catch (requestError) {
+      setSubmissionError(getAuthErrorMessage(requestError));
+    } finally {
+      setSubmitting(false);
+    }
+  }
   async function handleSignup(): Promise<void> {
     const nameParts = draft.fullName.trim().split(/\s+/);
     const apellido = nameParts.pop() ?? "";
@@ -401,8 +445,9 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
       {step === "interests" && <InterestsScreen draft={draft} topics={topics} status={topicsStatus} onChange={updateDraft} onContinue={() => setStep("profile")} onRetry={() => setCatalogReloadKey((current) => current + 1)} />}
       {step === "profile" && <ProfileScreen draft={draft} faculties={faculties} status={facultiesStatus} onChange={updateDraft} onContinue={() => setStep("password")} onRetry={() => setCatalogReloadKey((current) => current + 1)} />}
       {step === "password" && <PasswordScreen draft={draft} onChange={updateDraft} onContinue={() => setStep("certificate")} />}
-      {step === "certificate" && <CertificateScreen error={submissionError} submitting={submitting} onValidate={() => void handleSignup()} />}
+      {step === "certificate" && <CertificateScreen error={submissionError} fileName={certificateFile?.name ?? null} submitting={submitting} onFileChange={(file) => { setCertificateFile(file); setSubmissionError(null); }} onValidate={() => void handleCertificateValidationAndSignup()} />}
       {step === "validated" && authenticated && <ValidatedScreen auth={authenticated} onComplete={onComplete} />}
     </div>
   );
 }
+

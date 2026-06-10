@@ -7,7 +7,7 @@ import { AuthProviderError, ProfileCreationError } from "../domain/auth-errors";
 import {
   CertificateClassifierConfigError,
   CertificateClassifierRequestError,
-  classifyCertificatePdf
+  processCertificatePdf
 } from "../infrastructure/document-ai-certificate-classifier";
 import { PrismaUserRepository } from "../infrastructure/prisma-user-repository";
 import { SupabaseAuthProvider } from "../infrastructure/supabase-auth-provider";
@@ -44,6 +44,12 @@ const registerRequestSchema = z.object({
   apellido: z.string().min(1),
   id_facultad: z.coerce.number().int().positive(),
   topicos: z.array(z.coerce.number().int().positive()).default([])
+});
+
+const certificateValidationRequestSchema = z.object({
+  legajo: z.coerce.number().int().positive(),
+  nombre: z.string().trim().min(1),
+  apellido: z.string().trim().min(1)
 });
 
 const authProvider = new SupabaseAuthProvider();
@@ -92,9 +98,22 @@ export function createAuthRouter(): Router {
         return;
       }
 
-      const classification = await classifyCertificatePdf(request.file.buffer);
+      const parsedBody = certificateValidationRequestSchema.safeParse(request.body);
 
-      response.json({ certificate: classification });
+      if (!parsedBody.success) {
+        response.status(400).json({
+          error: {
+            code: "validation_error",
+            message: "Invalid certificate validation payload",
+            details: parsedBody.error.flatten().fieldErrors
+          }
+        });
+        return;
+      }
+
+      const certificate = await processCertificatePdf(request.file.buffer, parsedBody.data);
+
+      response.json({ certificate });
     } catch (error) {
       if (error instanceof CertificateClassifierConfigError) {
         response.status(500).json({

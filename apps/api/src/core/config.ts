@@ -15,6 +15,8 @@ const environmentSchema = z.object({
   GOOGLE_DOCUMENT_AI_LOCATION: z.string().default("us"),
   GOOGLE_DOCUMENT_AI_CLASSIFIER_PROCESSOR_ID: z.string().optional(),
   GOOGLE_DOCUMENT_AI_CLASSIFIER_VERSION_ID: z.string().optional(),
+  GOOGLE_DOCUMENT_AI_EXTRACTOR_PROCESSOR_ID: z.string().optional(),
+  GOOGLE_DOCUMENT_AI_EXTRACTOR_VERSION_ID: z.string().optional(),
   GOOGLE_DOCUMENT_AI_CERTIFICATE_CLASS: z.string().default("certificado_alumno_regular"),
   GOOGLE_DOCUMENT_AI_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.8),
   GOOGLE_SERVICE_ACCOUNT_JSON: z.string().optional(),

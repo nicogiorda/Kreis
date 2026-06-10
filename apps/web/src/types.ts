@@ -50,6 +50,7 @@ export type Community = {
   popular: boolean;
   pulse: string;
   description?: string;
+  status?: string;
 };
 
 export type ActivityPost = {
@@ -63,6 +64,19 @@ export type ActivityPost = {
   text: string;
   score: number;
   comments: number;
+};
+
+export type PostComment = {
+  id: string;
+  postId: string;
+  parentId: string | null;
+  body: string;
+  createdAt: string;
+  author: {
+    legajo: number;
+    name: string;
+  };
+  replies: PostComment[];
 };
 
 export type Profile = {

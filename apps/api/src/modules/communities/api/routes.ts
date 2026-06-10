@@ -133,7 +133,7 @@ async function authenticateOptionalUser(
 export function createCommunitiesRouter(): Router {
   const router = Router();
 
-  // Crea una nueva comunidad con estado "Pendiente".
+  // Crea una nueva comunidad con estado "Pendiente" de manera predeterminada!!! Luego deberá de ser aceptada por un admin para que aparezca en la lista pública.
   // Requiere autenticación — el legajo del creador se extrae del JWT, no del body.
   // El creador queda automáticamente como miembro de la comunidad recién creada.
   //
@@ -188,7 +188,7 @@ export function createCommunitiesRouter(): Router {
 
   // Devuelve la lista de comunidades en estado Aceptado.
   // Si el usuario envía token, el campo "joined" refleja si ya es miembro de cada comunidad.
-  // Si no hay token, "joined" es siempre false (respuesta pública sin personalización).
+  // Si no hay token, "joined" es siempre false (respuesta pública sin personalización). Luego en el front se filta por tópicos!
   router.get("/", async (request, response, next) => {
     try {
       const authenticatedUser = await authenticateOptionalUser(request);
@@ -232,9 +232,8 @@ export function createCommunitiesRouter(): Router {
     }
   });
 
-  // [ADMIN] Cambia el estado de una comunidad.
+  // [ADMIN] Cambia el estado de una comunidad a aceptado o rechazado!!
   // Requiere rol Administrador.
-  //
   // Params: id — id_comunidad de la comunidad a modificar
   // Body:   estado — "Pendiente" | "Aceptado" | "Rechazado"
   router.patch("/admin/:id/status", async (request, response, next) => {

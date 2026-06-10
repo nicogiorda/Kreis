@@ -271,6 +271,7 @@ export function createEventsRouter(): Router {
     }
   });
 
+  // ruta para ver el detalle completo de un evento a partir de su evento_id!!
   router.get("/:id_evento", async (request, response, next) => {
     try {
       const parsedParams = eventIdParamsSchema.safeParse(request.params);

@@ -86,6 +86,7 @@ export async function createCommunity(
       legajo,
       nombre: input.nombre,
       descripcion: input.descripcion ?? null,
+      estado: "Aceptado", // Creada temporalmente como Aceptado de manera predeterminada
       // Vincula los tópicos seleccionados en comunidad_topico
       comunidad_topico:
         input.topicos && input.topicos.length > 0

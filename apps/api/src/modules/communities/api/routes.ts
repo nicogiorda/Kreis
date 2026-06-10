@@ -228,6 +228,7 @@ export function createCommunitiesRouter(): Router {
     }
   });
 
+  // ruta para unirse a una comunidad!
   router.post("/:id/members", async (request, response, next) => {
     try {
       const parsedParams = communityIdParamsSchema.safeParse(request.params);
@@ -279,6 +280,7 @@ export function createCommunitiesRouter(): Router {
     }
   });
 
+  // ruta para salir de una comunidad (elimina la membresía del usuario autenticado en la comunidad indicada por id)!
   router.delete("/:id/members", async (request, response, next) => {
     try {
       const parsedParams = communityIdParamsSchema.safeParse(request.params);

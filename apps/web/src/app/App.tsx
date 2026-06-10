@@ -2,8 +2,15 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { listTopics, logout } from "../api/auth";
 import type { AuthResult } from "../api/auth";
+import {
+  createCommunity as persistCommunity,
+  joinCommunity,
+  leaveCommunity,
+  listCommunities
+} from "../api/communities";
 import { createPendingEvent, getEventDetail, listAllEvents, listUpcomingEvents, toggleEventInterest as persistEventInterest } from "../api/events";
 import { uploadEventImage } from "../api/event-images";
+import { createPost as persistPost, listPosts } from "../api/posts";
 import { getMyProfile } from "../api/users";
 import type { KreisUserProfile } from "../api/users";
 import { AuthFlow } from "../components/auth/AuthFlow";
@@ -16,8 +23,7 @@ import { HomeScreen } from "../components/home/HomeScreen";
 import { BottomNav } from "../components/navigation/BottomNav";
 import { Header } from "../components/navigation/Header";
 import { ProfileScreen } from "../components/profile/ProfileScreen";
-import { initialActivity, initialCommunities } from "../data/mockData";
-import type { ComposerMode, CreateCommunityInput, CreateEventInput, CreatePostInput, EventLoadStatus, HomeTab, KreisEvent, KreisTopic, Screen, ThemeMode } from "../types";
+import type { ActivityPost, Community, ComposerMode, CreateCommunityInput, CreateEventInput, CreatePostInput, EventLoadStatus, HomeTab, KreisEvent, KreisTopic, Screen, ThemeMode } from "../types";
 import { cn } from "../utils/cn";
 import { scrollTop } from "../utils/navigation";
 import { normalize } from "../utils/text";
@@ -58,7 +64,7 @@ function getComposerErrorMessage(error: unknown): string {
     return error.message;
   }
 
-  return "No pudimos enviar el evento. Intentá nuevamente.";
+  return "No pudimos completar la solicitud. Intenta nuevamente.";
 }
 
 function getInitialThemeMode(): ThemeMode {
@@ -85,8 +91,8 @@ export default function App() {
   const [eventTopicsReloadKey, setEventTopicsReloadKey] = useState(0);
   const [userProfile, setUserProfile] = useState<KreisUserProfile | null>(null);
   const [profileLoadStatus, setProfileLoadStatus] = useState<"loading" | "ready" | "error">("loading");
-  const [communities, setCommunities] = useState(initialCommunities);
-  const [activity, setActivity] = useState(initialActivity);
+  const [communities, setCommunities] = useState<Community[]>([]);
+  const [activity, setActivity] = useState<ActivityPost[]>([]);
   const [homeTab, setHomeTab] = useState<HomeTab>("events");
   const [eventFilter, setEventFilter] = useState("Todos");
   const [globalQuery, setGlobalQuery] = useState("");
@@ -153,6 +159,30 @@ export default function App() {
 
     return () => controller.abort();
   }, [authSession, eventReloadKey]);
+
+  useEffect(() => {
+    const accessToken = authSession?.session.access_token;
+    if (!accessToken) return;
+
+    const controller = new AbortController();
+
+    void Promise.all([
+      listCommunities(accessToken, controller.signal),
+      listPosts(accessToken, controller.signal)
+    ])
+      .then(([nextCommunities, nextPosts]) => {
+        setCommunities(nextCommunities);
+        setActivity(nextPosts);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setCommunities([]);
+          setActivity([]);
+        }
+      });
+
+    return () => controller.abort();
+  }, [authSession]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -265,6 +295,8 @@ export default function App() {
     setProfileLoadStatus("loading");
     setEvents([]);
     setUpcomingEvents([]);
+    setCommunities([]);
+    setActivity([]);
     setEventLoadStatus("loading");
     setComposerOpen(false);
     routerNavigate(screenRoutes.home, { replace: true });
@@ -294,12 +326,64 @@ export default function App() {
   }
 
   function toggleJoin(communityId: string): void {
-    setCommunities((items) => items.map((community) => community.id === communityId ? { ...community, joined: !community.joined } : community));
+    const accessToken = authSession?.session.access_token;
+    const community = communities.find((item) => item.id === communityId);
+    if (!accessToken || !community) return;
+
+    const previousJoined = community.joined;
+    const previousMembers = community.members;
+
+    setCommunities((items) => items.map((item) => item.id === communityId
+      ? {
+          ...item,
+          joined: !previousJoined,
+          members: Math.max(0, previousMembers + (previousJoined ? -1 : 1))
+        }
+      : item));
+
+    const membershipRequest = previousJoined
+      ? leaveCommunity(communityId, accessToken)
+      : joinCommunity(communityId, accessToken);
+
+    void membershipRequest
+      .then((membership) => {
+        setCommunities((items) => items.map((item) => item.id === communityId
+          ? {
+              ...item,
+              joined: membership.joined,
+              members: membership.miembros
+            }
+          : item));
+
+        if (!membership.joined) {
+          setActivity((items) => items.filter((post) => post.communityId !== communityId));
+        } else {
+          void listPosts(accessToken).then(setActivity).catch(() => undefined);
+        }
+      })
+      .catch(() => {
+        setCommunities((items) => items.map((item) => item.id === communityId
+          ? {
+              ...item,
+              joined: previousJoined,
+              members: previousMembers
+            }
+          : item));
+      });
   }
 
   function updateEventInterest(eventId: string, interested: boolean): void {
     setEvents((items) => items.map((event) => event.id === eventId ? { ...event, interested } : event));
     setUpcomingEvents((items) => items.map((event) => event.id === eventId ? { ...event, interested } : event));
+  }
+
+  function updatePostCommentCount(postId: string, total: number): void {
+    setActivity((items) => items.map((post) => post.id === postId
+      ? {
+          ...post,
+          comments: total
+        }
+      : post));
   }
 
   function toggleEventInterest(eventId: string): void {
@@ -317,23 +401,23 @@ export default function App() {
 
   function createCommunity({ name, category }: CreateCommunityInput): void {
     if (!name || !category) return;
+    const accessToken = authSession?.session.access_token;
+    if (!accessToken) return;
 
-    setCommunities((items) => [
-      {
-        id: `community-${Date.now()}`,
-        name,
-        members: 1,
-        category,
-        icon: name.slice(0, 2).toUpperCase(),
-        joined: true,
-        recommended: true,
-        popular: false,
-        pulse: "Comunidad recien creada",
-        description: "Un nuevo espacio para reunir estudiantes con intereses y planes en comun."
-      },
-      ...items
-    ]);
-    setComposerOpen(false);
+    const topicId = eventTopics.find((topic) => normalize(topic.name) === normalize(category))?.id;
+
+    setComposerSubmitting(true);
+    setComposerError(null);
+
+    void persistCommunity({ name, category, topicId }, accessToken)
+      .then((community) => {
+        setCommunities((items) => [community, ...items]);
+        setComposerOpen(false);
+      })
+      .catch((error) => {
+        setComposerError(getComposerErrorMessage(error));
+      })
+      .finally(() => setComposerSubmitting(false));
   }
 
   function createEvent({ title, date, place, topicIds, description, coverFile }: CreateEventInput): void {
@@ -365,27 +449,21 @@ export default function App() {
   }
 
   function createPost({ communityId, postText }: CreatePostInput): void {
-    const community = communities.find((item) => item.id === communityId);
+    const accessToken = authSession?.session.access_token;
+    if (!accessToken || !communityId || !postText) return;
 
-    if (community && postText) {
-      setActivity((items) => [
-        {
-          id: `post-${Date.now()}`,
-          communityId: community.id,
-          communityName: community.name,
-          icon: community.icon,
-          author: "Nico",
-          time: "ahora",
-          title: "Nuevo post",
-          text: postText,
-          score: 1,
-          comments: 0
-        },
-        ...items
-      ]);
-    }
+    setComposerSubmitting(true);
+    setComposerError(null);
 
-    setComposerOpen(false);
+    void persistPost(communityId, postText, accessToken)
+      .then((post) => {
+        setActivity((items) => [post, ...items]);
+        setComposerOpen(false);
+      })
+      .catch((error) => {
+        setComposerError(getComposerErrorMessage(error));
+      })
+      .finally(() => setComposerSubmitting(false));
   }
 
   return (
@@ -447,7 +525,16 @@ export default function App() {
                   onToggleTheme={toggleTheme}
                 />
               )}
-              {!isEventDetail && screen === "communities" && <CommunitiesScreen communities={communities} discover={discoverCommunities} posts={activity} onToggleJoin={toggleJoin} />}
+              {!isEventDetail && screen === "communities" && (
+                <CommunitiesScreen
+                  accessToken={authSession.session.access_token}
+                  communities={communities}
+                  discover={discoverCommunities}
+                  posts={activity}
+                  onCommentCountChange={updatePostCommentCount}
+                  onToggleJoin={toggleJoin}
+                />
+              )}
               {!isEventDetail && screen === "profile" && (
                 <ProfileScreen
                   profile={userProfile}

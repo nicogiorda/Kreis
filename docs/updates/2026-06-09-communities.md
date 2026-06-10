@@ -418,3 +418,438 @@ El rol se asigna con la ruta de dev `PATCH /api/v1/users/:legajo/rol`. En produc
 - El creador de una comunidad queda como miembro automáticamente al crearla.
 - `bigint` de Postgres se serializa como `string` en todas las respuestas JSON. El frontend debe tratar los campos `id`, `id_topico`, etc. como strings.
 - La ruta `/communities/admin` debe ir **antes** que `/:id` en el router para que Express no interprete "admin" como un ID. Esto ya está implementado correctamente.
+
+---
+
+## Actualización 2026-06-10 — Membresías y posts persistentes
+
+Esta continuación completa los objetivos de **unirse a una comunidad** y **postear en una comunidad**. También conecta el frontend con las APIs reales de comunidades y posts, reemplazando el comportamiento local basado en datos mock.
+
+### Estado actualizado de objetivos
+
+| Objetivo | Estado |
+|----------|--------|
+| Ver comunidades | Implementado en backend e integrado con frontend |
+| Unirse a comunidad | Implementado en backend e integrado con frontend |
+| Crear comunidad | Implementado en backend e integrado con frontend |
+| Postear en una comunidad | Implementado en backend e integrado con frontend |
+| Comentarios anidados | Implementado en backend e integrado con frontend |
+
+---
+
+### Endpoints nuevos de membresía
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| `POST` | `/api/v1/communities/:id/members` | Requerida | Une al usuario autenticado a una comunidad |
+| `DELETE` | `/api/v1/communities/:id/members` | Requerida | Quita al usuario autenticado de una comunidad |
+
+Las dos operaciones:
+
+- Obtienen el `legajo` desde el JWT.
+- Solo permiten comunidades con `estado = Aceptado`.
+- Son idempotentes: repetir la misma operación conserva el estado solicitado.
+- Devuelven el estado final y la cantidad actualizada de miembros.
+- Devuelven `404 community_not_found` si la comunidad no existe o no está aceptada.
+
+#### Unirse a una comunidad
+
+```http
+POST http://localhost:4000/api/v1/communities/ID_COMUNIDAD/members
+Authorization: Bearer <access_token>
+```
+
+**Respuesta exitosa (200):**
+
+```json
+{
+  "membership": {
+    "legajo": 1234567,
+    "id_comunidad": "1",
+    "joined": true,
+    "miembros": 4
+  }
+}
+```
+
+#### Salir de una comunidad
+
+```http
+DELETE http://localhost:4000/api/v1/communities/ID_COMUNIDAD/members
+Authorization: Bearer <access_token>
+```
+
+**Respuesta exitosa (200):**
+
+```json
+{
+  "membership": {
+    "legajo": 1234567,
+    "id_comunidad": "1",
+    "joined": false,
+    "miembros": 3
+  }
+}
+```
+
+---
+
+### Endpoints nuevos de posts
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| `GET` | `/api/v1/posts` | Requerida | Devuelve el feed de comunidades del usuario |
+| `POST` | `/api/v1/posts` | Requerida | Crea un post dentro de una comunidad |
+
+#### GET /api/v1/posts
+
+Devuelve únicamente posts que cumplen estas reglas:
+
+- La comunidad está en estado `Aceptado`.
+- El usuario autenticado pertenece a la comunidad.
+- Los resultados están ordenados desde el más reciente.
+
+```http
+GET http://localhost:4000/api/v1/posts
+Authorization: Bearer <access_token>
+```
+
+**Respuesta exitosa (200):**
+
+```json
+{
+  "posts": [
+    {
+      "id": "10",
+      "cuerpo": "Busco equipo para preparar el parcial.",
+      "created_at": "2026-06-10T18:00:00.000Z",
+      "autor": {
+        "legajo": 1234567,
+        "nombre": "Nicolás",
+        "apellido": "Pérez"
+      },
+      "comunidad": {
+        "id": "1",
+        "nombre": "Tecnología UADE"
+      },
+      "comentarios": 0
+    }
+  ]
+}
+```
+
+#### POST /api/v1/posts
+
+Para publicar, el usuario debe:
+
+- Tener un token válido.
+- Pertenecer a la comunidad.
+- Publicar en una comunidad con estado `Aceptado`.
+- Enviar un `cuerpo` no vacío de hasta 5000 caracteres.
+
+```http
+POST http://localhost:4000/api/v1/posts
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+```json
+{
+  "id_comunidad": "1",
+  "cuerpo": "Busco equipo para preparar el parcial."
+}
+```
+
+**Respuesta exitosa (201):**
+
+```json
+{
+  "post": {
+    "id": "10",
+    "cuerpo": "Busco equipo para preparar el parcial.",
+    "created_at": "2026-06-10T18:00:00.000Z",
+    "autor": {
+      "legajo": 1234567,
+      "nombre": "Nicolás",
+      "apellido": "Pérez"
+    },
+    "comunidad": {
+      "id": "1",
+      "nombre": "Tecnología UADE"
+    },
+    "comentarios": 0
+  }
+}
+```
+
+**Errores posibles:**
+
+- `400 validation_error` — ID o cuerpo inválido.
+- `401 missing_token` / `invalid_token` — autenticación faltante o inválida.
+- `403 not_community_member` — el usuario no pertenece a la comunidad.
+- `404 community_not_found` — la comunidad no existe o no está aceptada.
+
+---
+
+### Integración realizada en el frontend
+
+- Las comunidades se cargan desde `GET /api/v1/communities`.
+- Los datos mock dejaron de ser la fuente de comunidades y actividad.
+- El botón **Unirme** ejecuta el endpoint de membresía real.
+- La interfaz actualiza la membresía y el contador de forma optimista.
+- Si falla el request, la interfaz revierte al estado anterior.
+- Las comunidades unidas de la pantalla de comunidades permiten salir al presionarlas.
+- Al salir de una comunidad, sus posts desaparecen del feed local.
+- Al unirse, el feed se vuelve a consultar.
+- El composer solo muestra comunidades aceptadas donde el usuario es miembro.
+- Crear un post espera el `201` real antes de incorporarlo al feed.
+- Crear comunidad también quedó conectado al endpoint real existente.
+- Las comunidades pendientes aparecen para su creador, pero no se pueden seleccionar para publicar.
+
+---
+
+### Archivos creados
+
+```text
+apps/api/src/modules/posts/
+  data/
+    posts-repository.ts
+  api/
+    serialize-post.ts
+
+apps/web/src/api/
+  communities.ts
+  posts.ts
+```
+
+### Archivos modificados
+
+```text
+apps/api/src/modules/communities/
+  README.md
+  api/routes.ts
+  data/communities-repository.ts
+
+apps/api/src/modules/posts/
+  README.md
+  api/routes.ts
+
+apps/web/src/
+  app/App.tsx
+  types.ts
+  components/communities/CommunitiesScreen.tsx
+  components/composer/ComposerModal.tsx
+```
+
+---
+
+### Verificaciones realizadas
+
+- Generación del cliente Prisma.
+- Typecheck del backend.
+- Typecheck del frontend.
+- Build de producción del frontend.
+- ESLint sobre todos los archivos modificados.
+- Consulta real de lectura contra PostgreSQL/Supabase.
+- Smoke test HTTP:
+  - `/health` respondió `200`.
+  - `/api/v1/posts` sin token respondió `401 missing_token`.
+  - `/api/v1/communities/:id/members` sin token respondió `401 missing_token`.
+
+Vitest finalizó correctamente, aunque el proyecto todavía no contiene archivos de pruebas automatizadas.
+
+---
+
+### Comentarios anidados implementados
+
+La columna `comentario.id_padre` ya existía en Supabase como `bigint` nullable,
+con una foreign key autorreferencial y `ON DELETE CASCADE`. Se sincronizó el
+modelo Prisma y se completaron los índices que faltaban:
+
+```text
+comentario_id_post_id_padre_idx (id_post, id_padre)
+comentario_id_padre_idx         (id_padre)
+```
+
+El primer índice optimiza la consulta plana de todos los comentarios de un post.
+El segundo optimiza la relación autorreferencial y los borrados en cascada.
+
+#### Endpoints de comentarios
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| `GET` | `/api/v1/posts/:id/comentarios` | Requerida | Devuelve el árbol completo de comentarios |
+| `POST` | `/api/v1/posts/:id/comentarios` | Requerida | Crea un comentario raíz o una respuesta |
+
+Para leer o comentar:
+
+- El post debe existir.
+- La comunidad del post debe estar en estado `Aceptado`.
+- El usuario autenticado debe ser miembro de la comunidad.
+- El cuerpo debe tener entre 1 y 2000 caracteres.
+
+Si se envía `id_padre`, el backend comprueba que:
+
+- El comentario padre existe.
+- El comentario padre pertenece al mismo post.
+
+Si falla esta validación se devuelve `400 invalid_parent_comment`.
+
+#### Crear comentario raíz en Postman
+
+```http
+POST http://localhost:4000/api/v1/posts/ID_POST/comentarios
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+```json
+{
+  "cuerpo": "Este es un comentario principal."
+}
+```
+
+#### Responder a un comentario
+
+```http
+POST http://localhost:4000/api/v1/posts/ID_POST/comentarios
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+```json
+{
+  "cuerpo": "Esta es una respuesta anidada.",
+  "id_padre": "5"
+}
+```
+
+**Respuesta exitosa (201):**
+
+```json
+{
+  "comentario": {
+    "id": "6",
+    "id_post": "1",
+    "id_padre": "5",
+    "cuerpo": "Esta es una respuesta anidada.",
+    "created_at": "2026-06-10T19:00:00.000Z",
+    "autor": {
+      "legajo": 1234567,
+      "nombre": "Nicolás",
+      "apellido": "Pérez"
+    },
+    "respuestas": []
+  },
+  "total_comentarios": 2
+}
+```
+
+#### Consultar el árbol
+
+```http
+GET http://localhost:4000/api/v1/posts/ID_POST/comentarios
+Authorization: Bearer <access_token>
+```
+
+```json
+{
+  "comentarios": [
+    {
+      "id": "5",
+      "id_post": "1",
+      "id_padre": null,
+      "cuerpo": "Este es un comentario principal.",
+      "created_at": "2026-06-10T18:55:00.000Z",
+      "autor": {
+        "legajo": 1234567,
+        "nombre": "Nicolás",
+        "apellido": "Pérez"
+      },
+      "respuestas": [
+        {
+          "id": "6",
+          "id_post": "1",
+          "id_padre": "5",
+          "cuerpo": "Esta es una respuesta anidada.",
+          "created_at": "2026-06-10T19:00:00.000Z",
+          "autor": {
+            "legajo": 1234567,
+            "nombre": "Nicolás",
+            "apellido": "Pérez"
+          },
+          "respuestas": []
+        }
+      ]
+    }
+  ],
+  "total_comentarios": 2
+}
+```
+
+#### Construcción del árbol
+
+- Prisma trae todos los comentarios del post en una única consulta plana.
+- Los comentarios se ordenan por `created_at` e `id_comentario`.
+- TypeScript crea un `Map` indexado por `id_comentario`.
+- Los nodos con `id_padre = null` se agregan a la raíz.
+- Las respuestas se agregan al arreglo `respuestas` de su padre.
+- La API soporta profundidad ilimitada.
+
+#### Integración frontend
+
+- El contador de comentarios funciona como botón para abrir o cerrar el hilo.
+- Los comentarios se cargan bajo demanda al abrir un post.
+- Se pueden crear comentarios raíz.
+- Se puede responder a cualquier comentario.
+- El contador del post se actualiza con el total devuelto por la API.
+- Los primeros cuatro niveles conservan jerarquía visual.
+- A partir del cuarto nivel las respuestas aparecen colapsadas detrás de
+  **Ver respuestas**, evitando que el contenido se vuelva demasiado angosto.
+- Los errores de carga o publicación se muestran dentro del hilo.
+
+#### Archivos agregados o modificados para comentarios
+
+```text
+prisma/schema.prisma
+infra/database/migrations/20260610190000_add_nested_comment_indexes.sql
+
+apps/api/src/modules/posts/
+  data/posts-repository.ts
+  api/routes.ts
+  api/serialize-comment.ts
+
+apps/web/src/
+  api/posts.ts
+  types.ts
+  app/App.tsx
+  components/communities/CommunitiesScreen.tsx
+  components/communities/PostComments.tsx
+```
+
+#### Prueba de integración realizada
+
+Se ejecutó una prueba real contra PostgreSQL/Supabase creando datos temporales:
+
+1. Comentario raíz.
+2. Respuesta de nivel 1.
+3. Respuesta de nivel 2.
+4. Intento de usar como padre un comentario perteneciente a otro post.
+5. Lectura y construcción del árbol.
+
+Resultados:
+
+```json
+{
+  "root": "created",
+  "reply": "created",
+  "nested": "created",
+  "invalidParent": "invalid_parent",
+  "total": 3,
+  "rootCount": 1,
+  "levelOneCount": 1,
+  "levelTwoCount": 1
+}
+```
+
+Los posts y comentarios usados por la prueba fueron eliminados al finalizar.

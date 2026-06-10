@@ -16,8 +16,16 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { type Request, Router } from "express";
+import { z } from "zod";
 import { config } from "../../../core/config";
-import { createCommunity, findUserByAuthId, listAllCommunities, listCommunities, updateCommunityStatus } from "../data/communities-repository";
+import {
+  createCommunity,
+  findUserByAuthId,
+  listAllCommunities,
+  listCommunities,
+  setCommunityMembership,
+  updateCommunityStatus
+} from "../data/communities-repository";
 import { serializeCommunity } from "./serialize-community";
 
 // Cliente de Supabase usado exclusivamente para verificar tokens JWT entrantes.
@@ -130,6 +138,14 @@ async function authenticateOptionalUser(
   return authenticateUser(request);
 }
 
+const communityIdParamsSchema = z.object({
+  id: z
+    .string()
+    .trim()
+    .regex(/^\d+$/, "El id de la comunidad debe ser numerico")
+    .transform((id) => BigInt(id))
+});
+
 export function createCommunitiesRouter(): Router {
   const router = Router();
 
@@ -206,6 +222,108 @@ export function createCommunitiesRouter(): Router {
 
       response.json({
         comunidades: communities.map(serializeCommunity)
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/members", async (request, response, next) => {
+    try {
+      const parsedParams = communityIdParamsSchema.safeParse(request.params);
+
+      if (!parsedParams.success) {
+        response.status(400).json({
+          error: {
+            code: "validation_error",
+            message: "Invalid community id",
+            details: parsedParams.error.flatten().fieldErrors
+          }
+        });
+        return;
+      }
+
+      const authResult = await authenticateUser(request);
+
+      if (!authResult.ok) {
+        response.status(authResult.status).json({ error: authResult.error });
+        return;
+      }
+
+      const membership = await setCommunityMembership(
+        authResult.user.legajo,
+        parsedParams.data.id,
+        true
+      );
+
+      if (!membership) {
+        response.status(404).json({
+          error: {
+            code: "community_not_found",
+            message: "Comunidad no encontrada o no aceptada"
+          }
+        });
+        return;
+      }
+
+      response.json({
+        membership: {
+          legajo: membership.legajo,
+          id_comunidad: membership.id_comunidad.toString(),
+          joined: membership.joined,
+          miembros: membership.miembros
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.delete("/:id/members", async (request, response, next) => {
+    try {
+      const parsedParams = communityIdParamsSchema.safeParse(request.params);
+
+      if (!parsedParams.success) {
+        response.status(400).json({
+          error: {
+            code: "validation_error",
+            message: "Invalid community id",
+            details: parsedParams.error.flatten().fieldErrors
+          }
+        });
+        return;
+      }
+
+      const authResult = await authenticateUser(request);
+
+      if (!authResult.ok) {
+        response.status(authResult.status).json({ error: authResult.error });
+        return;
+      }
+
+      const membership = await setCommunityMembership(
+        authResult.user.legajo,
+        parsedParams.data.id,
+        false
+      );
+
+      if (!membership) {
+        response.status(404).json({
+          error: {
+            code: "community_not_found",
+            message: "Comunidad no encontrada o no aceptada"
+          }
+        });
+        return;
+      }
+
+      response.json({
+        membership: {
+          legajo: membership.legajo,
+          id_comunidad: membership.id_comunidad.toString(),
+          joined: membership.joined,
+          miembros: membership.miembros
+        }
       });
     } catch (error) {
       next(error);

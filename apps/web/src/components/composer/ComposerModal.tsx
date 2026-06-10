@@ -38,7 +38,7 @@ export function ComposerModal({ open, mode, communities, eventTopics, eventTopic
     );
   }
 
-  const joined = communities.filter((community) => community.joined);
+  const joined = communities.filter((community) => community.joined && community.status !== "Pendiente");
   const isCommunity = mode === "community";
   const dialogLabel = isCommunity ? "Crear comunidad" : "Crear post";
   const kicker = isCommunity ? "Nuevo circulo" : "Nuevo post";
@@ -94,7 +94,7 @@ export function ComposerModal({ open, mode, communities, eventTopics, eventTopic
             <>
               <label>
                 Comunidad
-                <select name="communityId">
+                <select name="communityId" required disabled={!joined.length}>
                   {joined.map((community) => (
                     <option value={community.id} key={community.id}>{community.name}</option>
                   ))}
@@ -107,7 +107,8 @@ export function ComposerModal({ open, mode, communities, eventTopics, eventTopic
             </>
           )}
           {error ? <p className="m-0 text-[0.84rem] font-bold leading-[1.35] text-kreis-orange">{error}</p> : null}
-          <button className="min-h-[42px] rounded-[14px] border-0 bg-kreis-orange px-4 font-black text-white shadow-none disabled:opacity-60" type="submit" disabled={submitting}>
+          {!isCommunity && !joined.length ? <p className="m-0 text-[0.84rem] font-bold leading-[1.35] text-kreis-muted">Unite a una comunidad aceptada antes de publicar.</p> : null}
+          <button className="min-h-[42px] rounded-[14px] border-0 bg-kreis-orange px-4 font-black text-white shadow-none disabled:opacity-60" type="submit" disabled={submitting || (!isCommunity && !joined.length)}>
             {submitLabel}
           </button>
         </form>

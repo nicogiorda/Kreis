@@ -100,6 +100,7 @@ const commentCreationSchema = z.object({
 export function createPostsRouter(): Router {
   const router = Router();
 
+  // ruta para obtener los post de una comunidad 
   router.get("/", async (request, response, next) => {
     try {
       const authenticatedUser = await authenticatePostUser(request);
@@ -121,6 +122,7 @@ export function createPostsRouter(): Router {
     }
   });
 
+  // ruta para crear un nuevo post en una comunidad aceptada del usuario autenticado
   router.post("/", async (request, response, next) => {
     try {
       const authenticatedUser = await authenticatePostUser(request);

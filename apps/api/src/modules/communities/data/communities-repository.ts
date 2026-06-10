@@ -33,6 +33,13 @@ export type CommunityWithRelations = {
   };
 };
 
+export type CommunityMembership = {
+  legajo: number;
+  id_comunidad: bigint;
+  joined: boolean;
+  miembros: number;
+};
+
 // Devuelve comunidades visibles para el usuario:
 //   - Todas las comunidades en estado Aceptado (públicas)
 //   - Las propias comunidades en estado Pendiente si el usuario está autenticado
@@ -194,6 +201,60 @@ export async function updateCommunityStatus(
     }
     throw error;
   }
+}
+
+export async function setCommunityMembership(
+  legajo: number,
+  id_comunidad: bigint,
+  joined: boolean
+): Promise<CommunityMembership | null> {
+  const community = await prisma.comunidad.findFirst({
+    where: {
+      id_comunidad,
+      estado: ACCEPTED_COMMUNITY_STATUS
+    },
+    select: {
+      id_comunidad: true
+    }
+  });
+
+  if (!community) return null;
+
+  if (joined) {
+    await prisma.user_comunidad.upsert({
+      where: {
+        legajo_id_comunidad: {
+          legajo,
+          id_comunidad: community.id_comunidad
+        }
+      },
+      create: {
+        legajo,
+        id_comunidad: community.id_comunidad
+      },
+      update: {}
+    });
+  } else {
+    await prisma.user_comunidad.deleteMany({
+      where: {
+        legajo,
+        id_comunidad: community.id_comunidad
+      }
+    });
+  }
+
+  const miembros = await prisma.user_comunidad.count({
+    where: {
+      id_comunidad: community.id_comunidad
+    }
+  });
+
+  return {
+    legajo,
+    id_comunidad: community.id_comunidad,
+    joined,
+    miembros
+  };
 }
 
 // Obtiene el legajo y el rol a partir del auth_id extraído del JWT.

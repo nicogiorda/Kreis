@@ -11,7 +11,6 @@ import { prisma } from "../../../core/database";
 
 // Constantes para el campo estado — evita strings sueltos dispersos en las queries.
 const ACCEPTED_EVENT_STATUS = "Aceptado";
-const PENDING_EVENT_STATUS = "Pendiente";
 
 // Campos de usuario que se traen en cada consulta de evento.
 // Centralizado acá para no repetir el mismo select en listAcceptedEvents,

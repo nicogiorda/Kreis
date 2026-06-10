@@ -1,6 +1,6 @@
 generator client {
-  provider        = "prisma-client"
-  output          = "../generated/prisma"
+  provider = "prisma-client"
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -152,20 +152,21 @@ model post {
 }
 
 model comentario {
-  id_comentario    BigInt       @id @default(autoincrement())
-  legajo           Int
-  id_post          BigInt
-  cuerpo           String
-  created_at       DateTime     @default(now()) @db.Timestamptz(6)
-  id_padre         BigInt?
-  comentario       comentario?  @relation("comentarioTocomentario", fields: [id_padre], references: [id_comentario], onDelete: Cascade, onUpdate: NoAction)
-  other_comentario comentario[] @relation("comentarioTocomentario")
-  post             post         @relation(fields: [id_post], references: [id_post], onDelete: Cascade, onUpdate: NoAction, map: "fk_comentario_post")
-  usuario          usuario      @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_comentario_usuario")
+  id_comentario BigInt       @id @default(autoincrement())
+  legajo        Int
+  id_post       BigInt
+  cuerpo        String
+  created_at    DateTime     @default(now()) @db.Timestamptz(6)
+  id_padre      BigInt?
+  post          post         @relation(fields: [id_post], references: [id_post], onDelete: Cascade, onUpdate: NoAction, map: "fk_comentario_post")
+  usuario       usuario      @relation(fields: [legajo], references: [legajo], onDelete: Cascade, onUpdate: NoAction, map: "fk_comentario_usuario")
+  padre         comentario?  @relation("ComentarioRespuestas", fields: [id_padre], references: [id_comentario], onDelete: Cascade, onUpdate: NoAction, map: "comentario_id_padre_fkey")
+  respuestas    comentario[] @relation("ComentarioRespuestas")
 
+  @@index([id_post, id_padre], map: "comentario_id_post_id_padre_idx")
+  @@index([id_padre], map: "comentario_id_padre_idx")
   @@schema("public")
 }
-
 
 enum publication_status {
   Pendiente
@@ -182,4 +183,3 @@ enum user_role {
 
   @@schema("public")
 }
-

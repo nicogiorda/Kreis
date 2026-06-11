@@ -1,4 +1,5 @@
 import { Plus } from "@phosphor-icons/react";
+import { Plain } from "@solar-icons/react";
 import { useMemo, useState } from "react";
 import { EmptyState } from "../common/EmptyState";
 import { ThemeToggleIcon } from "../common/Icons";
@@ -26,7 +27,11 @@ function getAvatarLabel(label: string): string {
 
 function CommunityPost({ post, accessToken, onCommentCountChange }: CommunityPostProps) {
   return (
-    <article className="grid grid-cols-[40px_minmax(0,1fr)] gap-2 border-b border-kreis-line py-[10px]">
+    <article className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-2 py-[10px]">
+      <span
+        className="pointer-events-none absolute bottom-0 left-1/2 h-px w-screen -translate-x-1/2 bg-kreis-line"
+        aria-hidden="true"
+      />
       <span className="mt-1 grid size-10 place-items-center rounded-full bg-kreis-event-surface text-[11px] font-medium uppercase leading-none text-kreis-orange" aria-hidden="true">
         {post.icon || getAvatarLabel(post.communityName)}
       </span>
@@ -101,6 +106,7 @@ type CommunitiesScreenProps = {
   accessToken: string;
   themeMode: ThemeMode;
   onCreateCommunity: () => void;
+  onCreatePost: () => void;
   onCommentCountChange: (postId: string, total: number) => void;
   onToggleTheme: () => void;
 };
@@ -111,6 +117,7 @@ export function CommunitiesScreen({
   accessToken,
   themeMode,
   onCreateCommunity,
+  onCreatePost,
   onCommentCountChange,
   onToggleTheme
 }: CommunitiesScreenProps) {
@@ -172,6 +179,15 @@ export function CommunitiesScreen({
           <EmptyState text="Unite a una comunidad desde Inicio para ver su feed." />
         )}
       </section>
+
+      <button
+        className="fixed bottom-[calc(var(--nav-height)+env(safe-area-inset-bottom)+37px)] right-[max(11px,calc((100vw-430px)/2+11px))] z-40 grid size-[55px] place-items-center rounded-full border-0 bg-kreis-orange p-0 text-kreis-cream shadow-none transition-[transform,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95"
+        type="button"
+        aria-label="Subir post"
+        onClick={onCreatePost}
+      >
+        <Plain className="size-[29px]" weight="LineDuotone" aria-hidden="true" />
+      </button>
     </section>
   );
 }

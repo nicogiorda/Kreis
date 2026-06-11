@@ -216,6 +216,8 @@ export function PostComments({
   const [replyBody, setReplyBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [liked, setLiked] = useState(false);
+  const displayedScore = typeof score === "number" ? score + (liked ? 1 : 0) : undefined;
 
   async function loadComments(): Promise<void> {
     setStatus("loading");
@@ -278,11 +280,20 @@ export function PostComments({
   return (
     <section className="mt-[12px]">
       <div className="flex items-center gap-[25px] text-[12px] font-normal leading-[15px] text-kreis-muted">
-        {typeof score === "number" ? (
-          <span className="inline-flex items-center gap-1.5" aria-label={`${score} likes`}>
-            <Heart aria-hidden="true" size={16} weight="regular" />
-            {score}
-          </span>
+        {typeof displayedScore === "number" ? (
+          <button
+            className={cn(
+              "inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-inherit shadow-none transition-colors duration-150",
+              liked ? "text-kreis-orange" : "text-inherit"
+            )}
+            type="button"
+            aria-label={liked ? "Quitar like" : "Dar like"}
+            aria-pressed={liked}
+            onClick={() => setLiked((current) => !current)}
+          >
+            <Heart aria-hidden="true" size={16} weight={liked ? "fill" : "regular"} />
+            {displayedScore}
+          </button>
         ) : null}
         <button
           className="inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-inherit shadow-none"

@@ -530,6 +530,7 @@ export default function App() {
                   posts={activity}
                   themeMode={themeMode}
                   onCreateCommunity={() => openComposer("community")}
+                  onCreatePost={() => openComposer("post")}
                   onCommentCountChange={updatePostCommentCount}
                   onToggleTheme={toggleTheme}
                 />

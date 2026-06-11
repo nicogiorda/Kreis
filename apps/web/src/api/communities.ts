@@ -27,8 +27,8 @@ type MembershipResponse = {
 
 type CreateCommunityInput = {
   name: string;
-  category: string;
-  topicId?: string;
+  description: string;
+  topicIds: string[];
 };
 
 function getCommunityIcon(name: string): string {
@@ -109,8 +109,8 @@ export async function createCommunity(
     headers: bearerTokenHeaders(accessToken),
     body: JSON.stringify({
       nombre: input.name,
-      descripcion: `Comunidad sobre ${input.category}`,
-      topicos: input.topicId ? [Number(input.topicId)] : []
+      descripcion: input.description,
+      topicos: input.topicIds.map(Number)
     })
   });
 

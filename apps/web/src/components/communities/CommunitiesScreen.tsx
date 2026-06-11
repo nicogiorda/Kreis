@@ -1,6 +1,12 @@
+import { Plus } from "@phosphor-icons/react";
+import { useMemo, useState } from "react";
 import { EmptyState } from "../common/EmptyState";
-import type { ActivityPost, Community } from "../../types";
+import { ThemeToggleIcon } from "../common/Icons";
+import type { ActivityPost, Community, ThemeMode } from "../../types";
+import { cn } from "../../utils/cn";
 import { PostComments } from "./PostComments";
+
+const allCommunitiesFilter = "all";
 
 type CommunityPostProps = {
   post: ActivityPost;
@@ -8,28 +14,42 @@ type CommunityPostProps = {
   onCommentCountChange: (postId: string, total: number) => void;
 };
 
+function getAvatarLabel(label: string): string {
+  return label
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word.charAt(0))
+    .join("")
+    .toUpperCase() || "K";
+}
+
 function CommunityPost({ post, accessToken, onCommentCountChange }: CommunityPostProps) {
   return (
-    <article className="grid grid-cols-[34px_minmax(0,1fr)] gap-2.5 border-b border-kreis-line py-[13px]">
-      <div className="grid content-start justify-items-center gap-0.5 pt-0.5 text-[0.78rem] text-kreis-orange" aria-label={`${post.score} votos`}>
-        <span aria-hidden="true">^</span>
-        <strong className="text-[0.74rem] text-kreis-muted">{post.score}</strong>
-      </div>
+    <article className="grid grid-cols-[40px_minmax(0,1fr)] gap-2 border-b border-kreis-line py-[10px]">
+      <span className="mt-1 grid size-10 place-items-center rounded-full bg-kreis-event-surface text-[11px] font-medium uppercase leading-none text-kreis-orange" aria-hidden="true">
+        {post.icon || getAvatarLabel(post.communityName)}
+      </span>
+
       <div className="min-w-0">
-        <div className="flex items-center gap-[5px] text-[0.72rem] font-semibold text-kreis-muted">
-          <span className="grid size-[22px] place-items-center rounded-full bg-kreis-beige text-[0.62rem] font-black text-kreis-orange">{post.icon}</span>
-          <span>{post.communityName}</span>
-          <span>-</span>
-          <span>{post.author}</span>
-          <span>-</span>
-          <span>{post.time}</span>
+        <div className="flex min-w-0 items-baseline gap-1.5">
+          <strong className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium leading-[15px] text-kreis-ink">
+            {post.author || "Kreis"}
+          </strong>
+          <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-normal leading-[15px] text-kreis-muted">
+            {post.communityName} · {post.time}
+          </span>
         </div>
-        <h2 className="mb-0 mt-2 text-base font-bold leading-[1.18] text-kreis-ink">{post.title}</h2>
-        <p className="mb-0 mt-[7px] text-[0.92rem] leading-[1.38] text-kreis-muted">{post.text}</p>
+
+        <p className="m-0 mt-[7px] whitespace-pre-wrap text-[12px] font-normal leading-[15px] text-kreis-ink">
+          {post.text}
+        </p>
+
         <PostComments
           accessToken={accessToken}
           initialCount={post.comments}
           postId={post.id}
+          score={post.score}
           onCountChange={onCommentCountChange}
         />
       </div>
@@ -37,48 +57,108 @@ function CommunityPost({ post, accessToken, onCommentCountChange }: CommunityPos
   );
 }
 
+type CommunityFilterRailProps = {
+  communities: Community[];
+  activeFilter: string;
+  onFilterChange: (filter: string) => void;
+};
+
+function CommunityFilterRail({ communities, activeFilter, onFilterChange }: CommunityFilterRailProps) {
+  const filters = [
+    { id: allCommunitiesFilter, label: "Todo" },
+    ...communities.map((community) => ({ id: community.id, label: community.name }))
+  ];
+
+  return (
+    <section className="mt-[21px] min-w-0" aria-label="Filtrar feed por comunidad">
+      <div className="flex min-w-0 gap-[7px] overflow-x-auto pb-[2px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {filters.map((filter) => {
+          const active = activeFilter === filter.id;
+
+          return (
+            <button
+              className={cn(
+                "h-[21px] max-w-[128px] flex-none overflow-hidden text-ellipsis whitespace-nowrap rounded-full border-0 px-[11px] text-[12px] font-normal leading-[15px] shadow-none transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.97]",
+                active ? "bg-kreis-orange text-kreis-cream" : "bg-kreis-event-surface text-kreis-muted"
+              )}
+              type="button"
+              key={filter.id}
+              aria-pressed={active}
+              onClick={() => onFilterChange(filter.id)}
+            >
+              {filter.label}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 type CommunitiesScreenProps = {
   communities: Community[];
   posts: ActivityPost[];
   accessToken: string;
-  discover?: Community[];
-  onToggleJoin?: (communityId: string) => void;
+  themeMode: ThemeMode;
+  onCreateCommunity: () => void;
   onCommentCountChange: (postId: string, total: number) => void;
+  onToggleTheme: () => void;
 };
 
 export function CommunitiesScreen({
   communities,
   posts,
   accessToken,
-  onToggleJoin,
-  onCommentCountChange
+  themeMode,
+  onCreateCommunity,
+  onCommentCountChange,
+  onToggleTheme
 }: CommunitiesScreenProps) {
-  const joined = communities.filter((community) => community.joined);
-  const joinedIds = new Set(joined.map((community) => community.id));
-  const feedPosts = posts.filter((post) => joinedIds.has(post.communityId));
+  const [activeFilter, setActiveFilter] = useState(allCommunitiesFilter);
+  const joinedCommunities = useMemo(
+    () => communities.filter((community) => community.joined && community.status !== "Pendiente"),
+    [communities]
+  );
+  const joinedCommunityIds = useMemo(() => new Set(joinedCommunities.map((community) => community.id)), [joinedCommunities]);
+  const selectedFilter = activeFilter === allCommunitiesFilter || joinedCommunityIds.has(activeFilter)
+    ? activeFilter
+    : allCommunitiesFilter;
+  const feedPosts = posts
+    .filter((post) => joinedCommunityIds.has(post.communityId))
+    .filter((post) => selectedFilter === allCommunitiesFilter || post.communityId === selectedFilter);
+  const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
 
   return (
-    <section className="pt-[18px] animate-[rise_220ms_ease-out]" data-screen="communities">
-      <section className="flex gap-2 overflow-x-auto pb-3.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Comunidades a las que perteneces">
-        {joined.map((community) => (
-          <button
-            className="inline-flex min-h-8 flex-none items-center gap-[7px] rounded-full border border-kreis-line bg-transparent py-0 pl-1.5 pr-2.5 text-[0.8rem] font-semibold text-kreis-muted"
-            key={community.id}
-            type="button"
-            onClick={() => onToggleJoin?.(community.id)}
-            aria-label={`Salir de ${community.name}`}
-          >
-            <span className="grid size-[22px] place-items-center rounded-full bg-kreis-beige text-[0.64rem] font-black text-kreis-orange">{community.icon}</span>
-            {community.name}
-          </button>
-        ))}
-      </section>
+    <section className="grid min-w-0 w-full max-w-[430px] animate-[rise_220ms_ease-out] pt-[63px] sm:mx-auto" data-screen="communities">
+      <h1 className="sr-only">Comunidades</h1>
 
-      <section className="mt-0.5 grid" aria-label="Feed de comunidades">
-        <div className="flex items-center justify-between gap-3 pb-1.5">
-          <h2 className="m-0 text-[1.12rem] font-bold leading-none">Tu feed</h2>
-          <span className="grid h-[25px] min-w-[25px] place-items-center rounded-full bg-kreis-surface text-[0.74rem] font-bold text-kreis-muted">{feedPosts.length}</span>
-        </div>
+      <div className="mb-[21px] flex h-[37px] items-center justify-end gap-[11px]">
+        <button
+          className="grid size-[37px] place-items-center rounded-[12px] border-0 bg-kreis-orange p-0 text-kreis-cream shadow-none transition-[transform,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95"
+          type="button"
+          aria-label="Crear comunidad"
+          onClick={onCreateCommunity}
+        >
+          <Plus className="size-[21px]" weight="bold" aria-hidden="true" />
+        </button>
+        <button
+          className="grid size-[37px] place-items-center rounded-[12px] border-0 bg-kreis-event-surface p-0 text-kreis-muted shadow-none transition-[transform,color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95 [&_svg]:size-[20px]"
+          type="button"
+          aria-label={nextThemeLabel}
+          aria-pressed={themeMode === "dark"}
+          onClick={onToggleTheme}
+        >
+          <ThemeToggleIcon themeMode={themeMode} />
+        </button>
+      </div>
+
+      <CommunityFilterRail
+        communities={joinedCommunities}
+        activeFilter={selectedFilter}
+        onFilterChange={setActiveFilter}
+      />
+
+      <section className="mt-[12px] grid min-w-0" aria-label="Feed de comunidades">
         {feedPosts.length ? feedPosts.map((post) => (
           <CommunityPost
             accessToken={accessToken}
@@ -86,7 +166,11 @@ export function CommunitiesScreen({
             post={post}
             onCommentCountChange={onCommentCountChange}
           />
-        )) : <EmptyState text="Unite a una comunidad para ver mensajes aca." />}
+        )) : joinedCommunities.length ? (
+          <EmptyState text="No hay posts en esta comunidad todavía." />
+        ) : (
+          <EmptyState text="Unite a una comunidad desde Inicio para ver su feed." />
+        )}
       </section>
     </section>
   );

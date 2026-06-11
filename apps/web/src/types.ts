@@ -87,7 +87,8 @@ export type Profile = {
 
 export type CreateCommunityInput = {
   name: string;
-  category: string;
+  description: string;
+  topicIds: string[];
 };
 
 export type CreateEventInput = {

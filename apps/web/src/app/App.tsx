@@ -122,8 +122,8 @@ export default function App() {
     return queryMatch && categoryMatch;
   });
 
-  const discoverCommunities = communities.filter((community) => {
-    return !community.joined && matchesQuery(`${community.name} ${community.category} ${community.pulse} ${community.description ?? ""}`);
+  const visibleCommunities = communities.filter((community) => {
+    return matchesQuery(`${community.name} ${community.category} ${community.pulse} ${community.description ?? ""}`);
   });
 
   useEffect(() => {
@@ -310,7 +310,7 @@ export default function App() {
   function openComposer(mode: ComposerMode): void {
     setComposerMode(mode);
     setComposerError(null);
-    if (mode === "event" && !eventTopics.length) reloadEventTopics();
+    if ((mode === "event" || mode === "community") && !eventTopics.length) reloadEventTopics();
     setComposerOpen(true);
   }
 
@@ -399,17 +399,15 @@ export default function App() {
       .catch(() => updateEventInterest(eventId, previousInterest));
   }
 
-  function createCommunity({ name, category }: CreateCommunityInput): void {
-    if (!name || !category) return;
+  function createCommunity({ name, description, topicIds }: CreateCommunityInput): void {
+    if (!name || !description || !topicIds.length) return;
     const accessToken = authSession?.session.access_token;
     if (!accessToken) return;
-
-    const topicId = eventTopics.find((topic) => normalize(topic.name) === normalize(category))?.id;
 
     setComposerSubmitting(true);
     setComposerError(null);
 
-    void persistCommunity({ name, category, topicId }, accessToken)
+    void persistCommunity({ name, description, topicIds }, accessToken)
       .then((community) => {
         setCommunities((items) => [community, ...items]);
         setComposerOpen(false);
@@ -477,7 +475,7 @@ export default function App() {
               isEventDetail ? "pb-0" : "pb-[var(--bottom-nav-clearance)]"
             )}
           >
-            {screen !== "profile" && screen !== "home" && screen !== "events" ? (
+            {screen !== "profile" && screen !== "home" && screen !== "events" && screen !== "communities" ? (
               <Header
                 globalQuery={globalQuery}
                 themeMode={themeMode}
@@ -498,7 +496,7 @@ export default function App() {
                 <HomeScreen
                   events={homeEvents}
                   eventLoadStatus={eventLoadStatus}
-                  communities={discoverCommunities}
+                  communities={visibleCommunities}
                   homeTab={homeTab}
                   themeMode={themeMode}
                   onHomeTab={setHomeTab}
@@ -529,10 +527,11 @@ export default function App() {
                 <CommunitiesScreen
                   accessToken={authSession.session.access_token}
                   communities={communities}
-                  discover={discoverCommunities}
                   posts={activity}
+                  themeMode={themeMode}
+                  onCreateCommunity={() => openComposer("community")}
                   onCommentCountChange={updatePostCommentCount}
-                  onToggleJoin={toggleJoin}
+                  onToggleTheme={toggleTheme}
                 />
               )}
               {!isEventDetail && screen === "profile" && (

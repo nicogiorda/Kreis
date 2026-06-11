@@ -1,4 +1,4 @@
-import { ArrowBendDownRight, CaretDown, ChatCircleDots, PaperPlaneTilt } from "@phosphor-icons/react";
+import { ArrowBendDownRight, CaretDown, ChatCircleDots, Heart, PaperPlaneTilt } from "@phosphor-icons/react";
 import { type FormEvent, useState } from "react";
 import { createPostComment, listPostComments } from "../../api/posts";
 import type { PostComment } from "../../types";
@@ -7,6 +7,7 @@ import { cn } from "../../utils/cn";
 type PostCommentsProps = {
   postId: string;
   initialCount: number;
+  score?: number;
   accessToken: string;
   onCountChange: (postId: string, total: number) => void;
 };
@@ -203,6 +204,7 @@ function CommentNode({
 export function PostComments({
   postId,
   initialCount,
+  score,
   accessToken,
   onCountChange
 }: PostCommentsProps) {
@@ -274,18 +276,23 @@ export function PostComments({
   }
 
   return (
-    <section className="mt-2.5">
-      <div className="flex items-center gap-4 text-[0.76rem] font-bold text-kreis-muted">
+    <section className="mt-[12px]">
+      <div className="flex items-center gap-[25px] text-[12px] font-normal leading-[15px] text-kreis-muted">
+        {typeof score === "number" ? (
+          <span className="inline-flex items-center gap-1.5" aria-label={`${score} likes`}>
+            <Heart aria-hidden="true" size={16} weight="regular" />
+            {score}
+          </span>
+        ) : null}
         <button
           className="inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-inherit shadow-none"
           type="button"
           aria-expanded={open}
           onClick={toggleOpen}
         >
-          <ChatCircleDots aria-hidden="true" size={16} weight={open ? "fill" : "bold"} />
-          {initialCount} {initialCount === 1 ? "comentario" : "comentarios"}
+          <ChatCircleDots aria-hidden="true" size={16} weight={open ? "fill" : "regular"} />
+          {initialCount}
         </button>
-        <span>Compartir</span>
       </div>
 
       {open ? (

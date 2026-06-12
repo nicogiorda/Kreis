@@ -59,6 +59,8 @@ export interface IAuthProvider {
   // Autentica con email y contraseña y devuelve la sesión activa.
   signIn(email: string, password: string): Promise<AuthSession>;
 
+  refreshSession(refreshToken: string): Promise<AuthSession>;
+
   // Elimina un usuario del sistema de auth externo.
   // Se usa para rollback si la creación del perfil de BD falla.
   deleteUser(id: string): Promise<void>;

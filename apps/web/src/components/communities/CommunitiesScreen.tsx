@@ -1,5 +1,5 @@
 import { Plus } from "@phosphor-icons/react";
-import { Plain } from "@solar-icons/react";
+import { WidgetAdd } from "@solar-icons/react";
 import { useMemo, useState } from "react";
 import { EmptyState } from "../common/EmptyState";
 import { ThemeToggleIcon } from "../common/Icons";
@@ -146,7 +146,7 @@ export function CommunitiesScreen({
           aria-label="Crear comunidad"
           onClick={onCreateCommunity}
         >
-          <Plus className="size-[21px]" weight="bold" aria-hidden="true" />
+          <WidgetAdd className="size-[21px]" weight="BoldDuotone" aria-hidden="true" />
         </button>
         <button
           className="grid size-[37px] place-items-center rounded-[12px] border-0 bg-kreis-event-surface p-0 text-kreis-muted shadow-none transition-[transform,color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95 [&_svg]:size-[20px]"
@@ -181,12 +181,12 @@ export function CommunitiesScreen({
       </section>
 
       <button
-        className="fixed bottom-[calc(var(--nav-height)+env(safe-area-inset-bottom)+37px)] right-[max(11px,calc((100vw-430px)/2+11px))] z-40 grid size-[55px] place-items-center rounded-full border-0 bg-kreis-orange p-0 text-kreis-cream shadow-none transition-[transform,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95"
+        className="fixed bottom-[calc(var(--nav-height)+env(safe-area-inset-bottom)+28px)] right-[max(11px,calc((100vw-430px)/2+11px))] z-40 grid size-[55px] place-items-center rounded-full border-0 bg-kreis-orange p-0 text-kreis-cream shadow-none transition-[transform,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95"
         type="button"
         aria-label="Subir post"
         onClick={onCreatePost}
       >
-        <Plain className="size-[29px]" weight="LineDuotone" aria-hidden="true" />
+        <Plus className="size-[29px]" weight="bold" aria-hidden="true" />
       </button>
     </section>
   );

@@ -2,6 +2,7 @@ import multer from "multer";
 import { type NextFunction, type Request, type Response, Router } from "express";
 import { z } from "zod";
 import { LoginUseCase } from "../application/login";
+import { RefreshSessionUseCase } from "../application/refresh-session";
 import { RegisterUseCase } from "../application/register";
 import { AuthProviderError, ProfileCreationError } from "../domain/auth-errors";
 import {
@@ -36,6 +37,10 @@ const loginRequestSchema = z.object({
   password: z.string().min(8)
 });
 
+const refreshRequestSchema = z.object({
+  refresh_token: z.string().min(1)
+});
+
 const registerRequestSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -56,6 +61,7 @@ const authProvider = new SupabaseAuthProvider();
 const userRepository = new PrismaUserRepository();
 const registerUseCase = new RegisterUseCase(authProvider, userRepository);
 const loginUseCase = new LoginUseCase(authProvider);
+const refreshSessionUseCase = new RefreshSessionUseCase(authProvider);
 
 function uploadCertificate(request: Request, response: Response, next: NextFunction): void {
   certificateUpload.single(certificateFieldName)(request, response, (error) => {
@@ -198,6 +204,36 @@ export function createAuthRouter(): Router {
       if (error instanceof AuthProviderError) {
         response.status(401).json({
           error: { code: "invalid_credentials", message: error.message }
+        });
+        return;
+      }
+
+      next(error);
+    }
+  });
+
+  router.post("/refresh", async (request, response, next) => {
+    try {
+      const parsedBody = refreshRequestSchema.safeParse(request.body);
+
+      if (!parsedBody.success) {
+        response.status(400).json({
+          error: {
+            code: "validation_error",
+            message: "Invalid refresh payload",
+            details: parsedBody.error.flatten().fieldErrors
+          }
+        });
+        return;
+      }
+
+      const session = await refreshSessionUseCase.execute(parsedBody.data.refresh_token);
+
+      response.json(session);
+    } catch (error) {
+      if (error instanceof AuthProviderError) {
+        response.status(401).json({
+          error: { code: "invalid_refresh_token", message: error.message }
         });
         return;
       }

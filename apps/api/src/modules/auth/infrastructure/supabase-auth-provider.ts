@@ -42,7 +42,9 @@ export class SupabaseAuthProvider implements IAuthProvider {
 
     // Convertimos el error de Supabase en un AuthProviderError tipado
     // para que la capa superior pueda identificarlo con instanceof.
-    if (error) throw new AuthProviderError(error.message);
+    if (error || !data.user) {
+      throw new AuthProviderError(error?.message ?? "No pudimos crear el usuario.");
+    }
 
     return { id: data.user.id, email: data.user.email };
   }
@@ -53,7 +55,22 @@ export class SupabaseAuthProvider implements IAuthProvider {
   async signIn(email: string, password: string): Promise<AuthSession> {
     const { data, error } = await supabaseAnon.auth.signInWithPassword({ email, password });
 
-    if (error) throw new AuthProviderError(error.message);
+    if (error || !data.session || !data.user) {
+      throw new AuthProviderError(error?.message ?? "No pudimos iniciar sesion.");
+    }
+
+    return {
+      session: data.session,
+      user: { id: data.user.id, email: data.user.email }
+    };
+  }
+
+  async refreshSession(refreshToken: string): Promise<AuthSession> {
+    const { data, error } = await supabaseAnon.auth.refreshSession({ refresh_token: refreshToken });
+
+    if (error || !data.session || !data.user) {
+      throw new AuthProviderError(error?.message ?? "No pudimos refrescar la sesion.");
+    }
 
     return {
       session: data.session,

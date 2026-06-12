@@ -1,4 +1,5 @@
-import { ArrowBendDownRight, CaretDown, ChatCircleDots, Heart, PaperPlaneTilt } from "@phosphor-icons/react";
+import { ChatRound, Heart } from "@solar-icons/react";
+import { ArrowBendDownRight, CaretDown, PaperPlaneTilt } from "@phosphor-icons/react";
 import { type FormEvent, useState } from "react";
 import { createPostComment, listPostComments } from "../../api/posts";
 import type { PostComment } from "../../types";
@@ -291,7 +292,7 @@ export function PostComments({
             aria-pressed={liked}
             onClick={() => setLiked((current) => !current)}
           >
-            <Heart aria-hidden="true" size={16} weight={liked ? "fill" : "regular"} />
+            <Heart aria-hidden="true" size={16} weight={liked ? "Bold" : "Outline"} />
             {displayedScore}
           </button>
         ) : null}
@@ -301,7 +302,7 @@ export function PostComments({
           aria-expanded={open}
           onClick={toggleOpen}
         >
-          <ChatCircleDots aria-hidden="true" size={16} weight={open ? "fill" : "regular"} />
+          <ChatRound aria-hidden="true" size={16} weight={open ? "Bold" : "Outline"} />
           {initialCount}
         </button>
       </div>

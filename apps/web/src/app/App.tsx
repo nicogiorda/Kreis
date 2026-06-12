@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { listTopics, logout } from "../api/auth";
+import { listTopics, logout, refreshSession } from "../api/auth";
 import type { AuthResult } from "../api/auth";
 import {
   createCommunity as persistCommunity,
@@ -24,6 +24,15 @@ import { BottomNav } from "../components/navigation/BottomNav";
 import { Header } from "../components/navigation/Header";
 import { ProfileScreen } from "../components/profile/ProfileScreen";
 import type { ActivityPost, Community, ComposerMode, CreateCommunityInput, CreateEventInput, CreatePostInput, EventLoadStatus, HomeTab, KreisEvent, KreisTopic, Screen, ThemeMode } from "../types";
+import {
+  authRefreshLeadMs,
+  clearStoredAuthSession,
+  getAuthSessionExpiryMs,
+  isAuthSessionExpired,
+  readStoredAuthSession,
+  shouldRefreshAuthSession,
+  storeAuthSession
+} from "../utils/auth-session";
 import { cn } from "../utils/cn";
 import { scrollTop } from "../utils/navigation";
 import { normalize } from "../utils/text";
@@ -81,7 +90,8 @@ function getInitialThemeMode(): ThemeMode {
 }
 
 export default function App() {
-  const [authSession, setAuthSession] = useState<AuthResult | null>(null);
+  const [authSession, setAuthSessionState] = useState<AuthResult | null>(null);
+  const [authBootstrapping, setAuthBootstrapping] = useState(true);
   const [events, setEvents] = useState<KreisEvent[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<KreisEvent[]>([]);
   const [eventLoadStatus, setEventLoadStatus] = useState<EventLoadStatus>("loading");
@@ -125,6 +135,73 @@ export default function App() {
   const visibleCommunities = communities.filter((community) => {
     return matchesQuery(`${community.name} ${community.category} ${community.pulse} ${community.description ?? ""}`);
   });
+
+  const applyAuthSession = useCallback((auth: AuthResult | null): void => {
+    setAuthSessionState(auth);
+
+    if (auth) {
+      storeAuthSession(auth);
+      return;
+    }
+
+    clearStoredAuthSession();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function restoreSession(): Promise<void> {
+      const storedSession = readStoredAuthSession();
+
+      if (!storedSession) {
+        setAuthBootstrapping(false);
+        return;
+      }
+
+      try {
+        const refreshToken = storedSession.session.refresh_token;
+
+        if (isAuthSessionExpired(storedSession) && !refreshToken) {
+          throw new Error("Stored session expired without a refresh token.");
+        }
+
+        const nextSession = refreshToken && shouldRefreshAuthSession(storedSession)
+          ? await refreshSession(refreshToken)
+          : storedSession;
+
+        if (!cancelled) applyAuthSession(nextSession);
+      } catch {
+        if (!cancelled) applyAuthSession(null);
+      } finally {
+        if (!cancelled) setAuthBootstrapping(false);
+      }
+    }
+
+    void restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyAuthSession]);
+
+  useEffect(() => {
+    if (!authSession) return;
+
+    const refreshToken = authSession.session.refresh_token;
+    const expiryMs = getAuthSessionExpiryMs(authSession);
+
+    if (!refreshToken || expiryMs === null) return;
+
+    const refreshDelay = Math.max(0, expiryMs - Date.now() - authRefreshLeadMs);
+
+    const timeoutId = window.setTimeout(() => {
+      void refreshSession(refreshToken)
+        .then(applyAuthSession)
+        .catch(() => applyAuthSession(null));
+    }, refreshDelay);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [applyAuthSession, authSession]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -290,7 +367,7 @@ export default function App() {
 
   function logoutUser(): void {
     void logout().catch(() => undefined);
-    setAuthSession(null);
+    applyAuthSession(null);
     setUserProfile(null);
     setProfileLoadStatus("loading");
     setEvents([]);
@@ -467,7 +544,7 @@ export default function App() {
   return (
     <>
       <SplashScreen />
-      {authSession ? (
+      {authBootstrapping ? null : authSession ? (
         <>
           <div
             className={cn(
@@ -564,7 +641,7 @@ export default function App() {
           {!isEventDetail && <BottomNav screen={screen} onNavigate={navigate} />}
         </>
       ) : (
-        <AuthFlow onComplete={setAuthSession} />
+        <AuthFlow onComplete={applyAuthSession} />
       )}
     </>
   );

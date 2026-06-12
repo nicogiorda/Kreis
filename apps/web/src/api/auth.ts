@@ -89,6 +89,8 @@ export type RegisterInput = {
 export type AuthSession = {
   access_token: string;
   refresh_token?: string;
+  expires_at?: number;
+  expires_in?: number;
   [key: string]: unknown;
 };
 
@@ -132,6 +134,13 @@ export async function login(email: string, password: string): Promise<AuthResult
   return requestJson<AuthResult>("/api/v1/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password })
+  });
+}
+
+export async function refreshSession(refreshToken: string): Promise<AuthResult> {
+  return requestJson<AuthResult>("/api/v1/auth/refresh", {
+    method: "POST",
+    body: JSON.stringify({ refresh_token: refreshToken })
   });
 }
 

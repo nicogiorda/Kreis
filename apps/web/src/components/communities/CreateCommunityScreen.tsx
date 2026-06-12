@@ -1,6 +1,8 @@
 import { X } from "@phosphor-icons/react";
 import { type FormEvent, useState } from "react";
 import type { CreateCommunityInput, KreisTopic } from "../../types";
+import { TopicRailSkeleton } from "../common/LoadingSkeleton";
+import { LoadingState } from "../common/LoadingState";
 import { cn } from "../../utils/cn";
 
 type CreateCommunityScreenProps = {
@@ -125,7 +127,7 @@ export function CreateCommunityScreen({
                 {topic.name}
               </button>
             ))}
-            {!topics.length && topicsStatus === "loading" ? <span className="text-[12px] leading-5 text-kreis-muted">Cargando tópicos...</span> : null}
+            {!topics.length && topicsStatus === "loading" ? <TopicRailSkeleton count={9} /> : null}
             {!topics.length && topicsStatus === "ready" ? <span className="text-[12px] leading-5 text-kreis-muted">No hay tópicos disponibles.</span> : null}
             {!topics.length && topicsStatus === "error" ? (
               <button
@@ -146,7 +148,7 @@ export function CreateCommunityScreen({
           type="submit"
           disabled={submitting || !hasSelectedTopic}
         >
-          {submitting ? "Creando..." : "Crear"}
+          {submitting ? <LoadingState label="Creando comunidad" variant="button" /> : "Crear"}
         </button>
       </form>
     </section>

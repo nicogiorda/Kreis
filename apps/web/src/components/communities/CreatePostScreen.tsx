@@ -1,6 +1,7 @@
 import { X } from "@phosphor-icons/react";
 import { type FormEvent, useMemo, useState } from "react";
 import type { Community, CreatePostInput } from "../../types";
+import { LoadingState } from "../common/LoadingState";
 
 type CreatePostScreenProps = {
   communities: Community[];
@@ -119,7 +120,7 @@ export function CreatePostScreen({
           type="submit"
           disabled={submitting || !canSubmit}
         >
-          {submitting ? "Publicando..." : "Publicar"}
+          {submitting ? <LoadingState label="Publicando post" variant="button" /> : "Publicar"}
         </button>
       </form>
     </section>

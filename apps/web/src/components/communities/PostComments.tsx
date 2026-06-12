@@ -3,6 +3,8 @@ import { ArrowBendDownRight, CaretDown, PaperPlaneTilt } from "@phosphor-icons/r
 import { type FormEvent, useState } from "react";
 import { createPostComment, listPostComments } from "../../api/posts";
 import type { PostComment } from "../../types";
+import { CommentSkeletonList } from "../common/LoadingSkeleton";
+import { LoadingState } from "../common/LoadingState";
 import { cn } from "../../utils/cn";
 
 type PostCommentsProps = {
@@ -104,8 +106,14 @@ function CommentForm({
           type="submit"
           disabled={submitting || !value.trim()}
         >
-          <PaperPlaneTilt aria-hidden="true" size={15} weight="fill" />
-          {submitting ? "Enviando" : "Publicar"}
+          {submitting ? (
+            <LoadingState label="Enviando comentario" variant="button" />
+          ) : (
+            <>
+              <PaperPlaneTilt aria-hidden="true" size={15} weight="fill" />
+              Publicar
+            </>
+          )}
         </button>
       </div>
     </form>
@@ -321,7 +329,7 @@ export function PostComments({
           />
 
           {status === "loading" ? (
-            <p className="m-0 text-[0.8rem] font-bold text-kreis-muted">Cargando comentarios...</p>
+            <CommentSkeletonList />
           ) : null}
 
           {status === "error" ? (

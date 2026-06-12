@@ -57,18 +57,20 @@ const emptySignupDraft: SignupDraft = {
 function AuthScreen({ children, tone }: { children: ReactNode; tone: AuthTone }) {
   return (
     <section className={cn("auth-redesign-screen", `auth-redesign-screen--${tone}`)}>
-      {children}
+      <div className="auth-redesign-stage">
+        {children}
+      </div>
     </section>
   );
 }
 
-function BrandLogo({ variant = "right" }: { variant?: "right" | "center" | "login" }) {
+function BrandLogo({ variant = "right" }: { variant?: "right" | "right-university" | "right-low" | "right-certificate" | "center" | "login" }) {
   return <img className={cn("auth-redesign-logo", `auth-redesign-logo--${variant}`)} src={invertedLogoUrl} alt="Kreis" />;
 }
 
-function BackButton({ onClick }: { onClick: () => void }) {
+function BackButton({ onClick, variant = "default" }: { onClick: () => void; variant?: "default" | "low" | "certificate" | "login" }) {
   return (
-    <button className="auth-redesign-back" type="button" aria-label="Volver" onClick={onClick}>
+    <button className={cn("auth-redesign-back", `auth-redesign-back--${variant}`)} type="button" aria-label="Volver" onClick={onClick}>
       <ArrowLeft aria-hidden="true" weight="regular" />
     </button>
   );
@@ -235,7 +237,7 @@ function OnboardingEventsScreen({ onContinue }: { onContinue: () => void }) {
         <span className="is-active" />
         <span />
       </div>
-      <PrimaryButton className="auth-redesign-onboarding-button auth-redesign-onboarding-button--green" onClick={onContinue}>Continuar</PrimaryButton>
+      <PrimaryButton className="auth-redesign-onboarding-button auth-redesign-button--green-text" onClick={onContinue}>Continuar</PrimaryButton>
     </AuthScreen>
   );
 }
@@ -252,7 +254,7 @@ function OnboardingCommunitiesScreen({ onContinue }: { onContinue: () => void })
         <span />
         <span className="is-active" />
       </div>
-      <PrimaryButton className="auth-redesign-onboarding-button auth-redesign-onboarding-button--pumpkin" onClick={onContinue}>Registrarse</PrimaryButton>
+      <PrimaryButton className="auth-redesign-onboarding-button auth-redesign-button--pumpkin-text" onClick={onContinue}>Registrarse</PrimaryButton>
     </AuthScreen>
   );
 }
@@ -272,7 +274,7 @@ function UniversityScreen({
     <AuthScreen tone="green">
       <CharacterBackdrop src={signUpOneUrl} />
       <BackButton onClick={onBack} />
-      <BrandLogo />
+      <BrandLogo variant="right-university" />
       <h1 className="auth-redesign-title auth-redesign-title--university">
         <span>ELIGE TU</span>
         <span>UNIVERSIDAD</span>
@@ -286,7 +288,7 @@ function UniversityScreen({
         autoComplete="off"
         onChange={(legajo) => onChange({ legajo: legajo.replace(/\D/g, "") })}
       />
-      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--bottom" disabled={!draft.university || !draft.legajo} onClick={onContinue}>Continuar</PrimaryButton>
+      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--bottom auth-redesign-button--orange-text" disabled={!draft.university || !draft.legajo} onClick={onContinue}>Continuar</PrimaryButton>
     </AuthScreen>
   );
 }
@@ -345,7 +347,7 @@ function InterestsScreen({
         ))}
       </div>
       {status === "error" ? <button className="auth-redesign-error auth-redesign-error--interests" type="button" onClick={onRetry}>No pudimos cargar los intereses. Reintentar</button> : null}
-      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--bottom" disabled={actionDisabled} onClick={status === "error" ? onRetry : onContinue}>
+      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--bottom auth-redesign-button--orange-text" disabled={actionDisabled} onClick={status === "error" ? onRetry : onContinue}>
         {status === "error" ? "Reintentar" : "Continuar"}
       </PrimaryButton>
     </AuthScreen>
@@ -369,8 +371,8 @@ function ProfileScreen({
   return (
     <AuthScreen tone="green">
       <CharacterBackdrop src={signUpThreeUrl} top={301} />
-      <BackButton onClick={onBack} />
-      <BrandLogo />
+      <BackButton variant="low" onClick={onBack} />
+      <BrandLogo variant="right-low" />
       <h1 className="auth-redesign-title auth-redesign-title--profile">
         <span>CREA TU</span>
         <span>USUARIO</span>
@@ -391,7 +393,7 @@ function ProfileScreen({
         suffix="@uade.edu.ar"
         onChange={(emailUser) => onChange({ emailUser: emailUser.replace(/@.*$/, "") })}
       />
-      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--profile" disabled={!hasFullName || !hasEmailUser} onClick={onContinue}>Continuar</PrimaryButton>
+      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--profile auth-redesign-button--green-text" disabled={!hasFullName || !hasEmailUser} onClick={onContinue}>Continuar</PrimaryButton>
     </AuthScreen>
   );
 }
@@ -412,15 +414,15 @@ function PasswordScreen({
   return (
     <AuthScreen tone="pumpkin">
       <CharacterBackdrop src={signUpFourUrl} top={306} />
-      <BackButton onClick={onBack} />
-      <BrandLogo />
+      <BackButton variant="low" onClick={onBack} />
+      <BrandLogo variant="right-low" />
       <h1 className="auth-redesign-title auth-redesign-title--password">
         <span>CREA UNA</span>
         <span>CONTRASEÑA</span>
       </h1>
       <TextField className="auth-redesign-field--password" label="Ingresa una contraseña" type="password" value={draft.password} autoComplete="new-password" onChange={(password) => onChange({ password })} />
       <TextField className="auth-redesign-field--password-repeat" label="Repita la contraseña" type="password" value={draft.passwordConfirmation} autoComplete="new-password" onChange={(passwordConfirmation) => onChange({ passwordConfirmation })} />
-      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--password" disabled={!passwordIsValid} onClick={onContinue}>Continuar</PrimaryButton>
+      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--password auth-redesign-button--pumpkin-text" disabled={!passwordIsValid} onClick={onContinue}>Continuar</PrimaryButton>
     </AuthScreen>
   );
 }
@@ -444,8 +446,8 @@ function CertificateScreen({
 
   return (
     <AuthScreen tone="green">
-      <BackButton onClick={onBack} />
-      <BrandLogo />
+      <BackButton variant="certificate" onClick={onBack} />
+      <BrandLogo variant="right-certificate" />
       <h1 className="auth-redesign-title auth-redesign-title--certificate">
         <span>CERTIFICADO</span>
         <span>DE ALUMNO</span>
@@ -492,12 +494,12 @@ function LoginScreen({ onBack, onComplete }: { onBack: () => void; onComplete: (
   return (
     <AuthScreen tone="green">
       <CharacterBackdrop src={signUpThreeUrl} top={279} />
-      <BackButton onClick={onBack} />
+      <BackButton variant="login" onClick={onBack} />
       <BrandLogo variant="login" />
       <h1 className="auth-redesign-title auth-redesign-title--login">INICIA SESIÓN</h1>
       <TextField className="auth-redesign-field--login-email" label="Ingresa tu mail" type="email" value={email} autoComplete="email" inputMode="email" onChange={setEmail} />
       <TextField className="auth-redesign-field--login-password" label="Ingresa tu contraseña" type="password" value={password} autoComplete="current-password" onChange={setPassword} />
-      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--login" disabled={submitting || !email.trim() || password.length < 8} onClick={() => void handleLogin()}>
+      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--login auth-redesign-button--green-text" disabled={submitting || !email.trim() || password.length < 8} onClick={() => void handleLogin()}>
         {submitting ? <LoadingState label="Ingresando" variant="button" /> : "Continuar"}
       </PrimaryButton>
       {error ? <p className="auth-redesign-error auth-redesign-error--login">{error}</p> : null}

@@ -1,6 +1,7 @@
 import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { EmptyState } from "../common/EmptyState";
 import { ThemeToggleIcon } from "../common/Icons";
+import { EventCardSkeletonList } from "../common/LoadingSkeleton";
 import { EventCard } from "./EventCard";
 import { EventTopicIcon } from "./EventTopicIcon";
 import type { EventLoadStatus, KreisEvent, ThemeMode } from "../../types";
@@ -108,9 +109,7 @@ export function EventsScreen({
 
       <div className="mt-[13px] grid min-w-0 grid-cols-[repeat(2,minmax(0,1fr))] gap-x-[17px] gap-y-[15px]">
         {events.length ? events.map((event) => <EventCard event={event} key={event.id} onOpenEventDetails={onOpenEventDetails} />) : eventLoadStatus === "loading" ? (
-          <div className="col-span-full">
-            <EmptyState title="Cargando eventos" text="Estamos buscando todos los eventos." />
-          </div>
+          <EventCardSkeletonList count={4} />
         ) : eventLoadStatus === "error" ? (
           <div className="col-span-full">
             <EmptyState title="No pudimos cargar los eventos" text="Intentá nuevamente en unos segundos." actionLabel="Reintentar" onAction={onRetryEvents} />

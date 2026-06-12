@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { CommunityCard } from "../communities/CommunityCard";
 import { EmptyState } from "../common/EmptyState";
+import { EventCardSkeletonList } from "../common/LoadingSkeleton";
 import { EventCard } from "../events/EventCard";
 import { HeroBanner } from "./HeroBanner";
 import type { Community, EventLoadStatus, HomeTab, KreisEvent, ThemeMode } from "../../types";
@@ -146,7 +147,7 @@ export function HomeScreen({
                         onOpenEventDetails={onOpenEventDetails}
                       />
                     )) : eventLoadStatus === "loading" ? (
-                      <EmptyState title="Cargando eventos" text="Estamos buscando los próximos eventos." />
+                      <EventCardSkeletonList count={3} variant="compact" />
                     ) : eventLoadStatus === "error" ? (
                       <EmptyState title="No pudimos cargar los eventos" text="Intentá nuevamente en unos segundos." actionLabel="Reintentar" onAction={onRetryEvents} />
                     ) : (

@@ -1,89 +1,165 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { ArrowLeft, Plus } from "@phosphor-icons/react";
+import { type ChangeEvent, type ReactNode, useEffect, useLayoutEffect, useState } from "react";
 import { ApiRequestError, classifyCertificate, listFaculties, listTopics, login, register } from "../../api/auth";
 import type { AuthResult, CertificateClassificationResult, FacultyCatalogItem, TopicCatalogItem } from "../../api/auth";
-import wordmarkUrl from "../../assets/auth/welcome-wordmark.svg";
-import validatedCheckUrl from "../../assets/auth/validated-check.svg";
+import certificateCharacterUrl from "../../assets/auth/certificate-character.webp";
+import onboardingEventsUrl from "../../assets/auth/onboarding-events.webp";
 import signUpOneUrl from "../../assets/auth/signup-1.webp";
 import signUpTwoUrl from "../../assets/auth/signup-2.webp";
 import signUpThreeUrl from "../../assets/auth/signup-3.webp";
 import signUpFourUrl from "../../assets/auth/signup-4.webp";
+import wordmarkUrl from "../../assets/auth/welcome-wordmark.svg";
 import invertedLogoUrl from "../../assets/brand/svgs/IMAGOTIPO-INVERTIDO.svg";
 import greetingCharacterUrl from "../../assets/characters/kreisito_saludando.webp";
+import { LoadingState } from "../common/LoadingState";
 import { cn } from "../../utils/cn";
 
 type AuthFlowProps = {
   onComplete: (auth: AuthResult) => void;
 };
 
-type AuthStep = "welcome" | "login" | "university" | "interests" | "profile" | "password" | "certificate" | "validated";
+type AuthStep = "welcome" | "events" | "communities" | "university" | "interests" | "profile" | "password" | "certificate" | "login";
 type CatalogStatus = "loading" | "ready" | "error";
+type AuthTone = "lace" | "green" | "orange" | "pumpkin";
 
 type SignupDraft = {
   university: string;
   legajo: string;
   topicIds: string[];
   fullName: string;
-  email: string;
-  facultyId: string;
+  emailUser: string;
   password: string;
   passwordConfirmation: string;
 };
 
-const signUpSteps: AuthStep[] = ["university", "interests", "profile", "password", "certificate"];
 const authSafeAreaBackgrounds: Record<AuthStep, string> = {
   welcome: "#f7edda",
-  login: "#f0531c",
-  university: "#f0531c",
-  interests: "#f0531c",
-  profile: "#f0531c",
-  password: "#f0531c",
-  certificate: "#f0531c",
-  validated: "#f0531c"
+  events: "#2e4b3c",
+  communities: "#ffa74f",
+  university: "#2e4b3c",
+  interests: "#ffa74f",
+  profile: "#2e4b3c",
+  password: "#ffa74f",
+  certificate: "#2e4b3c",
+  login: "#2e4b3c"
 };
+
 const emptySignupDraft: SignupDraft = {
   university: "",
   legajo: "",
   topicIds: [],
   fullName: "",
-  email: "",
-  facultyId: "",
+  emailUser: "",
   password: "",
   passwordConfirmation: ""
 };
 
-function AuthScreen({ children, tone }: { children: React.ReactNode; tone: "lace" | "green" | "orange" | "pumpkin" }) {
+function AuthScreen({ children, tone }: { children: ReactNode; tone: AuthTone }) {
   return (
-    <section className={cn("auth-screen", `auth-screen--${tone}`)}>
+    <section className={cn("auth-redesign-screen", `auth-redesign-screen--${tone}`)}>
       {children}
     </section>
   );
 }
 
-function Progress({ step }: { step: AuthStep }) {
-  const currentIndex = signUpSteps.indexOf(step);
+function BrandLogo({ variant = "right" }: { variant?: "right" | "center" | "login" }) {
+  return <img className={cn("auth-redesign-logo", `auth-redesign-logo--${variant}`)} src={invertedLogoUrl} alt="Kreis" />;
+}
 
+function BackButton({ onClick }: { onClick: () => void }) {
   return (
-    <div className="auth-progress" aria-label={`Paso ${currentIndex + 1} de ${signUpSteps.length}`}>
-      {signUpSteps.map((item, index) => (
-        <span className={cn("auth-progress-segment", index <= currentIndex && "is-active")} key={item} />
-      ))}
-    </div>
+    <button className="auth-redesign-back" type="button" aria-label="Volver" onClick={onClick}>
+      <ArrowLeft aria-hidden="true" weight="regular" />
+    </button>
   );
 }
 
-function BrandLogo({ login: isLogin = false }: { login?: boolean }) {
-  return <img className={cn("auth-brand-logo", isLogin && "auth-brand-logo--login")} src={invertedLogoUrl} alt="Kreis" />;
-}
-
-function CharacterBackground({ src, top = 0 }: { src: string; top?: number }) {
-  return <img className="auth-character-bg" style={{ top: `${(top / 852) * 100}%` }} src={src} alt="" aria-hidden="true" />;
-}
-
-function ContinueButton({ children = "Continuar", className, disabled = false, onClick }: { children?: React.ReactNode; className?: string; disabled?: boolean; onClick: () => void }) {
+function PrimaryButton({
+  children,
+  className,
+  disabled = false,
+  onClick
+}: {
+  children: ReactNode;
+  className?: string;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
   return (
-    <button className={cn("auth-continue-button", className)} type="button" disabled={disabled} onClick={onClick}>
+    <button className={cn("auth-redesign-primary-button", className)} type="button" disabled={disabled} onClick={onClick}>
       {children}
     </button>
+  );
+}
+
+function CharacterBackdrop({ src, className, top }: { src: string; className?: string; top?: number }) {
+  return (
+    <img
+      className={cn("auth-redesign-character-bg", className)}
+      style={top === undefined ? undefined : { top: `${(top / 852) * 100}%` }}
+      src={src}
+      alt=""
+      aria-hidden="true"
+    />
+  );
+}
+
+function TextField({
+  className,
+  label,
+  type = "text",
+  value,
+  autoComplete,
+  inputMode,
+  suffix,
+  onChange
+}: {
+  className: string;
+  label: string;
+  type?: "text" | "email" | "password";
+  value: string;
+  autoComplete?: string;
+  inputMode?: "numeric" | "email";
+  suffix?: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className={cn("auth-redesign-field", className)}>
+      <span className="sr-only">{label}</span>
+      <input
+        className={cn("auth-redesign-input", suffix && "auth-redesign-input--suffix")}
+        type={type}
+        value={value}
+        autoComplete={autoComplete}
+        inputMode={inputMode}
+        placeholder={label}
+        aria-label={label}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      {suffix ? <span className="auth-redesign-input-suffix">{suffix}</span> : null}
+    </label>
+  );
+}
+
+function SelectField({
+  className,
+  label,
+  value,
+  onChange
+}: {
+  className: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className={cn("auth-redesign-field", className)}>
+      <span className="sr-only">{label}</span>
+      <select className="auth-redesign-input auth-redesign-select" value={value} aria-label={label} onChange={(event) => onChange(event.target.value)}>
+        <option value="">{label}</option>
+        <option value="uade">UADE</option>
+      </select>
+    </label>
   );
 }
 
@@ -110,24 +186,291 @@ function getDraftProfile(draft: SignupDraft): { nombre: string; apellido: string
   };
 }
 
+function getSignupEmail(draft: SignupDraft): string {
+  const rawValue = draft.emailUser.trim().toLowerCase();
+  const userPart = rawValue.includes("@") ? rawValue.split("@")[0] : rawValue;
+
+  return `${userPart}@uade.edu.ar`;
+}
+
+function getInvalidCertificateMessage(certificate: CertificateClassificationResult): string {
+  if (!certificate.classificationValid) {
+    const type = certificate.classification?.type;
+
+    if (type === "formato_invalido_con_datos") return "El archivo tiene datos, pero no cumple el formato esperado.";
+    if (type === "otro_documento_universitario") return "El documento parece universitario, pero no es un certificado de alumno regular.";
+
+    return "Subí una constancia de alumno regular válida.";
+  }
+
+  if (certificate.validation?.errors.length) return certificate.validation.errors[0];
+
+  return "Los datos del certificado no coinciden con los datos ingresados.";
+}
+
 function WelcomeScreen({ onBegin, onLogin }: { onBegin: () => void; onLogin: () => void }) {
   return (
     <AuthScreen tone="lace">
-      <div className="auth-welcome-character">
-        <span className="auth-welcome-shadow" aria-hidden="true" />
+      <div className="auth-redesign-welcome-character">
+        <span className="auth-redesign-character-shadow" aria-hidden="true" />
         <img src={greetingCharacterUrl} alt="" aria-hidden="true" />
       </div>
-      <img className="auth-welcome-wordmark" src={wordmarkUrl} alt="Kreis" />
-      <p className="auth-welcome-tagline">Conecta con otros estudiantes y viví la vida universitaria que tanto soñaste.</p>
-      <div className="auth-welcome-actions">
-        <button className="auth-welcome-button auth-welcome-button--primary" type="button" onClick={onBegin}>Comenzar</button>
-        <button className="auth-welcome-button auth-welcome-button--secondary" type="button" onClick={onLogin}>Ya tengo cuenta</button>
-      </div>
+      <img className="auth-redesign-welcome-wordmark" src={wordmarkUrl} alt="Kreis" />
+      <p className="auth-redesign-welcome-copy">Conecta con otros estudiantes y viví la vida universitaria que tanto soñaste.</p>
+      <button className="auth-redesign-welcome-button auth-redesign-welcome-button--primary" type="button" onClick={onBegin}>Comenzar</button>
+      <button className="auth-redesign-welcome-button auth-redesign-welcome-button--secondary" type="button" onClick={onLogin}>Ya tengo cuenta</button>
     </AuthScreen>
   );
 }
 
-function LoginScreen({ onComplete }: { onComplete: (auth: AuthResult) => void }) {
+function OnboardingEventsScreen({ onContinue }: { onContinue: () => void }) {
+  return (
+    <AuthScreen tone="green">
+      <BrandLogo variant="center" />
+      <img className="auth-redesign-onboarding-character auth-redesign-onboarding-character--events" src={onboardingEventsUrl} alt="" aria-hidden="true" />
+      <span className="auth-redesign-character-shadow auth-redesign-character-shadow--onboarding" aria-hidden="true" />
+      <h1 className="auth-redesign-onboarding-title">Eventos</h1>
+      <p className="auth-redesign-onboarding-copy">Enterate de todos los eventos y mostrá interés en ellos.</p>
+      <div className="auth-redesign-dots" aria-hidden="true">
+        <span className="is-active" />
+        <span />
+      </div>
+      <PrimaryButton className="auth-redesign-onboarding-button auth-redesign-onboarding-button--green" onClick={onContinue}>Continuar</PrimaryButton>
+    </AuthScreen>
+  );
+}
+
+function OnboardingCommunitiesScreen({ onContinue }: { onContinue: () => void }) {
+  return (
+    <AuthScreen tone="pumpkin">
+      <BrandLogo variant="center" />
+      <img className="auth-redesign-onboarding-character auth-redesign-onboarding-character--communities" src={greetingCharacterUrl} alt="" aria-hidden="true" />
+      <span className="auth-redesign-character-shadow auth-redesign-character-shadow--onboarding" aria-hidden="true" />
+      <h1 className="auth-redesign-onboarding-title">Comunidades</h1>
+      <p className="auth-redesign-onboarding-copy">Unite a comunidades y forma parte de lo que mas te gusta.</p>
+      <div className="auth-redesign-dots" aria-hidden="true">
+        <span />
+        <span className="is-active" />
+      </div>
+      <PrimaryButton className="auth-redesign-onboarding-button auth-redesign-onboarding-button--pumpkin" onClick={onContinue}>Registrarse</PrimaryButton>
+    </AuthScreen>
+  );
+}
+
+function UniversityScreen({
+  draft,
+  onBack,
+  onChange,
+  onContinue
+}: {
+  draft: SignupDraft;
+  onBack: () => void;
+  onChange: (updates: Partial<SignupDraft>) => void;
+  onContinue: () => void;
+}) {
+  return (
+    <AuthScreen tone="green">
+      <CharacterBackdrop src={signUpOneUrl} />
+      <BackButton onClick={onBack} />
+      <BrandLogo />
+      <h1 className="auth-redesign-title auth-redesign-title--university">
+        <span>ELIGE TU</span>
+        <span>UNIVERSIDAD</span>
+      </h1>
+      <SelectField className="auth-redesign-field--university" label="Selecciona una universidad" value={draft.university} onChange={(university) => onChange({ university })} />
+      <TextField
+        className="auth-redesign-field--student-id"
+        label="Ingresa tu legajo"
+        value={draft.legajo}
+        inputMode="numeric"
+        autoComplete="off"
+        onChange={(legajo) => onChange({ legajo: legajo.replace(/\D/g, "") })}
+      />
+      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--bottom" disabled={!draft.university || !draft.legajo} onClick={onContinue}>Continuar</PrimaryButton>
+    </AuthScreen>
+  );
+}
+
+function InterestsScreen({
+  draft,
+  topics,
+  status,
+  onBack,
+  onChange,
+  onContinue,
+  onRetry
+}: {
+  draft: SignupDraft;
+  topics: TopicCatalogItem[];
+  status: CatalogStatus;
+  onBack: () => void;
+  onChange: (updates: Partial<SignupDraft>) => void;
+  onContinue: () => void;
+  onRetry: () => void;
+}) {
+  const actionDisabled = status === "loading" || (status === "ready" && draft.topicIds.length < 3);
+
+  function toggleInterest(topicId: string): void {
+    onChange({
+      topicIds: draft.topicIds.includes(topicId)
+        ? draft.topicIds.filter((item) => item !== topicId)
+        : [...draft.topicIds, topicId]
+    });
+  }
+
+  return (
+    <AuthScreen tone="pumpkin">
+      <CharacterBackdrop src={signUpTwoUrl} />
+      <BackButton onClick={onBack} />
+      <BrandLogo />
+      <h1 className="auth-redesign-title auth-redesign-title--interests">
+        <span>¿CUALES SON</span>
+        <span>TUS INTERESES?</span>
+      </h1>
+      <p className="auth-redesign-note">Seleccione mínimo 3 categorías.</p>
+      <div className="auth-redesign-interest-grid" aria-label="Seleccionar intereses">
+        {status === "loading" ? Array.from({ length: 9 }, (_, index) => (
+          <span className="auth-redesign-interest-pill auth-redesign-interest-pill--loading" key={index} />
+        )) : topics.map((topic) => (
+          <button
+            className={cn("auth-redesign-interest-pill", draft.topicIds.includes(topic.id_topico) && "is-selected")}
+            type="button"
+            key={topic.id_topico}
+            aria-label={topic.topico}
+            aria-pressed={draft.topicIds.includes(topic.id_topico)}
+            onClick={() => toggleInterest(topic.id_topico)}
+          >
+            {topic.topico}
+          </button>
+        ))}
+      </div>
+      {status === "error" ? <button className="auth-redesign-error auth-redesign-error--interests" type="button" onClick={onRetry}>No pudimos cargar los intereses. Reintentar</button> : null}
+      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--bottom" disabled={actionDisabled} onClick={status === "error" ? onRetry : onContinue}>
+        {status === "error" ? "Reintentar" : "Continuar"}
+      </PrimaryButton>
+    </AuthScreen>
+  );
+}
+
+function ProfileScreen({
+  draft,
+  onBack,
+  onChange,
+  onContinue
+}: {
+  draft: SignupDraft;
+  onBack: () => void;
+  onChange: (updates: Partial<SignupDraft>) => void;
+  onContinue: () => void;
+}) {
+  const hasFullName = draft.fullName.trim().split(/\s+/).length >= 2;
+  const hasEmailUser = /^[a-z0-9._%+-]+$/i.test(draft.emailUser.trim());
+
+  return (
+    <AuthScreen tone="green">
+      <CharacterBackdrop src={signUpThreeUrl} top={301} />
+      <BackButton onClick={onBack} />
+      <BrandLogo />
+      <h1 className="auth-redesign-title auth-redesign-title--profile">
+        <span>CREA TU</span>
+        <span>USUARIO</span>
+      </h1>
+      <TextField
+        className="auth-redesign-field--name"
+        label="Nombre y Apellido"
+        value={draft.fullName}
+        autoComplete="name"
+        onChange={(fullName) => onChange({ fullName })}
+      />
+      <TextField
+        className="auth-redesign-field--signup-email"
+        label="Mail universitario"
+        value={draft.emailUser}
+        autoComplete="email"
+        inputMode="email"
+        suffix="@uade.edu.ar"
+        onChange={(emailUser) => onChange({ emailUser: emailUser.replace(/@.*$/, "") })}
+      />
+      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--profile" disabled={!hasFullName || !hasEmailUser} onClick={onContinue}>Continuar</PrimaryButton>
+    </AuthScreen>
+  );
+}
+
+function PasswordScreen({
+  draft,
+  onBack,
+  onChange,
+  onContinue
+}: {
+  draft: SignupDraft;
+  onBack: () => void;
+  onChange: (updates: Partial<SignupDraft>) => void;
+  onContinue: () => void;
+}) {
+  const passwordIsValid = draft.password.length >= 8 && draft.password === draft.passwordConfirmation;
+
+  return (
+    <AuthScreen tone="pumpkin">
+      <CharacterBackdrop src={signUpFourUrl} top={306} />
+      <BackButton onClick={onBack} />
+      <BrandLogo />
+      <h1 className="auth-redesign-title auth-redesign-title--password">
+        <span>CREA UNA</span>
+        <span>CONTRASEÑA</span>
+      </h1>
+      <TextField className="auth-redesign-field--password" label="Ingresa una contraseña" type="password" value={draft.password} autoComplete="new-password" onChange={(password) => onChange({ password })} />
+      <TextField className="auth-redesign-field--password-repeat" label="Repita la contraseña" type="password" value={draft.passwordConfirmation} autoComplete="new-password" onChange={(passwordConfirmation) => onChange({ passwordConfirmation })} />
+      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--password" disabled={!passwordIsValid} onClick={onContinue}>Continuar</PrimaryButton>
+    </AuthScreen>
+  );
+}
+
+function CertificateScreen({
+  error,
+  fileName,
+  submitting,
+  onBack,
+  onFileSelect
+}: {
+  error: string | null;
+  fileName: string | null;
+  submitting: boolean;
+  onBack: () => void;
+  onFileSelect: (file: File | null) => void;
+}) {
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>): void {
+    onFileSelect(event.target.files?.[0] ?? null);
+  }
+
+  return (
+    <AuthScreen tone="green">
+      <BackButton onClick={onBack} />
+      <BrandLogo />
+      <h1 className="auth-redesign-title auth-redesign-title--certificate">
+        <span>CERTIFICADO</span>
+        <span>DE ALUMNO</span>
+        <span>REGULAR</span>
+      </h1>
+      <label className="auth-redesign-certificate-upload">
+        <input className="auth-redesign-file-input" type="file" accept="application/pdf" disabled={submitting} onChange={handleFileChange} />
+        {submitting ? (
+          <LoadingState label="Validando certificado" variant="button" />
+        ) : (
+          <>
+            <span className="auth-redesign-upload-plus" aria-hidden="true"><Plus weight="regular" /></span>
+            <span className="auth-redesign-upload-copy">{fileName || "Subí tu certificado"}</span>
+          </>
+        )}
+      </label>
+      <p className="auth-redesign-certificate-help">¿No sabes donde encontrarlo?</p>
+      {error ? <p className="auth-redesign-error auth-redesign-error--certificate">{error}</p> : null}
+      <img className="auth-redesign-certificate-character" src={certificateCharacterUrl} alt="" aria-hidden="true" />
+      <span className="auth-redesign-character-shadow auth-redesign-character-shadow--certificate" aria-hidden="true" />
+    </AuthScreen>
+  );
+}
+
+function LoginScreen({ onBack, onComplete }: { onBack: () => void; onComplete: (auth: AuthResult) => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -148,182 +491,16 @@ function LoginScreen({ onComplete }: { onComplete: (auth: AuthResult) => void })
 
   return (
     <AuthScreen tone="green">
-      <CharacterBackground src={signUpThreeUrl} top={279} />
-      <BrandLogo login />
-      <h1 className="auth-title auth-title--login">INICIA SESIÓN</h1>
-      <div className="auth-field-stack auth-field-stack--login">
-        <input className="auth-field" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Mail universitario" aria-label="Mail universitario" />
-        <input className="auth-field" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Contraseña" aria-label="Contraseña" />
-      </div>
-      {error && <p className="auth-form-error auth-form-error--login">{error}</p>}
-      <ContinueButton className="auth-continue-button--login" disabled={submitting || !email.trim() || password.length < 8} onClick={() => void handleLogin()}>
-        {submitting ? "Ingresando..." : "Continuar"}
-      </ContinueButton>
-    </AuthScreen>
-  );
-}
-
-function UniversityScreen({ draft, onChange, onContinue }: { draft: SignupDraft; onChange: (updates: Partial<SignupDraft>) => void; onContinue: () => void }) {
-  return (
-    <AuthScreen tone="green">
-      <CharacterBackground src={signUpOneUrl} />
-      <Progress step="university" />
-      <BrandLogo />
-      <h1 className="auth-title auth-title--university">ELIGE TU<br />UNIVERSIDAD</h1>
-      <div className="auth-university-fields">
-        <select className="auth-field auth-select" value={draft.university} onChange={(event) => onChange({ university: event.target.value })} aria-label="Selecciona una universidad">
-          <option value="">Selecciona una universidad</option>
-          <option value="uade">UADE</option>
-          <option value="uba">UBA</option>
-          <option value="utn">UTN</option>
-        </select>
-        <input className="auth-field" type="text" inputMode="numeric" autoComplete="off" value={draft.legajo} onChange={(event) => onChange({ legajo: event.target.value.replace(/\D/g, "") })} placeholder="Legajo" aria-label="Legajo" />
-      </div>
-      <ContinueButton className="auth-continue-button--bottom" disabled={!draft.university || !draft.legajo} onClick={onContinue} />
-    </AuthScreen>
-  );
-}
-
-function InterestsScreen({ draft, topics, status, onChange, onContinue, onRetry }: { draft: SignupDraft; topics: TopicCatalogItem[]; status: CatalogStatus; onChange: (updates: Partial<SignupDraft>) => void; onContinue: () => void; onRetry: () => void }) {
-  function toggleInterest(topicId: string): void {
-    onChange({
-      topicIds: draft.topicIds.includes(topicId)
-        ? draft.topicIds.filter((item) => item !== topicId)
-        : [...draft.topicIds, topicId]
-    });
-  }
-
-  const note = status === "loading"
-    ? "Cargando intereses..."
-    : status === "error"
-      ? "No pudimos cargar los intereses."
-      : "Seleccione mínimo 3 categorías.";
-  const actionLabel = status === "error" ? "Reintentar" : "Continuar";
-  const actionDisabled = status === "loading" || (status === "ready" && draft.topicIds.length < 3);
-  const handleAction = status === "error" ? onRetry : onContinue;
-
-  return (
-    <AuthScreen tone="pumpkin">
-      <CharacterBackground src={signUpTwoUrl} />
-      <Progress step="interests" />
-      <BrandLogo />
-      <h1 className="auth-title auth-title--interests">¿CUÁLES SON<br />TUS INTERESES?</h1>
-      <div className="auth-interest-grid" aria-label="Seleccionar intereses">
-        {topics.map((topic) => (
-          <button
-            className={cn("auth-interest-pill", draft.topicIds.includes(topic.id_topico) && "is-selected")}
-            type="button"
-            aria-label={topic.topico}
-            aria-pressed={draft.topicIds.includes(topic.id_topico)}
-            title={topic.topico}
-            key={topic.id_topico}
-            onClick={() => toggleInterest(topic.id_topico)}
-          >
-            {topic.topico}
-          </button>
-        ))}
-      </div>
-      <p className="auth-interest-note">{note}</p>
-      <ContinueButton className="auth-continue-button--bottom" disabled={actionDisabled} onClick={handleAction}>{actionLabel}</ContinueButton>
-    </AuthScreen>
-  );
-}
-
-function ProfileScreen({ draft, faculties, status, onChange, onContinue, onRetry }: { draft: SignupDraft; faculties: FacultyCatalogItem[]; status: CatalogStatus; onChange: (updates: Partial<SignupDraft>) => void; onContinue: () => void; onRetry: () => void }) {
-  const hasFullName = draft.fullName.trim().split(/\s+/).length >= 2;
-  const hasEmail = /^\S+@\S+\.\S+$/.test(draft.email.trim());
-  const actionLabel = status === "error" ? "Reintentar" : "Continuar";
-  const actionDisabled = status === "loading" || (status === "ready" && (!hasFullName || !hasEmail || !draft.facultyId));
-  const handleAction = status === "error" ? onRetry : onContinue;
-
-  return (
-    <AuthScreen tone="green">
-      <CharacterBackground src={signUpThreeUrl} top={306} />
-      <Progress step="profile" />
-      <BrandLogo />
-      <h1 className="auth-title auth-title--profile">CREA TU<br />USUARIO</h1>
-      <div className="auth-field-stack auth-field-stack--profile">
-        <input className="auth-field" type="text" autoComplete="name" value={draft.fullName} onChange={(event) => onChange({ fullName: event.target.value })} placeholder="Nombre y apellido" aria-label="Nombre y apellido" />
-        <input className="auth-field" type="email" autoComplete="email" value={draft.email} onChange={(event) => onChange({ email: event.target.value })} placeholder="Mail universitario" aria-label="Mail universitario" />
-        <select className="auth-field auth-select" value={draft.facultyId} onChange={(event) => onChange({ facultyId: event.target.value })} disabled={status !== "ready"} aria-label="Facultad">
-          <option value="">{status === "loading" ? "Cargando facultades..." : "Selecciona una facultad"}</option>
-          {faculties.map((faculty) => <option value={faculty.id_facultad} key={faculty.id_facultad}>{faculty.nombre}</option>)}
-        </select>
-      </div>
-      {status === "error" && <p className="auth-form-error auth-form-error--profile">No pudimos cargar las facultades.</p>}
-      <ContinueButton className="auth-continue-button--profile" disabled={actionDisabled} onClick={handleAction}>{actionLabel}</ContinueButton>
-    </AuthScreen>
-  );
-}
-
-function PasswordScreen({ draft, onChange, onContinue }: { draft: SignupDraft; onChange: (updates: Partial<SignupDraft>) => void; onContinue: () => void }) {
-  const passwordIsValid = draft.password.length >= 8 && draft.password === draft.passwordConfirmation;
-
-  return (
-    <AuthScreen tone="pumpkin">
-      <CharacterBackground src={signUpFourUrl} top={306} />
-      <Progress step="password" />
-      <BrandLogo />
-      <h1 className="auth-title auth-title--password">CREA UNA<br />CONTRASEÑA</h1>
-      <div className="auth-field-stack auth-field-stack--password">
-        <input className="auth-field" type="password" autoComplete="new-password" value={draft.password} onChange={(event) => onChange({ password: event.target.value })} placeholder="Contraseña" aria-label="Contraseña" />
-        <input className="auth-field" type="password" autoComplete="new-password" value={draft.passwordConfirmation} onChange={(event) => onChange({ passwordConfirmation: event.target.value })} placeholder="Repite la contraseña" aria-label="Repite la contraseña" />
-      </div>
-      <ContinueButton className="auth-continue-button--password" disabled={!passwordIsValid} onClick={onContinue} />
-    </AuthScreen>
-  );
-}
-
-function getInvalidCertificateMessage(certificate: CertificateClassificationResult): string {
-  if (!certificate.classificationValid) {
-    const type = certificate.classification?.type;
-
-    if (type === "formato_invalido_con_datos") {
-      return "El archivo tiene datos, pero no cumple el formato esperado del certificado.";
-    }
-
-    if (type === "otro_documento_universitario") {
-      return "El documento parece universitario, pero no es un certificado de alumno regular.";
-    }
-
-    return "Adjuntá una constancia de alumno regular válida.";
-  }
-
-  if (certificate.validation?.errors.length) {
-    return certificate.validation.errors[0];
-  }
-
-  return "Los datos del certificado no coinciden con los datos ingresados.";
-}
-
-function CertificateScreen({ error, fileName, submitting, onFileChange, onValidate }: { error: string | null; fileName: string | null; submitting: boolean; onFileChange: (file: File | null) => void; onValidate: () => void }) {
-  return (
-    <AuthScreen tone="orange">
-      <Progress step="certificate" />
-      <BrandLogo />
-      <h1 className="auth-title auth-title--certificate">ADJUNTA TU<br />CERTIFICADO<br />DE ALUMNO<br />REGULAR</h1>
-      <label className="auth-certificate-button">
-        <input className="auth-certificate-input" type="file" accept="application/pdf" disabled={submitting} onChange={(event) => onFileChange(event.target.files?.[0] ?? null)} />
-        {fileName ? "Cambiar PDF" : "Adjuntar PDF"}
-      </label>
-      {fileName ? <p className="auth-certificate-file-name">{fileName}</p> : null}
-      <button className="auth-certificate-submit-button" type="button" disabled={submitting || !fileName} onClick={onValidate}>
-        {submitting ? "Validando..." : "Validar"}
-      </button>
-      {error && <p className="auth-form-error auth-form-error--certificate">{error}</p>}
-    </AuthScreen>
-  );
-}
-
-function ValidatedScreen({ auth, onComplete }: { auth: AuthResult; onComplete: (auth: AuthResult) => void }) {
-  useEffect(() => {
-    const timeout = window.setTimeout(() => onComplete(auth), 1050);
-    return () => window.clearTimeout(timeout);
-  }, [auth, onComplete]);
-
-  return (
-    <AuthScreen tone="orange">
-      <img className="auth-validated-check" src={validatedCheckUrl} alt="Certificado validado" />
+      <CharacterBackdrop src={signUpThreeUrl} top={279} />
+      <BackButton onClick={onBack} />
+      <BrandLogo variant="login" />
+      <h1 className="auth-redesign-title auth-redesign-title--login">INICIA SESIÓN</h1>
+      <TextField className="auth-redesign-field--login-email" label="Ingresa tu mail" type="email" value={email} autoComplete="email" inputMode="email" onChange={setEmail} />
+      <TextField className="auth-redesign-field--login-password" label="Ingresa tu contraseña" type="password" value={password} autoComplete="current-password" onChange={setPassword} />
+      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--login" disabled={submitting || !email.trim() || password.length < 8} onClick={() => void handleLogin()}>
+        {submitting ? <LoadingState label="Ingresando" variant="button" /> : "Continuar"}
+      </PrimaryButton>
+      {error ? <p className="auth-redesign-error auth-redesign-error--login">{error}</p> : null}
     </AuthScreen>
   );
 }
@@ -334,12 +511,10 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
   const [topics, setTopics] = useState<TopicCatalogItem[]>([]);
   const [faculties, setFaculties] = useState<FacultyCatalogItem[]>([]);
   const [topicsStatus, setTopicsStatus] = useState<CatalogStatus>("loading");
-  const [facultiesStatus, setFacultiesStatus] = useState<CatalogStatus>("loading");
   const [catalogReloadKey, setCatalogReloadKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
-  const [certificateFile, setCertificateFile] = useState<File | null>(null);
-  const [authenticated, setAuthenticated] = useState<AuthResult | null>(null);
+  const [certificateFileName, setCertificateFileName] = useState<string | null>(null);
 
   useEffect(() => {
     function preventViewportScroll(event: Event): void {
@@ -368,38 +543,26 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
   useEffect(() => {
     const controller = new AbortController();
 
-    async function loadTopics(): Promise<void> {
+    async function loadCatalogs(): Promise<void> {
       setTopicsStatus("loading");
 
       try {
-        const nextTopics = await listTopics(controller.signal);
+        const [nextTopics, nextFaculties] = await Promise.all([
+          listTopics(controller.signal),
+          listFaculties(controller.signal).catch(() => [])
+        ]);
 
         if (controller.signal.aborted) return;
 
         setTopics(nextTopics);
+        setFaculties(nextFaculties);
         setTopicsStatus("ready");
       } catch {
         if (!controller.signal.aborted) setTopicsStatus("error");
       }
     }
 
-    async function loadFaculties(): Promise<void> {
-      setFacultiesStatus("loading");
-
-      try {
-        const nextFaculties = await listFaculties(controller.signal);
-
-        if (controller.signal.aborted) return;
-
-        setFaculties(nextFaculties);
-        setFacultiesStatus("ready");
-      } catch {
-        if (!controller.signal.aborted) setFacultiesStatus("error");
-      }
-    }
-
-    void loadTopics();
-    void loadFaculties();
+    void loadCatalogs();
 
     return () => controller.abort();
   }, [catalogReloadKey]);
@@ -408,14 +571,10 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
     setDraft((current) => ({ ...current, ...updates }));
   }
 
-  async function handleCertificateValidationAndSignup(): Promise<void> {
-    if (!certificateFile) {
-      setSubmissionError("Adjuntá tu certificado en PDF.");
-      return;
-    }
-
+  async function handleSignup(certificateFile: File): Promise<void> {
     setSubmitting(true);
     setSubmissionError(null);
+    setCertificateFileName(certificateFile.name);
 
     try {
       const profile = getDraftProfile(draft);
@@ -430,38 +589,20 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
         return;
       }
 
-      console.info("Certificado validado", {
-        carrera: certificate.validation?.degreeProgram ?? certificate.extraction?.degreeProgram ?? null,
-        facultad: certificate.validation?.facultyName ?? certificate.extraction?.facultyName ?? null
-      });
+      const facultyId = Number(faculties[0]?.id_facultad ?? 1);
+      const email = getSignupEmail(draft);
 
-      await handleSignup();
-    } catch (requestError) {
-      setSubmissionError(getAuthErrorMessage(requestError));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-  async function handleSignup(): Promise<void> {
-    const profile = getDraftProfile(draft);
-
-    setSubmitting(true);
-    setSubmissionError(null);
-
-    try {
       await register({
-        email: draft.email.trim(),
+        email,
         password: draft.password,
         legajo: Number(draft.legajo),
         nombre: profile.nombre,
         apellido: profile.apellido,
-        id_facultad: Number(draft.facultyId),
+        id_facultad: facultyId,
         topicos: draft.topicIds.map(Number)
       });
 
-      const auth = await login(draft.email.trim(), draft.password);
-      setAuthenticated(auth);
-      setStep("validated");
+      onComplete(await login(email, draft.password));
     } catch (requestError) {
       setSubmissionError(getAuthErrorMessage(requestError));
     } finally {
@@ -470,16 +611,16 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
   }
 
   return (
-    <div className="auth-flow-shell">
-      {step === "welcome" && <WelcomeScreen onBegin={() => setStep("university")} onLogin={() => setStep("login")} />}
-      {step === "login" && <LoginScreen onComplete={onComplete} />}
-      {step === "university" && <UniversityScreen draft={draft} onChange={updateDraft} onContinue={() => setStep("interests")} />}
-      {step === "interests" && <InterestsScreen draft={draft} topics={topics} status={topicsStatus} onChange={updateDraft} onContinue={() => setStep("profile")} onRetry={() => setCatalogReloadKey((current) => current + 1)} />}
-      {step === "profile" && <ProfileScreen draft={draft} faculties={faculties} status={facultiesStatus} onChange={updateDraft} onContinue={() => setStep("password")} onRetry={() => setCatalogReloadKey((current) => current + 1)} />}
-      {step === "password" && <PasswordScreen draft={draft} onChange={updateDraft} onContinue={() => setStep("certificate")} />}
-      {step === "certificate" && <CertificateScreen error={submissionError} fileName={certificateFile?.name ?? null} submitting={submitting} onFileChange={(file) => { setCertificateFile(file); setSubmissionError(null); }} onValidate={() => void handleCertificateValidationAndSignup()} />}
-      {step === "validated" && authenticated && <ValidatedScreen auth={authenticated} onComplete={onComplete} />}
+    <div className="auth-redesign-shell">
+      {step === "welcome" && <WelcomeScreen onBegin={() => setStep("events")} onLogin={() => setStep("login")} />}
+      {step === "events" && <OnboardingEventsScreen onContinue={() => setStep("communities")} />}
+      {step === "communities" && <OnboardingCommunitiesScreen onContinue={() => setStep("university")} />}
+      {step === "university" && <UniversityScreen draft={draft} onBack={() => setStep("communities")} onChange={updateDraft} onContinue={() => setStep("interests")} />}
+      {step === "interests" && <InterestsScreen draft={draft} topics={topics} status={topicsStatus} onBack={() => setStep("university")} onChange={updateDraft} onContinue={() => setStep("profile")} onRetry={() => setCatalogReloadKey((current) => current + 1)} />}
+      {step === "profile" && <ProfileScreen draft={draft} onBack={() => setStep("interests")} onChange={updateDraft} onContinue={() => setStep("password")} />}
+      {step === "password" && <PasswordScreen draft={draft} onBack={() => setStep("profile")} onChange={updateDraft} onContinue={() => setStep("certificate")} />}
+      {step === "certificate" && <CertificateScreen error={submissionError} fileName={certificateFileName} submitting={submitting} onBack={() => setStep("password")} onFileSelect={(file) => { if (file) void handleSignup(file); }} />}
+      {step === "login" && <LoginScreen onBack={() => setStep("welcome")} onComplete={onComplete} />}
     </div>
   );
 }
-

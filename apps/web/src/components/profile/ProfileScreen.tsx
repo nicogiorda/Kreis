@@ -3,6 +3,7 @@ import { CalendarAdd, Ticket, UsersGroupRounded } from "@solar-icons/react";
 import type { KreisUserProfile } from "../../api/users";
 import type { ThemeMode } from "../../types";
 import { ThemeToggleIcon } from "../common/Icons";
+import { ProfileMetaSkeleton } from "../common/LoadingSkeleton";
 
 type ProfileScreenProps = {
   profile: KreisUserProfile | null;
@@ -29,7 +30,7 @@ export function ProfileScreen({
   onToggleTheme,
   onLogout
 }: ProfileScreenProps) {
-  const displayName = profile?.name || (profileLoadStatus === "loading" ? "Cargando perfil..." : "Mi perfil");
+  const displayName = profile?.name || "Mi perfil";
   const facultyLabel = profile?.faculty ? `UADE | ${profile.faculty}` : "UADE";
   const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
   const profileFacts = [
@@ -46,7 +47,11 @@ export function ProfileScreen({
         </div>
         <div className="min-w-0">
           <h2 className="m-0 truncate text-[24px] font-medium leading-[30px]">{displayName}</h2>
-          <p className="m-0 mt-[1px] truncate text-[16px] font-medium leading-[19px] text-kreis-muted">{facultyLabel}</p>
+          {profileLoadStatus === "loading" ? (
+            <ProfileMetaSkeleton />
+          ) : (
+            <p className="m-0 mt-[1px] truncate text-[16px] font-medium leading-[19px] text-kreis-muted">{facultyLabel}</p>
+          )}
           <button
             className="mt-[12px] h-[29px] rounded-[10px] border-0 bg-kreis-orange px-[17px] text-[14px] font-medium leading-[29px] text-kreis-cream shadow-none disabled:cursor-default"
             type="button"

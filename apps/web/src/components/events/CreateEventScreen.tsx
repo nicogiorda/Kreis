@@ -1,6 +1,8 @@
 import { CalendarBlank, Plus, X } from "@phosphor-icons/react";
 import { type ChangeEvent, type FocusEvent, type FormEvent, type MouseEvent, useEffect, useMemo, useState } from "react";
 import type { CreateEventInput, KreisTopic } from "../../types";
+import { TopicRailSkeleton } from "../common/LoadingSkeleton";
+import { LoadingState } from "../common/LoadingState";
 import { cn } from "../../utils/cn";
 import { normalize } from "../../utils/text";
 
@@ -218,7 +220,7 @@ export function CreateEventScreen({
                 {topic.name}
               </button>
             ))}
-            {!creatableTopics.length && topicsStatus === "loading" ? <span className="text-[12px] leading-5 text-kreis-muted">Cargando topicos...</span> : null}
+            {!creatableTopics.length && topicsStatus === "loading" ? <TopicRailSkeleton count={8} /> : null}
             {!creatableTopics.length && topicsStatus === "ready" ? <span className="text-[12px] leading-5 text-kreis-muted">No hay topicos disponibles.</span> : null}
             {!creatableTopics.length && topicsStatus === "error" ? (
               <button
@@ -239,7 +241,7 @@ export function CreateEventScreen({
           type="submit"
           disabled={submitting || !hasSelectedCreatableTopic}
         >
-          {submitting ? "Creando..." : "Crear"}
+          {submitting ? <LoadingState label="Creando evento" variant="button" /> : "Crear"}
         </button>
       </form>
     </section>

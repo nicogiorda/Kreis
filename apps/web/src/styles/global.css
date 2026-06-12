@@ -846,15 +846,26 @@ html[data-theme="dark"] {
 
   .auth-redesign-screen {
     position: relative;
-    width: min(100vw, 393px);
+    display: grid;
+    width: 100%;
     height: 100%;
     min-height: 100%;
     overflow: hidden;
     color: #f7edda;
     font-family: var(--font-sans);
     isolation: isolate;
+    place-items: start center;
     overscroll-behavior: none;
     animation: auth-screen-enter 180ms ease-out both;
+  }
+
+  .auth-redesign-stage {
+    position: relative;
+    width: min(100vw, 393px);
+    height: 100%;
+    min-height: 100%;
+    overflow: hidden;
+    flex: none;
   }
 
   .auth-redesign-screen--lace {
@@ -898,6 +909,27 @@ html[data-theme="dark"] {
     height: 26px;
   }
 
+  .auth-redesign-logo--right-university {
+    top: 6.69%;
+    right: 26px;
+    width: 102px;
+    height: 26px;
+  }
+
+  .auth-redesign-logo--right-low {
+    top: 7.51%;
+    right: 26px;
+    width: 102px;
+    height: 26px;
+  }
+
+  .auth-redesign-logo--right-certificate {
+    top: 7.86%;
+    right: 26px;
+    width: 102px;
+    height: 26px;
+  }
+
   .auth-redesign-logo--login {
     top: 11.38%;
     left: 42px;
@@ -915,7 +947,7 @@ html[data-theme="dark"] {
     height: 37px;
     place-items: center;
     border: 0;
-    border-radius: 999px;
+    border-radius: 15px;
     padding: 0;
     background: transparent;
     color: #f7edda;
@@ -931,14 +963,28 @@ html[data-theme="dark"] {
     transform: scale(0.94);
   }
 
+  .auth-redesign-back--low {
+    top: 7.51%;
+  }
+
+  .auth-redesign-back--certificate {
+    top: 7.86%;
+  }
+
+  .auth-redesign-back--login {
+    top: 5.87%;
+  }
+
   .auth-redesign-character-bg {
     position: absolute;
     top: 0;
     left: 0;
     z-index: 1;
     width: 100%;
+    height: 100%;
     max-width: none;
-    height: auto;
+    object-fit: cover;
+    object-position: top center;
     pointer-events: none;
     user-select: none;
   }
@@ -994,7 +1040,7 @@ html[data-theme="dark"] {
     height: 34px;
     min-width: 0;
     overflow: hidden;
-    border-radius: 999px;
+    border-radius: 15px;
     background: rgba(247, 237, 218, 0.2);
   }
 
@@ -1080,7 +1126,7 @@ html[data-theme="dark"] {
     display: grid;
     place-items: center;
     border: 0;
-    border-radius: 999px;
+    border-radius: 15px;
     background: #f7edda;
     color: #2e4b3c;
     font-family: var(--font-sans);
@@ -1099,8 +1145,20 @@ html[data-theme="dark"] {
 
   .auth-redesign-primary-button:disabled {
     cursor: default;
-    opacity: 0.62;
+    opacity: 1;
     transform: none;
+  }
+
+  .auth-redesign-button--green-text {
+    color: #2e4b3c;
+  }
+
+  .auth-redesign-button--orange-text {
+    color: #f0531c;
+  }
+
+  .auth-redesign-button--pumpkin-text {
+    color: #ffa74f;
   }
 
   .auth-redesign-form-button {
@@ -1148,7 +1206,7 @@ html[data-theme="dark"] {
     display: block;
     width: 39.69%;
     height: 3.46%;
-    border-radius: 999px;
+    border-radius: 50%;
     background: rgba(10, 10, 10, 0.14);
     transform: translateX(-50%);
   }
@@ -1191,7 +1249,7 @@ html[data-theme="dark"] {
     width: 73.03%;
     height: 38px;
     border: 0;
-    border-radius: 999px;
+    border-radius: 15px;
     font-size: 16px;
     font-weight: 500;
     line-height: 38px;
@@ -1288,7 +1346,7 @@ html[data-theme="dark"] {
   .auth-redesign-dots span {
     width: 10px;
     height: 10px;
-    border-radius: 999px;
+    border-radius: 50%;
     background: #f7edda;
     opacity: 0.3;
   }
@@ -1313,10 +1371,11 @@ html[data-theme="dark"] {
     width: 100%;
     margin: 0;
     color: #f7edda;
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 500;
-    line-height: 20px;
+    line-height: 30px;
     text-align: center;
+    white-space: nowrap;
   }
 
   .auth-redesign-interest-grid {
@@ -1345,7 +1404,7 @@ html[data-theme="dark"] {
     min-width: 0;
     overflow: hidden;
     border: 0;
-    border-radius: 999px;
+    border-radius: 15px;
     padding: 0 6px;
     background: rgba(247, 237, 218, 0.2);
     color: #f7edda;

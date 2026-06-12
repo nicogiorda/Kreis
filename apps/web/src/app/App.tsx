@@ -641,7 +641,9 @@ export default function App() {
           {!isEventDetail && <BottomNav screen={screen} onNavigate={navigate} />}
         </>
       ) : (
-        <AuthFlow onComplete={applyAuthSession} />
+        <div className="auth-stack-root">
+          <AuthFlow onComplete={applyAuthSession} />
+        </div>
       )}
     </>
   );

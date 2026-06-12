@@ -110,17 +110,8 @@
   --page-gutter: 18px;
   --viewport-safe-top: env(safe-area-inset-top, 0px);
   --viewport-safe-bottom: env(safe-area-inset-bottom, 0px);
-  --auth-viewport-height: max(100vh, calc(100dvh + var(--viewport-safe-bottom)));
-  --splash-viewport-height: max(100vh, calc(100dvh + var(--viewport-safe-top) + var(--viewport-safe-bottom)));
   --auth-safe-area-bg: var(--app-bg);
   color-scheme: light;
-}
-
-@supports (height: 100lvh) {
-  :root {
-    --auth-viewport-height: max(100lvh, calc(100dvh + var(--viewport-safe-bottom)));
-    --splash-viewport-height: max(100lvh, calc(100dvh + var(--viewport-safe-top) + var(--viewport-safe-bottom)));
-  }
 }
 
 html[data-theme="dark"] {
@@ -679,10 +670,10 @@ html[data-theme="dark"] {
 
   .splash-screen {
     top: calc(0px - var(--viewport-safe-top));
-    bottom: auto;
+    bottom: calc(0px - var(--viewport-safe-bottom));
     background: #f0531c;
     min-height: 0;
-    height: var(--splash-viewport-height);
+    height: auto;
     overscroll-behavior: none;
     padding-block: 0;
     padding-inline: calc(22px + env(safe-area-inset-left)) calc(22px + env(safe-area-inset-right));
@@ -829,14 +820,12 @@ html[data-theme="dark"] {
 @layer components {
   .auth-redesign-shell {
     position: fixed;
-    inset: 0;
+    inset: 0 0 calc(0px - var(--viewport-safe-bottom)) 0;
     z-index: 0;
     display: grid;
     width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    min-height: 100vh;
-    min-height: 100dvh;
+    height: auto;
+    min-height: 0;
     overflow: hidden;
     place-items: stretch center;
     overscroll-behavior: none;
@@ -850,7 +839,7 @@ html[data-theme="dark"] {
     width: 100%;
     height: 100%;
     min-height: 100%;
-    overflow: hidden;
+    overflow: visible;
     color: #f7edda;
     font-family: var(--font-sans);
     isolation: isolate;
@@ -864,7 +853,7 @@ html[data-theme="dark"] {
     width: min(100vw, 393px);
     height: 100%;
     min-height: 100%;
-    overflow: hidden;
+    overflow: visible;
     flex: none;
   }
 
@@ -978,14 +967,15 @@ html[data-theme="dark"] {
   .auth-redesign-character-bg {
     position: absolute;
     top: 0;
-    left: 0;
+    left: 50%;
     z-index: 1;
-    width: 100%;
+    width: max(100%, 100vw);
     height: 100%;
     max-width: none;
     object-fit: cover;
     object-position: top center;
     pointer-events: none;
+    transform: translateX(-50%);
     user-select: none;
   }
 

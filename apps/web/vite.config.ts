@@ -11,7 +11,7 @@ export default defineConfig({
     tailwindcss(),
     react(),
     VitePWA({
-      injectRegister: "script",
+      injectRegister: null,
       registerType: "autoUpdate",
       manifest: false,
       includeAssets: [

@@ -111,6 +111,7 @@
   --viewport-safe-top: env(safe-area-inset-top, 0px);
   --viewport-safe-bottom: env(safe-area-inset-bottom, 0px);
   --auth-safe-area-bg: var(--app-bg);
+  --auth-bottom-safe-area-bg: var(--auth-safe-area-bg);
   color-scheme: light;
 }
 
@@ -198,6 +199,19 @@ html[data-theme="dark"] {
     overflow: hidden;
     overscroll-behavior: none;
     background: var(--auth-safe-area-bg);
+  }
+
+  html.auth-scroll-lock::after {
+    content: "";
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2147483647;
+    height: var(--viewport-safe-bottom);
+    min-height: 0;
+    background: var(--auth-bottom-safe-area-bg);
+    pointer-events: none;
   }
 
   button {
@@ -619,6 +633,195 @@ html[data-theme="dark"] {
     -webkit-appearance: none;
   }
 
+  .create-flow-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    height: 100dvh;
+    overflow: hidden;
+    background: var(--app-bg);
+    color: var(--ink);
+  }
+
+  .create-flow-form {
+    display: flex;
+    width: 100%;
+    max-width: 430px;
+    height: 100%;
+    min-height: 0;
+    margin-inline: auto;
+    flex-direction: column;
+    overflow: hidden;
+    padding: max(clamp(16px, 7.39dvh, 63px), env(safe-area-inset-top)) 16px max(clamp(12px, 5.16dvh, 44px), env(safe-area-inset-bottom)) 22px;
+  }
+
+  .create-flow-header {
+    display: flex;
+    height: 37px;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .create-flow-title {
+    margin: 0;
+    font-family: "Amsi Pro", "Amsi_Pro", var(--font-sans);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 29px;
+    letter-spacing: 0;
+  }
+
+  .create-flow-close-button {
+    display: grid;
+    width: 37px;
+    height: 37px;
+    place-items: center;
+    border: 0;
+    border-radius: 12px;
+    background: var(--event-surface);
+    padding: 0;
+    box-shadow: none;
+    transition: transform 150ms ease-out;
+  }
+
+  .create-flow-close-button:active {
+    transform: scale(0.95);
+  }
+
+  .create-flow-close-button:disabled {
+    opacity: 0.6;
+  }
+
+  .create-flow-label {
+    display: grid;
+    flex: none;
+    gap: clamp(4px, 0.82dvh, 7px);
+    color: var(--muted);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 19px;
+  }
+
+  .create-flow-label--name {
+    margin-top: clamp(8px, 2.46dvh, 21px);
+  }
+
+  .create-flow-label--name-spacious {
+    margin-top: clamp(14px, 3.05dvh, 26px);
+  }
+
+  .create-flow-label--field {
+    margin-top: clamp(5px, 1.18dvh, 10px);
+    gap: clamp(3px, 0.82dvh, 7px);
+  }
+
+  .create-flow-label--field-compact {
+    margin-top: clamp(5px, 1.29dvh, 11px);
+    gap: clamp(3px, 0.58dvh, 5px);
+  }
+
+  .create-flow-label--field-spacious {
+    margin-top: clamp(10px, 1.88dvh, 16px);
+    gap: clamp(3px, 0.58dvh, 5px);
+  }
+
+  .create-flow-input {
+    height: 40px;
+    min-width: 0;
+    border: 0;
+    border-radius: 15px;
+    background: var(--event-surface);
+    padding-inline: 16px;
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 400;
+    outline: 0;
+  }
+
+  .create-flow-input::placeholder {
+    color: var(--muted);
+  }
+
+  .create-flow-textarea {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    resize: none;
+    border: 0;
+    border-radius: 20px;
+    background: var(--event-surface);
+    padding: 12px 16px 24px;
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 400;
+    outline: 0;
+  }
+
+  .create-flow-textarea::placeholder {
+    color: var(--muted);
+  }
+
+  .create-flow-textarea--event {
+    height: clamp(82px, 16.78dvh, 143px);
+  }
+
+  .create-flow-textarea--community {
+    height: clamp(118px, 20.66dvh, 176px);
+  }
+
+  .create-flow-textarea--post {
+    height: clamp(218px, 38dvh, 324px);
+    padding-bottom: 28px;
+  }
+
+  .create-flow-counter {
+    position: absolute;
+    right: 12px;
+    bottom: 7px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .create-flow-counter--post {
+    bottom: 8px;
+  }
+
+  .create-flow-submit {
+    position: relative;
+    left: -3px;
+    display: grid;
+    width: 159px;
+    height: 37px;
+    margin-inline: auto;
+    margin-top: auto;
+    flex: none;
+    place-items: center;
+    border: 0;
+    border-radius: 19px;
+    background: var(--fiery-glow);
+    padding-inline: 16px;
+    color: var(--cream-icon);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 19px;
+    box-shadow: none;
+    transition:
+      filter 150ms ease-out,
+      transform 150ms ease-out;
+  }
+
+  .create-flow-submit:active {
+    transform: scale(0.97);
+  }
+
+  .create-flow-submit:disabled {
+    opacity: 0.6;
+  }
+
   @media (max-height: 720px) {
     .create-event-form {
       padding-top: max(16px, env(safe-area-inset-top)) !important;
@@ -679,6 +882,18 @@ html[data-theme="dark"] {
     padding-block: 0;
     padding-inline: calc(22px + env(safe-area-inset-left)) calc(22px + env(safe-area-inset-right));
     animation: splash-exit 360ms cubic-bezier(0.7, 0, 0.84, 0) 1780ms both;
+  }
+
+  .splash-screen::after {
+    content: "";
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1;
+    height: var(--viewport-safe-bottom);
+    background: #f0531c;
+    pointer-events: none;
   }
 
   .splash-mark-shell {

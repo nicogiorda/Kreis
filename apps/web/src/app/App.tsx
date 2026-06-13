@@ -14,6 +14,7 @@ import { createPost as persistPost, listPosts } from "../api/posts";
 import { getMyProfile } from "../api/users";
 import type { KreisUserProfile } from "../api/users";
 import { AuthFlow } from "../components/auth/AuthFlow";
+import { AuthViewport } from "../components/auth/AuthLayout";
 import { ComposerModal } from "../components/composer/ComposerModal";
 import { CommunitiesScreen } from "../components/communities/CommunitiesScreen";
 import { EventDetailScreen } from "../components/events/EventDetailScreen";
@@ -641,9 +642,9 @@ export default function App() {
           {!isEventDetail && <BottomNav screen={screen} onNavigate={navigate} />}
         </>
       ) : (
-        <div className="auth-stack-root">
+        <AuthViewport>
           <AuthFlow onComplete={applyAuthSession} />
-        </div>
+        </AuthViewport>
       )}
     </>
   );

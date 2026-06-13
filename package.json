@@ -16,6 +16,7 @@
         "test:watch": "vitest --config vitest.config.ts --configLoader runner",
         "typecheck": "tsc -b",
         "typecheck:web": "tsc -p apps/web/tsconfig.json --noEmit",
+        "verify:auth-layout": "node apps/web/scripts/verify-auth-layout.mjs",
         "pretypecheck:api": "npm run db:generate",
         "typecheck:api": "tsc -p apps/api/tsconfig.json",
         "preview": "vite preview --config apps/web/vite.config.ts",

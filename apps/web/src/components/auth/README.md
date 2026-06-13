@@ -6,7 +6,7 @@ Rules:
 
 - `AuthViewport`, `AuthShell`, `AuthScreenFrame`, and `AuthStage` must all cover the same visible viewport.
 - Do not model screen height as `100dvh + env(safe-area-inset-bottom)`.
-- Do not position roots with `bottom: -env(safe-area-inset-bottom)`.
+- Auth/splash may extend the visual root with `--auth-visual-bottom-extension`; the interactive stage must keep the logical viewport height.
 - Safe-area insets may protect foreground controls, but they must not change the size of the decorative background.
 - Mascot and color fields belong in `AuthDecorLayer`, which is full-bleed and independent from interactive content.
 - Avoid global `html::after` or `body::after` patches for auth/splash gaps.
@@ -20,4 +20,4 @@ Run the app locally and then:
 npm run verify:auth-layout
 ```
 
-The check expects `#root`, `.auth-stack-root`, `.auth-redesign-shell`, `.auth-redesign-screen`, and `.auth-redesign-stage` to match `window.innerHeight`.
+The check expects the normal layout to match `window.innerHeight`, then simulates a 34px bottom inset: the visual root and decorative layer extend, while `.auth-redesign-stage` and foreground controls keep their original positions.

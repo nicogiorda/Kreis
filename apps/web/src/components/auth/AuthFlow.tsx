@@ -44,6 +44,18 @@ const authSafeAreaBackgrounds: Record<AuthStep, string> = {
   login: "#2e4b3c"
 };
 
+const authBottomSafeAreaBackgrounds: Record<AuthStep, string> = {
+  welcome: "#f7edda",
+  events: "#2e4b3c",
+  communities: "#ffa74f",
+  university: "#f0531c",
+  interests: "#f0531c",
+  profile: "#f0531c",
+  password: "#f0531c",
+  certificate: "#2e4b3c",
+  login: "#f0531c"
+};
+
 const emptySignupDraft: SignupDraft = {
   university: "",
   legajo: "",
@@ -536,9 +548,11 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
 
   useLayoutEffect(() => {
     document.documentElement.style.setProperty("--auth-safe-area-bg", authSafeAreaBackgrounds[step]);
+    document.documentElement.style.setProperty("--auth-bottom-safe-area-bg", authBottomSafeAreaBackgrounds[step]);
 
     return () => {
       document.documentElement.style.removeProperty("--auth-safe-area-bg");
+      document.documentElement.style.removeProperty("--auth-bottom-safe-area-bg");
     };
   }, [step]);
 

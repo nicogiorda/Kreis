@@ -221,6 +221,356 @@ function measure(label, viewport) {
   }, label, viewport);
 }
 
+function measureSyntheticExtension(label, viewport) {
+  return evaluate((screenLabel, expectedViewport) => {
+    const tolerance = 1;
+    const extension = 34;
+    const previousExtension = document.documentElement.style.getPropertyValue("--auth-visual-bottom-extension");
+
+    function rect(selector) {
+      const element = selector === "html"
+        ? document.documentElement
+        : selector === "body"
+          ? document.body
+          : document.querySelector(selector);
+      if (!element) return null;
+
+      const box = element.getBoundingClientRect();
+      const styles = window.getComputedStyle(element);
+      return {
+        top: box.top,
+        right: box.right,
+        bottom: box.bottom,
+        left: box.left,
+        width: box.width,
+        height: box.height,
+        overflow: styles.overflow,
+        overflowX: styles.overflowX,
+        overflowY: styles.overflowY,
+        position: styles.position,
+        background: styles.backgroundColor,
+        paddingBottom: styles.paddingBottom,
+        marginBottom: styles.marginBottom
+      };
+    }
+
+    function closeEnough(actual, expected) {
+      return typeof actual === "number" && Math.abs(actual - expected) <= tolerance;
+    }
+
+    function controlRects() {
+      return [...document.querySelectorAll([
+        ".auth-redesign-logo",
+        ".auth-redesign-back",
+        ".auth-redesign-title",
+        ".auth-redesign-field",
+        ".auth-redesign-primary-button",
+        ".auth-redesign-welcome-character",
+        ".auth-redesign-welcome-wordmark",
+        ".auth-redesign-welcome-copy",
+        ".auth-redesign-welcome-button",
+        ".auth-redesign-onboarding-character",
+        ".auth-redesign-onboarding-title",
+        ".auth-redesign-onboarding-copy",
+        ".auth-redesign-dots",
+        ".auth-redesign-note",
+        ".auth-redesign-interest-grid",
+        ".auth-redesign-certificate-upload",
+        ".auth-redesign-certificate-help",
+        ".auth-redesign-error"
+      ].join(","))].map((element, index) => {
+        const box = element.getBoundingClientRect();
+        return {
+          index,
+          tag: element.tagName.toLowerCase(),
+          className: element.className,
+          top: box.top,
+          right: box.right,
+          bottom: box.bottom,
+          left: box.left,
+          width: box.width,
+          height: box.height
+        };
+      });
+    }
+
+    function collect() {
+      return {
+        html: rect("html"),
+        body: rect("body"),
+        root: rect("#root"),
+        authRoot: rect(".auth-stack-root"),
+        shell: rect(".auth-redesign-shell"),
+        screen: rect(".auth-redesign-screen"),
+        stage: rect(".auth-redesign-stage"),
+        decorLayer: rect(".auth-redesign-decor-layer"),
+        character: rect(".auth-redesign-character-bg"),
+        orangeFill: rect(".auth-redesign-orange-fill"),
+        controls: controlRects(),
+        scroll: {
+          scrollY: window.scrollY,
+          htmlTop: document.documentElement.scrollTop,
+          bodyTop: document.body.scrollTop,
+          htmlHeight: document.documentElement.scrollHeight,
+          bodyHeight: document.body.scrollHeight,
+          htmlWidth: document.documentElement.scrollWidth,
+          bodyWidth: document.body.scrollWidth
+        }
+      };
+    }
+
+    function setExtension(value) {
+      document.documentElement.style.setProperty("--auth-visual-bottom-extension", `${value}px`);
+      document.body.getBoundingClientRect();
+    }
+
+    setExtension(0);
+    const before = collect();
+    setExtension(extension);
+    const after = collect();
+
+    if (previousExtension) {
+      document.documentElement.style.setProperty("--auth-visual-bottom-extension", previousExtension);
+    } else {
+      document.documentElement.style.removeProperty("--auth-visual-bottom-extension");
+    }
+
+    const innerWidth = window.innerWidth;
+    const innerHeight = window.innerHeight;
+    const requiresDecor = ["university", "interests", "profile", "password", "login"].includes(screenLabel);
+    const controlsChanged = after.controls
+      .map((control, index) => {
+        const previous = before.controls[index];
+        if (!previous) return { index, reason: "MISSING_BASELINE", control };
+        const deltas = {
+          top: Math.abs(control.top - previous.top),
+          right: Math.abs(control.right - previous.right),
+          bottom: Math.abs(control.bottom - previous.bottom),
+          left: Math.abs(control.left - previous.left),
+          width: Math.abs(control.width - previous.width),
+          height: Math.abs(control.height - previous.height)
+        };
+        const moved = Object.values(deltas).some((value) => value > tolerance);
+        return moved ? { index, className: control.className, deltas, before: previous, after: control } : null;
+      })
+      .filter(Boolean);
+    const controlCountStable = before.controls.length === after.controls.length;
+    const rootExtends =
+      Boolean(after.authRoot) &&
+      closeEnough(after.authRoot.top, 0) &&
+      closeEnough(after.authRoot.bottom, innerHeight + extension) &&
+      closeEnough(after.authRoot.height, innerHeight + extension);
+    const shellExtends =
+      Boolean(after.shell) &&
+      closeEnough(after.shell.top, 0) &&
+      closeEnough(after.shell.bottom, innerHeight + extension) &&
+      closeEnough(after.shell.height, innerHeight + extension);
+    const screenExtends =
+      Boolean(after.screen) &&
+      closeEnough(after.screen.top, 0) &&
+      closeEnough(after.screen.bottom, innerHeight + extension) &&
+      closeEnough(after.screen.height, innerHeight + extension);
+    const stagePreservesViewport =
+      Boolean(after.stage) &&
+      closeEnough(after.stage.top, 0) &&
+      closeEnough(after.stage.bottom, innerHeight) &&
+      closeEnough(after.stage.left, 0) &&
+      closeEnough(after.stage.width, innerWidth) &&
+      closeEnough(after.stage.height, innerHeight);
+    const decorExtends =
+      !requiresDecor ||
+      (Boolean(after.decorLayer) &&
+        closeEnough(after.decorLayer.top, 0) &&
+        closeEnough(after.decorLayer.bottom, innerHeight + extension) &&
+        closeEnough(after.decorLayer.left, 0) &&
+        closeEnough(after.decorLayer.width, innerWidth) &&
+        closeEnough(after.decorLayer.height, innerHeight + extension));
+    const characterExtends =
+      !requiresDecor ||
+      (Boolean(after.character) &&
+        closeEnough(after.character.top, 0) &&
+        closeEnough(after.character.bottom, innerHeight + extension) &&
+        closeEnough(after.character.left, 0) &&
+        closeEnough(after.character.width, innerWidth) &&
+        closeEnough(after.character.height, innerHeight + extension));
+    const orangeFillAbsent = !after.orangeFill;
+    const noScroll =
+      after.scroll.scrollY === 0 &&
+      after.scroll.htmlTop === 0 &&
+      after.scroll.bodyTop === 0 &&
+      after.scroll.htmlHeight <= innerHeight + tolerance &&
+      after.scroll.bodyHeight <= innerHeight + tolerance &&
+      after.scroll.htmlWidth <= innerWidth + tolerance &&
+      after.scroll.bodyWidth <= innerWidth + tolerance;
+    const viewportMatchesExpected =
+      closeEnough(innerWidth, expectedViewport.width) &&
+      closeEnough(innerHeight, expectedViewport.height);
+    const ok =
+      viewportMatchesExpected &&
+      rootExtends &&
+      shellExtends &&
+      screenExtends &&
+      stagePreservesViewport &&
+      decorExtends &&
+      characterExtends &&
+      controlCountStable &&
+      controlsChanged.length === 0 &&
+      orangeFillAbsent &&
+      noScroll;
+
+    return JSON.stringify({
+      ok,
+      label: `${screenLabel} synthetic safe-area`,
+      expectedViewport,
+      innerWidth,
+      innerHeight,
+      extension,
+      viewportMatchesExpected,
+      rootExtends,
+      shellExtends,
+      screenExtends,
+      stagePreservesViewport,
+      decorExtends,
+      characterExtends,
+      controlCountStable,
+      controlsChanged,
+      orangeFillAbsent,
+      noScroll,
+      before,
+      after
+    });
+  }, label, viewport);
+}
+
+function measureSplashSyntheticExtension(viewport) {
+  return evaluate((expectedViewport) => {
+    const tolerance = 1;
+    const extension = 34;
+    const previousExtension = document.documentElement.style.getPropertyValue("--auth-visual-bottom-extension");
+    document.querySelectorAll(".splash-screen, .splash-mark-shell, .splash-lockup").forEach((element) => {
+      element.style.animationPlayState = "paused";
+    });
+
+    function rect(selector) {
+      const element = document.querySelector(selector);
+      if (!element) return null;
+      const box = element.getBoundingClientRect();
+      return {
+        top: box.top,
+        right: box.right,
+        bottom: box.bottom,
+        left: box.left,
+        width: box.width,
+        height: box.height
+      };
+    }
+
+    function closeEnough(actual, expected) {
+      return typeof actual === "number" && Math.abs(actual - expected) <= tolerance;
+    }
+
+    function collect() {
+      return {
+        splash: rect(".splash-screen"),
+        frame: rect(".splash-layout-frame"),
+        mark: rect(".splash-mark-shell"),
+        lockup: rect(".splash-lockup"),
+        scroll: {
+          scrollY: window.scrollY,
+          htmlTop: document.documentElement.scrollTop,
+          bodyTop: document.body.scrollTop,
+          htmlHeight: document.documentElement.scrollHeight,
+          bodyHeight: document.body.scrollHeight,
+          htmlWidth: document.documentElement.scrollWidth,
+          bodyWidth: document.body.scrollWidth
+        }
+      };
+    }
+
+    function setExtension(value) {
+      document.documentElement.style.setProperty("--auth-visual-bottom-extension", `${value}px`);
+      document.body.getBoundingClientRect();
+    }
+
+    setExtension(0);
+    const before = collect();
+    setExtension(extension);
+    const after = collect();
+
+    if (previousExtension) {
+      document.documentElement.style.setProperty("--auth-visual-bottom-extension", previousExtension);
+    } else {
+      document.documentElement.style.removeProperty("--auth-visual-bottom-extension");
+    }
+
+    const innerWidth = window.innerWidth;
+    const innerHeight = window.innerHeight;
+    const lockupStable =
+      Boolean(before.lockup) &&
+      Boolean(after.lockup) &&
+      closeEnough(before.lockup.top, after.lockup.top) &&
+      closeEnough(before.lockup.bottom, after.lockup.bottom) &&
+      closeEnough(before.lockup.left, after.lockup.left) &&
+      closeEnough(before.lockup.right, after.lockup.right);
+    const markStable =
+      Boolean(before.mark) &&
+      Boolean(after.mark) &&
+      closeEnough(before.mark.top, after.mark.top) &&
+      closeEnough(before.mark.bottom, after.mark.bottom) &&
+      closeEnough(before.mark.left, after.mark.left) &&
+      closeEnough(before.mark.right, after.mark.right);
+    const splashExtends =
+      Boolean(after.splash) &&
+      closeEnough(after.splash.top, 0) &&
+      closeEnough(after.splash.bottom, innerHeight + extension) &&
+      closeEnough(after.splash.height, innerHeight + extension) &&
+      closeEnough(after.splash.left, 0) &&
+      closeEnough(after.splash.width, innerWidth);
+    const framePreservesViewport =
+      Boolean(after.frame) &&
+      closeEnough(after.frame.top, 0) &&
+      closeEnough(after.frame.bottom, innerHeight) &&
+      closeEnough(after.frame.height, innerHeight) &&
+      closeEnough(after.frame.left, 0) &&
+      closeEnough(after.frame.width, innerWidth);
+    const noScroll =
+      after.scroll.scrollY === 0 &&
+      after.scroll.htmlTop === 0 &&
+      after.scroll.bodyTop === 0 &&
+      after.scroll.htmlHeight <= innerHeight + tolerance &&
+      after.scroll.bodyHeight <= innerHeight + tolerance &&
+      after.scroll.htmlWidth <= innerWidth + tolerance &&
+      after.scroll.bodyWidth <= innerWidth + tolerance;
+    const viewportMatchesExpected =
+      closeEnough(innerWidth, expectedViewport.width) &&
+      closeEnough(innerHeight, expectedViewport.height);
+    const ok =
+      viewportMatchesExpected &&
+      splashExtends &&
+      framePreservesViewport &&
+      lockupStable &&
+      markStable &&
+      noScroll;
+
+    return JSON.stringify({
+      ok,
+      label: "splash synthetic safe-area",
+      expectedViewport,
+      innerWidth,
+      innerHeight,
+      extension,
+      viewportMatchesExpected,
+      splashExtends,
+      framePreservesViewport,
+      lockupStable,
+      markStable,
+      noScroll,
+      before,
+      after
+    });
+  }, viewport);
+}
+
 function clickButton(label) {
   return evaluate((buttonLabel) => {
     const button = [...document.querySelectorAll("button")].find((item) => item.textContent?.includes(buttonLabel));
@@ -287,7 +637,9 @@ function recordStep(checks, step) {
 function runSignupTraversal(viewport) {
   const checks = [];
   openFresh(viewport);
+  recordStep(checks, measureSplashSyntheticExtension(viewport));
   recordStep(checks, measure("welcome", viewport));
+  recordStep(checks, measureSyntheticExtension("welcome", viewport));
   recordStep(checks, clickButton("Comenzar"));
   wait(150);
   recordStep(checks, clickButton("Continuar"));
@@ -295,6 +647,7 @@ function runSignupTraversal(viewport) {
   recordStep(checks, clickButton("Registrarse"));
   wait(250);
   recordStep(checks, measure("university", viewport));
+  recordStep(checks, measureSyntheticExtension("university", viewport));
   recordStep(checks, setFieldValue("Selecciona una universidad", "uade"));
   recordStep(checks, setFieldValue("Ingresa tu legajo", "123456"));
   wait(150);
@@ -308,12 +661,14 @@ function runSignupTraversal(viewport) {
     recordStep(checks, clickButton("Continuar"));
     wait(250);
     recordStep(checks, measure("profile", viewport));
+    recordStep(checks, measureSyntheticExtension("profile", viewport));
     recordStep(checks, setFieldValue("Nombre y Apellido", "Kreis Tester"));
     recordStep(checks, setFieldValue("Mail universitario", "tester"));
     wait(150);
     recordStep(checks, clickButton("Continuar"));
     wait(250);
     recordStep(checks, measure("password", viewport));
+    recordStep(checks, measureSyntheticExtension("password", viewport));
   } else {
     recordStep(checks, {
       ok: false,
@@ -329,9 +684,11 @@ function runSignupTraversal(viewport) {
 function runLoginTraversal(viewport) {
   const checks = [];
   openFresh(viewport);
+  recordStep(checks, measureSplashSyntheticExtension(viewport));
   recordStep(checks, clickButton("Ya tengo cuenta"));
   wait(250);
   recordStep(checks, measure("login", viewport));
+  recordStep(checks, measureSyntheticExtension("login", viewport));
   return checks;
 }
 

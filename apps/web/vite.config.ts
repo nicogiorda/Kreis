@@ -13,13 +13,8 @@ export default defineConfig({
     VitePWA({
       injectRegister: null,
       registerType: "autoUpdate",
-      manifest: false,
-      includeAssets: [
-        "icons/icono-app-180.png",
-        "icons/icono-app-192.png",
-        "icons/icono-app-512.png"
-      ],
       workbox: {
+        cacheId: "kreis-web-app",
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         navigateFallback: "/index.html",
@@ -30,10 +25,10 @@ export default defineConfig({
             urlPattern: ({ url }) => url.pathname.startsWith("/api/"),
             handler: "NetworkFirst",
             options: {
-              cacheName: "kreis-api",
+              cacheName: "kreis-api-v1",
               networkTimeoutSeconds: 5,
               expiration: {
-                maxAgeSeconds: 60 * 60 * 24,
+                maxAgeSeconds: 60 * 5,
                 maxEntries: 80
               },
               cacheableResponse: {
@@ -42,12 +37,12 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: ({ request }) => request.destination === "image",
-            handler: "CacheFirst",
+            urlPattern: ({ request, url }) => request.destination === "image" && !url.pathname.startsWith("/assets/"),
+            handler: "StaleWhileRevalidate",
             options: {
-              cacheName: "kreis-images",
+              cacheName: "kreis-public-images-v1",
               expiration: {
-                maxAgeSeconds: 60 * 60 * 24 * 30,
+                maxAgeSeconds: 60 * 60 * 24 * 7,
                 maxEntries: 80
               },
               cacheableResponse: {
@@ -56,7 +51,13 @@ export default defineConfig({
             }
           }
         ]
-      }
+      },
+      manifest: false,
+      includeAssets: [
+        "icons/icono-app-180.png",
+        "icons/icono-app-192.png",
+        "icons/icono-app-512.png"
+      ]
     })
   ],
   build: {

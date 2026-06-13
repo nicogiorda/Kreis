@@ -2,7 +2,6 @@ import { ArrowLeft, Plus } from "@phosphor-icons/react";
 import { type ChangeEvent, type ReactNode, useEffect, useLayoutEffect, useState } from "react";
 import { ApiRequestError, classifyCertificate, listFaculties, listTopics, login, register } from "../../api/auth";
 import type { AuthResult, CertificateClassificationResult, FacultyCatalogItem, TopicCatalogItem } from "../../api/auth";
-import certificateCharacterUrl from "../../assets/auth/certificate-character.webp";
 import onboardingEventsUrl from "../../assets/auth/onboarding-events.webp";
 import signUpOneUrl from "../../assets/auth/signup-1.webp";
 import signUpTwoUrl from "../../assets/auth/signup-2.webp";
@@ -423,13 +422,15 @@ function CertificateScreen({
   fileName,
   submitting,
   onBack,
-  onFileSelect
+  onFileSelect,
+  onSubmit
 }: {
   error: string | null;
   fileName: string | null;
   submitting: boolean;
   onBack: () => void;
   onFileSelect: (file: File | null) => void;
+  onSubmit: () => void;
 }) {
   function handleFileChange(event: ChangeEvent<HTMLInputElement>): void {
     onFileSelect(event.target.files?.[0] ?? null);
@@ -457,8 +458,9 @@ function CertificateScreen({
       </label>
       <p className="auth-redesign-certificate-help">¿No sabes donde encontrarlo?</p>
       {error ? <p className="auth-redesign-error auth-redesign-error--certificate">{error}</p> : null}
-      <img className="auth-redesign-certificate-character" src={certificateCharacterUrl} alt="" aria-hidden="true" />
-      <span className="auth-redesign-character-shadow auth-redesign-character-shadow--certificate" aria-hidden="true" />
+      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--certificate auth-redesign-button--green-text" disabled={submitting || !fileName} onClick={onSubmit}>
+        {submitting ? <LoadingState label="Validando certificado" variant="button" /> : "Validar"}
+      </PrimaryButton>
     </AuthScreenFrame>
   );
 }
@@ -507,6 +509,7 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
   const [catalogReloadKey, setCatalogReloadKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const [certificateFileName, setCertificateFileName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -564,10 +567,15 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
     setDraft((current) => ({ ...current, ...updates }));
   }
 
+  function updateCertificateFile(file: File | null): void {
+    setCertificateFile(file);
+    setCertificateFileName(file?.name ?? null);
+    setSubmissionError(null);
+  }
+
   async function handleSignup(certificateFile: File): Promise<void> {
     setSubmitting(true);
     setSubmissionError(null);
-    setCertificateFileName(certificateFile.name);
 
     try {
       const profile = getDraftProfile(draft);
@@ -612,7 +620,18 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
       {step === "interests" && <InterestsScreen draft={draft} topics={topics} status={topicsStatus} onBack={() => setStep("university")} onChange={updateDraft} onContinue={() => setStep("profile")} onRetry={() => setCatalogReloadKey((current) => current + 1)} />}
       {step === "profile" && <ProfileScreen draft={draft} onBack={() => setStep("interests")} onChange={updateDraft} onContinue={() => setStep("password")} />}
       {step === "password" && <PasswordScreen draft={draft} onBack={() => setStep("profile")} onChange={updateDraft} onContinue={() => setStep("certificate")} />}
-      {step === "certificate" && <CertificateScreen error={submissionError} fileName={certificateFileName} submitting={submitting} onBack={() => setStep("password")} onFileSelect={(file) => { if (file) void handleSignup(file); }} />}
+      {step === "certificate" && (
+        <CertificateScreen
+          error={submissionError}
+          fileName={certificateFileName}
+          submitting={submitting}
+          onBack={() => setStep("password")}
+          onFileSelect={updateCertificateFile}
+          onSubmit={() => {
+            if (certificateFile) void handleSignup(certificateFile);
+          }}
+        />
+      )}
       {step === "login" && <LoginScreen onBack={() => setStep("welcome")} onComplete={onComplete} />}
     </AuthShell>
   );

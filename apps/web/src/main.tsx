@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router";
 import { registerSW } from "virtual:pwa-register";
 import App from "./app/App";
 import "./styles/global.css";
+import "./styles/auth-flow.css";
 
 registerSW({
   immediate: true,

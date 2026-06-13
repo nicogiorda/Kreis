@@ -13,6 +13,7 @@ import invertedLogoUrl from "../../assets/brand/svgs/IMAGOTIPO-INVERTIDO.svg";
 import greetingCharacterUrl from "../../assets/characters/kreisito_saludando.webp";
 import { LoadingState } from "../common/LoadingState";
 import { cn } from "../../utils/cn";
+import { AuthDecorLayer, AuthOrangeFill, AuthScreenFrame, AuthShell } from "./AuthLayout";
 
 type AuthFlowProps = {
   onComplete: (auth: AuthResult) => void;
@@ -20,7 +21,6 @@ type AuthFlowProps = {
 
 type AuthStep = "welcome" | "events" | "communities" | "university" | "interests" | "profile" | "password" | "certificate" | "login";
 type CatalogStatus = "loading" | "ready" | "error";
-type AuthTone = "lace" | "green" | "orange" | "pumpkin";
 
 type SignupDraft = {
   university: string;
@@ -44,18 +44,6 @@ const authSafeAreaBackgrounds: Record<AuthStep, string> = {
   login: "#2e4b3c"
 };
 
-const authBottomSafeAreaBackgrounds: Record<AuthStep, string> = {
-  welcome: "#f7edda",
-  events: "#2e4b3c",
-  communities: "#ffa74f",
-  university: "#f0531c",
-  interests: "#f0531c",
-  profile: "#f0531c",
-  password: "#f0531c",
-  certificate: "#2e4b3c",
-  login: "#f0531c"
-};
-
 const emptySignupDraft: SignupDraft = {
   university: "",
   legajo: "",
@@ -65,16 +53,6 @@ const emptySignupDraft: SignupDraft = {
   password: "",
   passwordConfirmation: ""
 };
-
-function AuthScreen({ children, tone }: { children: ReactNode; tone: AuthTone }) {
-  return (
-    <section className={cn("auth-redesign-screen", `auth-redesign-screen--${tone}`)}>
-      <div className="auth-redesign-stage">
-        {children}
-      </div>
-    </section>
-  );
-}
 
 function BrandLogo({ variant = "right" }: { variant?: "right" | "right-university" | "right-low" | "right-certificate" | "center" | "login" }) {
   return <img className={cn("auth-redesign-logo", `auth-redesign-logo--${variant}`)} src={invertedLogoUrl} alt="Kreis" />;
@@ -108,13 +86,14 @@ function PrimaryButton({
 
 function CharacterBackdrop({ src, className, top }: { src: string; className?: string; top?: number }) {
   return (
-    <img
-      className={cn("auth-redesign-character-bg", className)}
-      style={top === undefined ? undefined : { top: `${(top / 852) * 100}%` }}
-      src={src}
-      alt=""
-      aria-hidden="true"
-    />
+    <AuthDecorLayer>
+      <img
+        className={cn("auth-redesign-character-bg", className)}
+        style={top === undefined ? undefined : { top: `${(top / 852) * 100}%` }}
+        src={src}
+        alt=""
+      />
+    </AuthDecorLayer>
   );
 }
 
@@ -224,7 +203,7 @@ function getInvalidCertificateMessage(certificate: CertificateClassificationResu
 
 function WelcomeScreen({ onBegin, onLogin }: { onBegin: () => void; onLogin: () => void }) {
   return (
-    <AuthScreen tone="lace">
+    <AuthScreenFrame tone="lace">
       <div className="auth-redesign-welcome-character">
         <span className="auth-redesign-character-shadow" aria-hidden="true" />
         <img src={greetingCharacterUrl} alt="" aria-hidden="true" />
@@ -233,13 +212,13 @@ function WelcomeScreen({ onBegin, onLogin }: { onBegin: () => void; onLogin: () 
       <p className="auth-redesign-welcome-copy">Conecta con otros estudiantes y viví la vida universitaria que tanto soñaste.</p>
       <button className="auth-redesign-welcome-button auth-redesign-welcome-button--primary" type="button" onClick={onBegin}>Comenzar</button>
       <button className="auth-redesign-welcome-button auth-redesign-welcome-button--secondary" type="button" onClick={onLogin}>Ya tengo cuenta</button>
-    </AuthScreen>
+    </AuthScreenFrame>
   );
 }
 
 function OnboardingEventsScreen({ onContinue }: { onContinue: () => void }) {
   return (
-    <AuthScreen tone="green">
+    <AuthScreenFrame tone="green">
       <BrandLogo variant="center" />
       <img className="auth-redesign-onboarding-character auth-redesign-onboarding-character--events" src={onboardingEventsUrl} alt="" aria-hidden="true" />
       <span className="auth-redesign-character-shadow auth-redesign-character-shadow--onboarding" aria-hidden="true" />
@@ -250,13 +229,13 @@ function OnboardingEventsScreen({ onContinue }: { onContinue: () => void }) {
         <span />
       </div>
       <PrimaryButton className="auth-redesign-onboarding-button auth-redesign-button--green-text" onClick={onContinue}>Continuar</PrimaryButton>
-    </AuthScreen>
+    </AuthScreenFrame>
   );
 }
 
 function OnboardingCommunitiesScreen({ onContinue }: { onContinue: () => void }) {
   return (
-    <AuthScreen tone="pumpkin">
+    <AuthScreenFrame tone="pumpkin">
       <BrandLogo variant="center" />
       <img className="auth-redesign-onboarding-character auth-redesign-onboarding-character--communities" src={greetingCharacterUrl} alt="" aria-hidden="true" />
       <span className="auth-redesign-character-shadow auth-redesign-character-shadow--onboarding" aria-hidden="true" />
@@ -267,7 +246,7 @@ function OnboardingCommunitiesScreen({ onContinue }: { onContinue: () => void })
         <span className="is-active" />
       </div>
       <PrimaryButton className="auth-redesign-onboarding-button auth-redesign-button--pumpkin-text" onClick={onContinue}>Registrarse</PrimaryButton>
-    </AuthScreen>
+    </AuthScreenFrame>
   );
 }
 
@@ -283,7 +262,8 @@ function UniversityScreen({
   onContinue: () => void;
 }) {
   return (
-    <AuthScreen tone="green">
+    <AuthScreenFrame tone="green">
+      <AuthOrangeFill />
       <CharacterBackdrop src={signUpOneUrl} />
       <BackButton onClick={onBack} />
       <BrandLogo variant="right-university" />
@@ -301,7 +281,7 @@ function UniversityScreen({
         onChange={(legajo) => onChange({ legajo: legajo.replace(/\D/g, "") })}
       />
       <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--bottom auth-redesign-button--orange-text" disabled={!draft.university || !draft.legajo} onClick={onContinue}>Continuar</PrimaryButton>
-    </AuthScreen>
+    </AuthScreenFrame>
   );
 }
 
@@ -333,7 +313,8 @@ function InterestsScreen({
   }
 
   return (
-    <AuthScreen tone="pumpkin">
+    <AuthScreenFrame tone="pumpkin">
+      <AuthOrangeFill />
       <CharacterBackdrop src={signUpTwoUrl} />
       <BackButton onClick={onBack} />
       <BrandLogo />
@@ -362,7 +343,7 @@ function InterestsScreen({
       <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--bottom auth-redesign-button--orange-text" disabled={actionDisabled} onClick={status === "error" ? onRetry : onContinue}>
         {status === "error" ? "Reintentar" : "Continuar"}
       </PrimaryButton>
-    </AuthScreen>
+    </AuthScreenFrame>
   );
 }
 
@@ -381,7 +362,8 @@ function ProfileScreen({
   const hasEmailUser = /^[a-z0-9._%+-]+$/i.test(draft.emailUser.trim());
 
   return (
-    <AuthScreen tone="green">
+    <AuthScreenFrame tone="green">
+      <AuthOrangeFill />
       <CharacterBackdrop src={signUpThreeUrl} top={301} />
       <BackButton variant="low" onClick={onBack} />
       <BrandLogo variant="right-low" />
@@ -406,7 +388,7 @@ function ProfileScreen({
         onChange={(emailUser) => onChange({ emailUser: emailUser.replace(/@.*$/, "") })}
       />
       <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--profile auth-redesign-button--green-text" disabled={!hasFullName || !hasEmailUser} onClick={onContinue}>Continuar</PrimaryButton>
-    </AuthScreen>
+    </AuthScreenFrame>
   );
 }
 
@@ -424,7 +406,8 @@ function PasswordScreen({
   const passwordIsValid = draft.password.length >= 8 && draft.password === draft.passwordConfirmation;
 
   return (
-    <AuthScreen tone="pumpkin">
+    <AuthScreenFrame tone="pumpkin">
+      <AuthOrangeFill />
       <CharacterBackdrop src={signUpFourUrl} top={306} />
       <BackButton variant="low" onClick={onBack} />
       <BrandLogo variant="right-low" />
@@ -435,7 +418,7 @@ function PasswordScreen({
       <TextField className="auth-redesign-field--password" label="Ingresa una contraseña" type="password" value={draft.password} autoComplete="new-password" onChange={(password) => onChange({ password })} />
       <TextField className="auth-redesign-field--password-repeat" label="Repita la contraseña" type="password" value={draft.passwordConfirmation} autoComplete="new-password" onChange={(passwordConfirmation) => onChange({ passwordConfirmation })} />
       <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--password auth-redesign-button--pumpkin-text" disabled={!passwordIsValid} onClick={onContinue}>Continuar</PrimaryButton>
-    </AuthScreen>
+    </AuthScreenFrame>
   );
 }
 
@@ -457,7 +440,7 @@ function CertificateScreen({
   }
 
   return (
-    <AuthScreen tone="green">
+    <AuthScreenFrame tone="green">
       <BackButton variant="certificate" onClick={onBack} />
       <BrandLogo variant="right-certificate" />
       <h1 className="auth-redesign-title auth-redesign-title--certificate">
@@ -480,7 +463,7 @@ function CertificateScreen({
       {error ? <p className="auth-redesign-error auth-redesign-error--certificate">{error}</p> : null}
       <img className="auth-redesign-certificate-character" src={certificateCharacterUrl} alt="" aria-hidden="true" />
       <span className="auth-redesign-character-shadow auth-redesign-character-shadow--certificate" aria-hidden="true" />
-    </AuthScreen>
+    </AuthScreenFrame>
   );
 }
 
@@ -504,7 +487,8 @@ function LoginScreen({ onBack, onComplete }: { onBack: () => void; onComplete: (
   }
 
   return (
-    <AuthScreen tone="green">
+    <AuthScreenFrame tone="green">
+      <AuthOrangeFill />
       <CharacterBackdrop src={signUpThreeUrl} top={279} />
       <BackButton variant="login" onClick={onBack} />
       <BrandLogo variant="login" />
@@ -515,7 +499,7 @@ function LoginScreen({ onBack, onComplete }: { onBack: () => void; onComplete: (
         {submitting ? <LoadingState label="Ingresando" variant="button" /> : "Continuar"}
       </PrimaryButton>
       {error ? <p className="auth-redesign-error auth-redesign-error--login">{error}</p> : null}
-    </AuthScreen>
+    </AuthScreenFrame>
   );
 }
 
@@ -548,11 +532,9 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
 
   useLayoutEffect(() => {
     document.documentElement.style.setProperty("--auth-safe-area-bg", authSafeAreaBackgrounds[step]);
-    document.documentElement.style.setProperty("--auth-bottom-safe-area-bg", authBottomSafeAreaBackgrounds[step]);
 
     return () => {
       document.documentElement.style.removeProperty("--auth-safe-area-bg");
-      document.documentElement.style.removeProperty("--auth-bottom-safe-area-bg");
     };
   }, [step]);
 
@@ -627,7 +609,7 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
   }
 
   return (
-    <div className="auth-redesign-shell">
+    <AuthShell>
       {step === "welcome" && <WelcomeScreen onBegin={() => setStep("events")} onLogin={() => setStep("login")} />}
       {step === "events" && <OnboardingEventsScreen onContinue={() => setStep("communities")} />}
       {step === "communities" && <OnboardingCommunitiesScreen onContinue={() => setStep("university")} />}
@@ -637,6 +619,6 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
       {step === "password" && <PasswordScreen draft={draft} onBack={() => setStep("profile")} onChange={updateDraft} onContinue={() => setStep("certificate")} />}
       {step === "certificate" && <CertificateScreen error={submissionError} fileName={certificateFileName} submitting={submitting} onBack={() => setStep("password")} onFileSelect={(file) => { if (file) void handleSignup(file); }} />}
       {step === "login" && <LoginScreen onBack={() => setStep("welcome")} onComplete={onComplete} />}
-    </div>
+    </AuthShell>
   );
 }

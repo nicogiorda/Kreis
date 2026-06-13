@@ -8,6 +8,13 @@ import "./styles/auth-flow.css";
 
 let refreshingForServiceWorkerUpdate = false;
 
+const standaloneNavigator = navigator as Navigator & { standalone?: boolean };
+const isStandalone =
+  window.matchMedia("(display-mode: standalone)").matches ||
+  standaloneNavigator.standalone === true;
+
+document.documentElement.classList.toggle("kreis-standalone", isStandalone);
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (refreshingForServiceWorkerUpdate) return;

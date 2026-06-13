@@ -377,22 +377,38 @@ function measureSyntheticExtension(label, viewport) {
       closeEnough(after.stage.left, 0) &&
       closeEnough(after.stage.width, innerWidth) &&
       closeEnough(after.stage.height, innerHeight);
-    const decorExtends =
+    const decorPreservesViewport =
       !requiresDecor ||
       (Boolean(after.decorLayer) &&
         closeEnough(after.decorLayer.top, 0) &&
-        closeEnough(after.decorLayer.bottom, innerHeight + extension) &&
+        closeEnough(after.decorLayer.bottom, innerHeight) &&
         closeEnough(after.decorLayer.left, 0) &&
         closeEnough(after.decorLayer.width, innerWidth) &&
-        closeEnough(after.decorLayer.height, innerHeight + extension));
-    const characterExtends =
+        closeEnough(after.decorLayer.height, innerHeight));
+    const characterTopStable =
       !requiresDecor ||
       (Boolean(after.character) &&
-        closeEnough(after.character.top, 0) &&
-        closeEnough(after.character.bottom, innerHeight + extension) &&
+        Boolean(before.character) &&
+        closeEnough(after.character.top, before.character.top));
+    const characterHeightExtended =
+      !requiresDecor ||
+      (Boolean(after.character) &&
+        Boolean(before.character) &&
+        closeEnough(after.character.height, before.character.height + extension));
+    const characterBottomExtended =
+      !requiresDecor ||
+      (Boolean(after.character) &&
+        Boolean(before.character) &&
+        closeEnough(after.character.bottom, before.character.bottom + extension));
+    const characterCoversPhysicalBottom =
+      !requiresDecor ||
+      (Boolean(after.character) &&
+        after.character.bottom >= innerHeight + extension - tolerance);
+    const characterHasNoSideMargins =
+      !requiresDecor ||
+      (Boolean(after.character) &&
         closeEnough(after.character.left, 0) &&
-        closeEnough(after.character.width, innerWidth) &&
-        closeEnough(after.character.height, innerHeight + extension));
+        closeEnough(after.character.width, innerWidth));
     const orangeFillAbsent = !after.orangeFill;
     const noScroll =
       after.scroll.scrollY === 0 &&
@@ -411,8 +427,12 @@ function measureSyntheticExtension(label, viewport) {
       shellExtends &&
       screenExtends &&
       stagePreservesViewport &&
-      decorExtends &&
-      characterExtends &&
+      decorPreservesViewport &&
+      characterTopStable &&
+      characterHeightExtended &&
+      characterBottomExtended &&
+      characterCoversPhysicalBottom &&
+      characterHasNoSideMargins &&
       controlCountStable &&
       controlsChanged.length === 0 &&
       orangeFillAbsent &&
@@ -430,8 +450,12 @@ function measureSyntheticExtension(label, viewport) {
       shellExtends,
       screenExtends,
       stagePreservesViewport,
-      decorExtends,
-      characterExtends,
+      decorPreservesViewport,
+      characterTopStable,
+      characterHeightExtended,
+      characterBottomExtended,
+      characterCoversPhysicalBottom,
+      characterHasNoSideMargins,
       controlCountStable,
       controlsChanged,
       orangeFillAbsent,
@@ -653,6 +677,8 @@ function runSignupTraversal(viewport) {
   wait(150);
   recordStep(checks, clickButton("Continuar"));
   wait(400);
+  recordStep(checks, measure("interests", viewport));
+  recordStep(checks, measureSyntheticExtension("interests", viewport));
 
   const interests = waitForInterests();
   recordStep(checks, interests);

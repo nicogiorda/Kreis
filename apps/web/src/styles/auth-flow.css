@@ -11,6 +11,10 @@
   }
 }
 
+html.kreis-standalone {
+  --auth-visual-bottom-extension: env(safe-area-inset-bottom, 0px);
+}
+
 @layer components {
   .splash-screen {
     inset: 0;
@@ -180,9 +184,8 @@
   .auth-redesign-decor-layer {
     position: absolute;
     inset: 0;
-    bottom: calc(0px - var(--auth-visual-bottom-extension));
     z-index: 0;
-    overflow: hidden;
+    overflow: visible;
     pointer-events: none;
   }
 
@@ -299,7 +302,7 @@
     left: 0;
     z-index: 1;
     width: 100%;
-    height: 100%;
+    height: calc(100% + var(--auth-visual-bottom-extension));
     max-width: none;
     object-fit: cover;
     object-position: top center;

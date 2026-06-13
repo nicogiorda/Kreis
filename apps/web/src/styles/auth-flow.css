@@ -475,6 +475,10 @@
     top: 36.97%;
   }
 
+  .auth-redesign-form-button--certificate {
+    top: 61.5%;
+  }
+
   .auth-redesign-welcome-character {
     position: absolute;
     top: 11.74%;
@@ -813,27 +817,6 @@
     text-align: center;
   }
 
-  .auth-redesign-certificate-character {
-    position: absolute;
-    top: 63.5%;
-    left: 50%;
-    z-index: 2;
-    width: 66.67%;
-    max-width: 262px;
-    aspect-ratio: 1;
-    object-fit: contain;
-    transform: translateX(-50%);
-    pointer-events: none;
-    user-select: none;
-  }
-
-  .auth-redesign-character-shadow--certificate {
-    top: 88.5%;
-    width: 41.98%;
-    height: 3.64%;
-    opacity: 0.32;
-  }
-
   .auth-redesign-error {
     position: absolute;
     left: 6.62%;
@@ -854,7 +837,7 @@
   }
 
   .auth-redesign-error--certificate {
-    top: 59%;
+    top: 58.65%;
   }
 
   .auth-redesign-error--login {

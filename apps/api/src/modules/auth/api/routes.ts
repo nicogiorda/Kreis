@@ -1,4 +1,5 @@
 import multer from "multer";
+import rateLimit from "express-rate-limit";
 import { type NextFunction, type Request, type Response, Router } from "express";
 import { z } from "zod";
 import { LoginUseCase } from "../application/login";
@@ -15,6 +16,19 @@ import { SupabaseAuthProvider } from "../infrastructure/supabase-auth-provider";
 
 const certificateFieldName = "certificate";
 const maxCertificateSizeBytes = 5 * 1024 * 1024;
+
+const certificateRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: {
+      code: "certificate_rate_limited",
+      message: "Demasiados intentos de validacion de certificado. Intenta nuevamente en unos minutos."
+    }
+  }
+});
 
 const certificateUpload = multer({
   storage: multer.memoryStorage(),
@@ -92,7 +106,7 @@ function uploadCertificate(request: Request, response: Response, next: NextFunct
 export function createAuthRouter(): Router {
   const router = Router();
 
-  router.post("/certificate/classify", uploadCertificate, async (request, response, next) => {
+  router.post("/certificate/classify", certificateRateLimit, uploadCertificate, async (request, response, next) => {
     try {
       if (!request.file) {
         response.status(400).json({

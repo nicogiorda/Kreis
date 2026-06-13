@@ -26,11 +26,3 @@ export function AuthStage({ children }: { children: ReactNode }) {
 export function AuthDecorLayer({ children }: { children: ReactNode }) {
   return <div className="auth-redesign-decor-layer" aria-hidden="true">{children}</div>;
 }
-
-export function AuthOrangeFill() {
-  return (
-    <AuthDecorLayer>
-      <span className="auth-redesign-orange-fill" />
-    </AuthDecorLayer>
-  );
-}

@@ -13,7 +13,7 @@ import invertedLogoUrl from "../../assets/brand/svgs/IMAGOTIPO-INVERTIDO.svg";
 import greetingCharacterUrl from "../../assets/characters/kreisito_saludando.webp";
 import { LoadingState } from "../common/LoadingState";
 import { cn } from "../../utils/cn";
-import { AuthDecorLayer, AuthOrangeFill, AuthScreenFrame, AuthShell } from "./AuthLayout";
+import { AuthDecorLayer, AuthScreenFrame, AuthShell } from "./AuthLayout";
 
 type AuthFlowProps = {
   onComplete: (auth: AuthResult) => void;
@@ -263,7 +263,6 @@ function UniversityScreen({
 }) {
   return (
     <AuthScreenFrame tone="green">
-      <AuthOrangeFill />
       <CharacterBackdrop src={signUpOneUrl} />
       <BackButton onClick={onBack} />
       <BrandLogo variant="right-university" />
@@ -314,7 +313,6 @@ function InterestsScreen({
 
   return (
     <AuthScreenFrame tone="pumpkin">
-      <AuthOrangeFill />
       <CharacterBackdrop src={signUpTwoUrl} />
       <BackButton onClick={onBack} />
       <BrandLogo />
@@ -363,7 +361,6 @@ function ProfileScreen({
 
   return (
     <AuthScreenFrame tone="green">
-      <AuthOrangeFill />
       <CharacterBackdrop src={signUpThreeUrl} top={301} />
       <BackButton variant="low" onClick={onBack} />
       <BrandLogo variant="right-low" />
@@ -407,7 +404,6 @@ function PasswordScreen({
 
   return (
     <AuthScreenFrame tone="pumpkin">
-      <AuthOrangeFill />
       <CharacterBackdrop src={signUpFourUrl} top={306} />
       <BackButton variant="low" onClick={onBack} />
       <BrandLogo variant="right-low" />
@@ -488,7 +484,6 @@ function LoginScreen({ onBack, onComplete }: { onBack: () => void; onComplete: (
 
   return (
     <AuthScreenFrame tone="green">
-      <AuthOrangeFill />
       <CharacterBackdrop src={signUpThreeUrl} top={279} />
       <BackButton variant="login" onClick={onBack} />
       <BrandLogo variant="login" />

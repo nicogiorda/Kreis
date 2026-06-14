@@ -4,11 +4,13 @@ This module is intentionally separate from the authenticated app layout.
 
 Rules:
 
-- `AuthViewport`, `AuthShell`, `AuthScreenFrame`, and `AuthStage` must all cover the same visible viewport.
+- `AuthViewport`, `AuthShell`, and `AuthScreenFrame` own the full-bleed visual viewport.
+- `AuthStage` owns the logical interactive viewport.
 - Do not model screen height as `100dvh + env(safe-area-inset-bottom)`.
-- Auth/splash may extend the visual root with `--auth-visual-bottom-extension`; the interactive stage must keep the logical viewport height.
+- Auth/splash use `--auth-visual-height` for the full-bleed canvas and `--auth-layout-height` for foreground positioning.
+- `--auth-visual-bottom-extension` is diagnostic only and must not change layout.
 - Safe-area insets may protect foreground controls, but they must not change the logical size of `AuthDecorLayer`.
-- Mascot and color fields belong in `AuthDecorLayer`; the image can extend visually into the bottom safe area while the layer keeps viewport height.
+- Mascot and color fields belong in `AuthDecorLayer`; the image should cover the visual viewport without adding safe-area height.
 - Avoid global `html::after` or `body::after` patches for auth/splash gaps.
 - Keep auth/splash styles in `apps/web/src/styles/auth-flow.css`.
 
@@ -20,4 +22,4 @@ Run the app locally and then:
 npm run verify:auth-layout
 ```
 
-The check expects the normal layout to match `window.innerHeight`, then simulates a 34px bottom inset: the visual root and character image extend, while `.auth-redesign-stage`, `.auth-redesign-decor-layer`, and foreground controls keep their original positions.
+The check measures `vh`, `dvh`, `lvh`, and `svh`: the visual root/shell/screen/character/splash should match `--auth-visual-height`, while stage/decor/splash frame should match `--auth-layout-height`.

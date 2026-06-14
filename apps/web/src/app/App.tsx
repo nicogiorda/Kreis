@@ -20,6 +20,7 @@ import { CommunitiesScreen } from "../components/communities/CommunitiesScreen";
 import { EventDetailScreen } from "../components/events/EventDetailScreen";
 import { EventsScreen } from "../components/events/EventsScreen";
 import { SplashScreen } from "../components/common/SplashScreen";
+import { ViewportDebugPanel } from "../components/common/ViewportDebugPanel";
 import { HomeScreen } from "../components/home/HomeScreen";
 import { BottomNav } from "../components/navigation/BottomNav";
 import { Header } from "../components/navigation/Header";
@@ -545,6 +546,7 @@ export default function App() {
   return (
     <>
       <SplashScreen />
+      <ViewportDebugPanel />
       {authBootstrapping ? null : authSession ? (
         <>
           <div

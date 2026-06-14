@@ -40,7 +40,7 @@ export function SplashScreen() {
   }
 
   return (
-    <section className="splash-screen fixed left-0 right-0 z-[100] w-full overflow-hidden bg-kreis-orange text-[oklch(97%_0.025_76)] pointer-events-auto isolate" role="status" aria-label="Cargando Kreis" onAnimationEnd={handleExitAnimationEnd}>
+    <section className="splash-screen fixed left-0 top-0 z-[100] w-full overflow-hidden bg-kreis-orange text-[oklch(97%_0.025_76)] pointer-events-auto isolate" role="status" aria-label="Cargando Kreis" onAnimationEnd={handleExitAnimationEnd}>
       <div className="splash-layout-frame">
         <div className="hidden" aria-hidden="true">
           <span />

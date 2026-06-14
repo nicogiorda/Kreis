@@ -215,9 +215,10 @@ function WelcomeScreen({ onBegin, onLogin }: { onBegin: () => void; onLogin: () 
   );
 }
 
-function OnboardingEventsScreen({ onContinue }: { onContinue: () => void }) {
+function OnboardingEventsScreen({ onBack, onContinue }: { onBack: () => void; onContinue: () => void }) {
   return (
     <AuthScreenFrame tone="green">
+      <BackButton onClick={onBack} />
       <BrandLogo variant="center" />
       <img className="auth-redesign-onboarding-character auth-redesign-onboarding-character--events" src={onboardingEventsUrl} alt="" aria-hidden="true" />
       <span className="auth-redesign-character-shadow auth-redesign-character-shadow--onboarding" aria-hidden="true" />
@@ -232,9 +233,10 @@ function OnboardingEventsScreen({ onContinue }: { onContinue: () => void }) {
   );
 }
 
-function OnboardingCommunitiesScreen({ onContinue }: { onContinue: () => void }) {
+function OnboardingCommunitiesScreen({ onBack, onContinue }: { onBack: () => void; onContinue: () => void }) {
   return (
     <AuthScreenFrame tone="pumpkin">
+      <BackButton onClick={onBack} />
       <BrandLogo variant="center" />
       <img className="auth-redesign-onboarding-character auth-redesign-onboarding-character--communities" src={greetingCharacterUrl} alt="" aria-hidden="true" />
       <span className="auth-redesign-character-shadow auth-redesign-character-shadow--onboarding" aria-hidden="true" />
@@ -614,8 +616,8 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
   return (
     <AuthShell>
       {step === "welcome" && <WelcomeScreen onBegin={() => setStep("events")} onLogin={() => setStep("login")} />}
-      {step === "events" && <OnboardingEventsScreen onContinue={() => setStep("communities")} />}
-      {step === "communities" && <OnboardingCommunitiesScreen onContinue={() => setStep("university")} />}
+      {step === "events" && <OnboardingEventsScreen onBack={() => setStep("welcome")} onContinue={() => setStep("communities")} />}
+      {step === "communities" && <OnboardingCommunitiesScreen onBack={() => setStep("events")} onContinue={() => setStep("university")} />}
       {step === "university" && <UniversityScreen draft={draft} onBack={() => setStep("communities")} onChange={updateDraft} onContinue={() => setStep("interests")} />}
       {step === "interests" && <InterestsScreen draft={draft} topics={topics} status={topicsStatus} onBack={() => setStep("university")} onChange={updateDraft} onContinue={() => setStep("profile")} onRetry={() => setCatalogReloadKey((current) => current + 1)} />}
       {step === "profile" && <ProfileScreen draft={draft} onBack={() => setStep("interests")} onChange={updateDraft} onContinue={() => setStep("password")} />}

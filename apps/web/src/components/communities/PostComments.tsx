@@ -1,6 +1,6 @@
 import { ChatRound, Heart } from "@solar-icons/react";
-import { ArrowBendDownRight, CaretDown, PaperPlaneTilt } from "@phosphor-icons/react";
-import { type FormEvent, useState } from "react";
+import { ArrowBendDownRight, CaretDown, DotsThree, PaperPlaneTilt } from "@phosphor-icons/react";
+import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { createPostComment, listPostComments } from "../../api/posts";
 import type { PostComment } from "../../types";
 import { CommentSkeletonList } from "../common/LoadingSkeleton";
@@ -12,6 +12,8 @@ type PostCommentsProps = {
   initialCount: number;
   score?: number;
   accessToken: string;
+  expanded?: boolean;
+  onExpand?: () => void;
   onCountChange: (postId: string, total: number) => void;
 };
 
@@ -40,6 +42,20 @@ function formatCommentTime(createdAt: string): string {
   return `hace ${Math.floor(elapsedHours / 24)} d`;
 }
 
+function formatDetailCommentTime(createdAt: string): string {
+  const elapsedMilliseconds = Date.now() - new Date(createdAt).getTime();
+  const elapsedMinutes = Math.max(0, Math.floor(elapsedMilliseconds / 60_000));
+
+  if (elapsedMinutes < 1) return "ahora";
+  if (elapsedMinutes < 60) return `${elapsedMinutes} ${elapsedMinutes === 1 ? "minuto" : "minutos"}`;
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `${elapsedHours} ${elapsedHours === 1 ? "hora" : "horas"}`;
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return `${elapsedDays} ${elapsedDays === 1 ? "dia" : "dias"}`;
+}
+
 function insertReply(
   comments: PostComment[],
   parentId: string,
@@ -60,6 +76,11 @@ function insertReply(
       replies: insertReply(comment.replies, parentId, reply)
     };
   });
+}
+
+function getCommentLikeSeed(comment: PostComment): number {
+  if (comment.replies.length) return Math.min(comment.replies.length + 1, 9);
+  return Number.parseInt(comment.id.replace(/\D/g, "").slice(-1), 10) % 3 || 1;
 }
 
 function CommentForm({
@@ -210,14 +231,149 @@ function CommentNode({
   );
 }
 
+function DetailCommentActions({
+  comment,
+  isReplying,
+  onReplyStart,
+  onReplyCancel
+}: {
+  comment: PostComment;
+  isReplying: boolean;
+  onReplyStart: (commentId: string) => void;
+  onReplyCancel: () => void;
+}) {
+  const [liked, setLiked] = useState(false);
+  const likeCount = getCommentLikeSeed(comment) + (liked ? 1 : 0);
+
+  return (
+    <div className="mt-[7px] flex h-[27px] items-center gap-[22px] text-[12px] font-normal leading-[15px] text-kreis-muted">
+      <button
+        className="grid size-[27px] place-items-center border-0 bg-transparent p-0 text-inherit shadow-none transition-colors duration-150 active:scale-95"
+        type="button"
+        aria-label={isReplying ? "Cancelar respuesta" : `Responder a ${comment.author.name}`}
+        onClick={() => isReplying ? onReplyCancel() : onReplyStart(comment.id)}
+      >
+        <ArrowBendDownRight aria-hidden="true" size={15} weight="regular" />
+      </button>
+      <button
+        className={cn(
+          "inline-flex h-[27px] items-center gap-1.5 border-0 bg-transparent p-0 text-inherit shadow-none transition-colors duration-150 active:scale-95",
+          liked && "text-kreis-orange"
+        )}
+        type="button"
+        aria-label={liked ? "Quitar like del comentario" : "Dar like al comentario"}
+        aria-pressed={liked}
+        onClick={() => setLiked((current) => !current)}
+      >
+        <Heart aria-hidden="true" size={16} weight={liked ? "Bold" : "Outline"} />
+        {likeCount}
+      </button>
+      <button
+        className="ml-auto grid size-[27px] place-items-center border-0 bg-transparent p-0 text-inherit shadow-none"
+        type="button"
+        aria-label="Mas opciones"
+      >
+        <DotsThree aria-hidden="true" size={19} weight="bold" />
+      </button>
+    </div>
+  );
+}
+
+function DetailCommentNode({
+  comment,
+  depth,
+  replyingTo,
+  replyBody,
+  submitting,
+  onReplyStart,
+  onReplyCancel,
+  onReplyBodyChange,
+  onReplySubmit
+}: CommentNodeProps) {
+  const isReplying = replyingTo === comment.id;
+  const hasReplies = comment.replies.length > 0;
+  const indent = depth === 0 ? 0 : depth === 1 ? 20 : 37;
+
+  return (
+    <div className="relative min-w-0" style={{ marginLeft: indent }}>
+      {hasReplies ? (
+        <span
+          className="pointer-events-none absolute bottom-[-17px] left-0 top-[70px] w-px bg-kreis-line"
+          aria-hidden="true"
+        />
+      ) : null}
+
+      <article className="relative grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2">
+        <span className="mt-1 grid size-10 rounded-full bg-kreis-event-surface" aria-hidden="true" />
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-baseline gap-1.5">
+            <strong className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium leading-[15px] text-kreis-ink">
+              {comment.author.name}
+            </strong>
+            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-normal leading-[15px] text-kreis-muted">
+              &middot; {formatDetailCommentTime(comment.createdAt)}
+            </span>
+          </div>
+
+          <p className="m-0 mt-[7px] whitespace-pre-wrap text-[12px] font-normal leading-[15px] text-kreis-ink">
+            {comment.body}
+          </p>
+
+          <DetailCommentActions
+            comment={comment}
+            isReplying={isReplying}
+            onReplyStart={onReplyStart}
+            onReplyCancel={onReplyCancel}
+          />
+
+          {isReplying ? (
+            <div className="mt-2">
+              <CommentForm
+                compact
+                value={replyBody}
+                placeholder={`Responder a ${comment.author.name}`}
+                submitting={submitting}
+                onChange={onReplyBodyChange}
+                onCancel={onReplyCancel}
+                onSubmit={(event) => onReplySubmit(event, comment.id)}
+              />
+            </div>
+          ) : null}
+        </div>
+      </article>
+
+      {hasReplies ? (
+        <div className="mt-[13px] grid gap-[13px]">
+          {comment.replies.map((reply) => (
+            <DetailCommentNode
+              comment={reply}
+              depth={depth + 1}
+              key={reply.id}
+              replyingTo={replyingTo}
+              replyBody={replyBody}
+              submitting={submitting}
+              onReplyStart={onReplyStart}
+              onReplyCancel={onReplyCancel}
+              onReplyBodyChange={onReplyBodyChange}
+              onReplySubmit={onReplySubmit}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function PostComments({
   postId,
   initialCount,
   score,
   accessToken,
+  expanded,
+  onExpand,
   onCountChange
 }: PostCommentsProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [comments, setComments] = useState<PostComment[]>([]);
   const [rootBody, setRootBody] = useState("");
@@ -226,9 +382,10 @@ export function PostComments({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [liked, setLiked] = useState(false);
+  const open = expanded ?? internalOpen;
   const displayedScore = typeof score === "number" ? score + (liked ? 1 : 0) : undefined;
 
-  async function loadComments(): Promise<void> {
+  const loadComments = useCallback(async (): Promise<void> => {
     setStatus("loading");
     setError(null);
 
@@ -241,15 +398,21 @@ export function PostComments({
       setError(loadError instanceof Error ? loadError.message : "No pudimos cargar los comentarios.");
       setStatus("error");
     }
-  }
+  }, [accessToken, onCountChange, postId]);
 
-  function toggleOpen(): void {
-    const nextOpen = !open;
-    setOpen(nextOpen);
+  useEffect(() => {
+    if (open && status === "idle") void loadComments();
+  }, [loadComments, open, status]);
 
-    if (nextOpen && status === "idle") {
-      void loadComments();
+  function openThread(): void {
+    if (open) return;
+
+    if (onExpand) {
+      onExpand();
+      return;
     }
+
+    setInternalOpen(true);
   }
 
   function startReply(commentId: string): void {
@@ -288,7 +451,10 @@ export function PostComments({
 
   return (
     <section className="mt-[12px]">
-      <div className="flex items-center gap-[25px] text-[12px] font-normal leading-[15px] text-kreis-muted">
+      <div className={cn(
+        "flex items-center gap-[25px] text-[12px] font-normal leading-[15px] text-kreis-muted",
+        expanded && "h-[27px]"
+      )}>
         {typeof displayedScore === "number" ? (
           <button
             className={cn(
@@ -298,7 +464,10 @@ export function PostComments({
             type="button"
             aria-label={liked ? "Quitar like" : "Dar like"}
             aria-pressed={liked}
-            onClick={() => setLiked((current) => !current)}
+            onClick={(event) => {
+              event.stopPropagation();
+              setLiked((current) => !current);
+            }}
           >
             <Heart aria-hidden="true" size={16} weight={liked ? "Bold" : "Outline"} />
             {displayedScore}
@@ -308,68 +477,126 @@ export function PostComments({
           className="inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-inherit shadow-none"
           type="button"
           aria-expanded={open}
-          onClick={toggleOpen}
+          onClick={(event) => {
+            event.stopPropagation();
+            openThread();
+          }}
         >
           <ChatRound aria-hidden="true" size={16} weight={open ? "Bold" : "Outline"} />
           {initialCount}
         </button>
+        {expanded ? (
+          <button
+            className="ml-auto grid size-[27px] place-items-center border-0 bg-transparent p-0 text-inherit shadow-none"
+            type="button"
+            aria-label="Mas opciones"
+          >
+            <DotsThree aria-hidden="true" size={19} weight="bold" />
+          </button>
+        ) : null}
       </div>
 
       {open ? (
-        <div className="mt-3 grid gap-3 rounded-[15px] border border-kreis-line bg-kreis-event-surface p-3">
-          <CommentForm
-            value={rootBody}
-            placeholder="Sumate a la conversación..."
-            submitting={submitting}
-            onChange={setRootBody}
-            onSubmit={(event) => {
-              event.preventDefault();
-              void submitComment(rootBody);
-            }}
-          />
+        expanded ? (
+          <div className="relative ml-[-48px] mt-[13px] grid gap-[14px] pt-[14px] before:pointer-events-none before:absolute before:left-[calc(var(--page-gutter)*-1)] before:top-0 before:h-px before:w-screen before:bg-kreis-line">
+            {status === "loading" ? (
+              <LoadingState label="Cargando comentarios" variant="inline" className="ml-12" />
+            ) : null}
 
-          {status === "loading" ? (
-            <CommentSkeletonList />
-          ) : null}
+            {status === "error" ? (
+              <button
+                className="ml-12 w-max border-0 bg-transparent p-0 text-[12px] font-medium leading-[15px] text-kreis-orange shadow-none"
+                type="button"
+                onClick={() => void loadComments()}
+              >
+                Reintentar
+              </button>
+            ) : null}
 
-          {status === "error" ? (
-            <button
-              className="w-max border-0 bg-transparent p-0 text-[0.78rem] font-black text-kreis-orange shadow-none"
-              type="button"
-              onClick={() => void loadComments()}
-            >
-              Reintentar
-            </button>
-          ) : null}
+            {error ? <p className="m-0 ml-12 text-[12px] font-medium leading-[15px] text-kreis-orange">{error}</p> : null}
 
-          {error ? <p className="m-0 text-[0.78rem] font-bold leading-[1.35] text-kreis-orange">{error}</p> : null}
+            {status === "ready" && comments.length === 0 ? (
+              <p className="m-0 ml-12 text-[12px] font-normal leading-[15px] text-kreis-muted">Todavia no hay comentarios.</p>
+            ) : null}
 
-          {status === "ready" && comments.length === 0 ? (
-            <p className="m-0 text-[0.8rem] leading-[1.4] text-kreis-muted">Todavía no hay comentarios. Podés abrir el hilo.</p>
-          ) : null}
+            {comments.length ? (
+              <div className="grid gap-[17px]">
+                {comments.map((comment) => (
+                  <DetailCommentNode
+                    comment={comment}
+                    depth={0}
+                    key={comment.id}
+                    replyingTo={replyingTo}
+                    replyBody={replyBody}
+                    submitting={submitting}
+                    onReplyStart={startReply}
+                    onReplyCancel={cancelReply}
+                    onReplyBodyChange={setReplyBody}
+                    onReplySubmit={(event, parentId) => {
+                      event.preventDefault();
+                      void submitComment(replyBody, parentId);
+                    }}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <div className="mt-3 grid gap-3 rounded-[15px] border border-kreis-line bg-kreis-event-surface p-3">
+            {status === "loading" ? (
+              <CommentSkeletonList />
+            ) : null}
 
-          {comments.length ? (
-            <div className="grid gap-3 border-t border-kreis-line pt-3">
-              {comments.map((comment) => (
-                <CommentNode
-                  comment={comment}
-                  depth={0}
-                  key={comment.id}
-                  replyingTo={replyingTo}
-                  replyBody={replyBody}
-                  submitting={submitting}
-                  onReplyStart={startReply}
-                  onReplyCancel={cancelReply}
-                  onReplyBodyChange={setReplyBody}
-                  onReplySubmit={(event, parentId) => {
-                    event.preventDefault();
-                    void submitComment(replyBody, parentId);
-                  }}
-                />
-              ))}
-            </div>
-          ) : null}
-        </div>
+            {status === "error" ? (
+              <button
+                className="w-max border-0 bg-transparent p-0 text-[0.78rem] font-black text-kreis-orange shadow-none"
+                type="button"
+                onClick={() => void loadComments()}
+              >
+                Reintentar
+              </button>
+            ) : null}
+
+            {error ? <p className="m-0 text-[0.78rem] font-bold leading-[1.35] text-kreis-orange">{error}</p> : null}
+
+            {status === "ready" && comments.length === 0 ? (
+              <p className="m-0 text-[0.8rem] leading-[1.4] text-kreis-muted">Todavia no hay comentarios. Podes abrir el hilo.</p>
+            ) : null}
+
+            {comments.length ? (
+              <div className="grid gap-3">
+                {comments.map((comment) => (
+                  <CommentNode
+                    comment={comment}
+                    depth={0}
+                    key={comment.id}
+                    replyingTo={replyingTo}
+                    replyBody={replyBody}
+                    submitting={submitting}
+                    onReplyStart={startReply}
+                    onReplyCancel={cancelReply}
+                    onReplyBodyChange={setReplyBody}
+                    onReplySubmit={(event, parentId) => {
+                      event.preventDefault();
+                      void submitComment(replyBody, parentId);
+                    }}
+                  />
+                ))}
+              </div>
+            ) : null}
+
+            <CommentForm
+              value={rootBody}
+              placeholder="Sumate a la conversacion..."
+              submitting={submitting}
+              onChange={setRootBody}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submitComment(rootBody);
+              }}
+            />
+          </div>
+        )
       ) : null}
     </section>
   );

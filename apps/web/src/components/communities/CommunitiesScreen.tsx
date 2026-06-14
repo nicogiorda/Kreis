@@ -1,6 +1,6 @@
-import { Plus } from "@phosphor-icons/react";
+import { Plus, X } from "@phosphor-icons/react";
 import { WidgetAdd } from "@solar-icons/react";
-import { useMemo, useState } from "react";
+import { type KeyboardEvent, type MouseEvent, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../common/EmptyState";
 import { ThemeToggleIcon } from "../common/Icons";
 import type { ActivityPost, Community, ThemeMode } from "../../types";
@@ -12,6 +12,8 @@ const allCommunitiesFilter = "all";
 type CommunityPostProps = {
   post: ActivityPost;
   accessToken: string;
+  expanded?: boolean;
+  onOpen?: (postId: string) => void;
   onCommentCountChange: (postId: string, total: number) => void;
 };
 
@@ -25,18 +27,81 @@ function getAvatarLabel(label: string): string {
     .toUpperCase() || "K";
 }
 
-function CommunityPost({ post, accessToken, onCommentCountChange }: CommunityPostProps) {
+function getDetailTime(time: string): string {
+  const normalized = time.replace(/^hace\s+/i, "").trim();
+  const hourMatch = normalized.match(/^(\d+)\s*h$/i);
+  const minuteMatch = normalized.match(/^(\d+)\s*min$/i);
+  const dayMatch = normalized.match(/^(\d+)\s*d$/i);
+
+  if (hourMatch) return `${hourMatch[1]} ${hourMatch[1] === "1" ? "hora" : "horas"}`;
+  if (minuteMatch) return `${minuteMatch[1]} ${minuteMatch[1] === "1" ? "minuto" : "minutos"}`;
+  if (dayMatch) return `${dayMatch[1]} ${dayMatch[1] === "1" ? "dia" : "dias"}`;
+
+  return normalized;
+}
+
+function CommunityPost({ post, accessToken, expanded = false, onOpen, onCommentCountChange }: CommunityPostProps) {
+  function openPost(): void {
+    if (expanded) return;
+    onOpen?.(post.id);
+  }
+
+  function handlePostClick(event: MouseEvent<HTMLElement>): void {
+    if ((event.target as HTMLElement).closest("button, input, textarea, select, a")) return;
+    openPost();
+  }
+
+  function handlePostKeyDown(event: KeyboardEvent<HTMLElement>): void {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    openPost();
+  }
+
   return (
-    <article className="relative grid grid-cols-[40px_minmax(0,1fr)] gap-2 py-[10px]">
+    <article
+      className={cn(
+        "relative grid grid-cols-[40px_minmax(0,1fr)] gap-2",
+        expanded ? "py-0" : "py-[10px]",
+        expanded ? "animate-[rise_180ms_ease-out]" : "cursor-pointer"
+      )}
+      role={expanded ? undefined : "button"}
+      aria-label={expanded ? undefined : `Abrir post de ${post.author || "Kreis"}`}
+      tabIndex={expanded ? undefined : 0}
+      onClick={expanded ? undefined : handlePostClick}
+      onKeyDown={expanded ? undefined : handlePostKeyDown}
+    >
+      {!expanded ? (
+        <span
+          className="pointer-events-none absolute bottom-0 left-1/2 h-px w-screen -translate-x-1/2 bg-kreis-line"
+          aria-hidden="true"
+        />
+      ) : null}
       <span
-        className="pointer-events-none absolute bottom-0 left-1/2 h-px w-screen -translate-x-1/2 bg-kreis-line"
+        className={cn(
+          "mt-1 grid size-10 place-items-center rounded-full bg-kreis-event-surface text-[11px] font-medium uppercase leading-none text-kreis-orange",
+          expanded && "text-transparent"
+        )}
         aria-hidden="true"
-      />
-      <span className="mt-1 grid size-10 place-items-center rounded-full bg-kreis-event-surface text-[11px] font-medium uppercase leading-none text-kreis-orange" aria-hidden="true">
-        {post.icon || getAvatarLabel(post.communityName)}
+      >
+        {expanded ? null : post.icon || getAvatarLabel(post.communityName)}
       </span>
 
       <div className="min-w-0">
+        {expanded ? (
+          <div className="grid min-w-0">
+            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-normal leading-[15px] text-kreis-muted">
+              {post.communityName}
+            </span>
+            <div className="flex min-w-0 items-baseline gap-1.5">
+              <strong className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium leading-[15px] text-kreis-ink">
+                {post.author || "Kreis"}
+              </strong>
+              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-normal leading-[15px] text-kreis-muted">
+                &middot; {getDetailTime(post.time)}
+              </span>
+            </div>
+          </div>
+        ) : (
         <div className="flex min-w-0 items-baseline gap-1.5">
           <strong className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium leading-[15px] text-kreis-ink">
             {post.author || "Kreis"}
@@ -45,6 +110,7 @@ function CommunityPost({ post, accessToken, onCommentCountChange }: CommunityPos
             {post.communityName} · {post.time}
           </span>
         </div>
+        )}
 
         <p className="m-0 mt-[7px] whitespace-pre-wrap text-[12px] font-normal leading-[15px] text-kreis-ink">
           {post.text}
@@ -52,7 +118,9 @@ function CommunityPost({ post, accessToken, onCommentCountChange }: CommunityPos
 
         <PostComments
           accessToken={accessToken}
+          expanded={expanded}
           initialCount={post.comments}
+          onExpand={() => onOpen?.(post.id)}
           postId={post.id}
           score={post.score}
           onCountChange={onCommentCountChange}
@@ -122,6 +190,7 @@ export function CommunitiesScreen({
   onToggleTheme
 }: CommunitiesScreenProps) {
   const [activeFilter, setActiveFilter] = useState(allCommunitiesFilter);
+  const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
   const joinedCommunities = useMemo(
     () => communities.filter((community) => community.joined && community.status !== "Pendiente"),
     [communities]
@@ -130,10 +199,44 @@ export function CommunitiesScreen({
   const selectedFilter = activeFilter === allCommunitiesFilter || joinedCommunityIds.has(activeFilter)
     ? activeFilter
     : allCommunitiesFilter;
-  const feedPosts = posts
-    .filter((post) => joinedCommunityIds.has(post.communityId))
-    .filter((post) => selectedFilter === allCommunitiesFilter || post.communityId === selectedFilter);
+  const feedPosts = useMemo(
+    () => posts
+      .filter((post) => joinedCommunityIds.has(post.communityId))
+      .filter((post) => selectedFilter === allCommunitiesFilter || post.communityId === selectedFilter),
+    [joinedCommunityIds, posts, selectedFilter]
+  );
+  const expandedPost = expandedPostId ? feedPosts.find((post) => post.id === expandedPostId) ?? null : null;
   const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
+
+  useEffect(() => {
+    if (expandedPostId && !expandedPost) setExpandedPostId(null);
+  }, [expandedPost, expandedPostId]);
+
+  if (expandedPost) {
+    return (
+      <section className="grid min-w-0 w-full max-w-[430px] animate-[rise_220ms_ease-out] pt-[29px] sm:mx-auto" data-screen="communities-post-detail">
+        <h1 className="sr-only">Detalle de post</h1>
+
+        <div className="mb-[15px] flex h-[37px] items-center justify-end">
+          <button
+            className="grid size-[37px] place-items-center rounded-[12px] border-0 bg-kreis-event-surface p-0 text-kreis-muted shadow-none transition-[transform,color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95"
+            type="button"
+            aria-label="Cerrar post"
+            onClick={() => setExpandedPostId(null)}
+          >
+            <X aria-hidden="true" size={19} weight="bold" />
+          </button>
+        </div>
+
+        <CommunityPost
+          accessToken={accessToken}
+          expanded
+          post={expandedPost}
+          onCommentCountChange={onCommentCountChange}
+        />
+      </section>
+    );
+  }
 
   return (
     <section className="grid min-w-0 w-full max-w-[430px] animate-[rise_220ms_ease-out] pt-[63px] sm:mx-auto" data-screen="communities">
@@ -170,6 +273,7 @@ export function CommunitiesScreen({
           <CommunityPost
             accessToken={accessToken}
             key={post.id}
+            onOpen={setExpandedPostId}
             post={post}
             onCommentCountChange={onCommentCountChange}
           />

@@ -1,4 +1,4 @@
-import { Plus, X } from "@phosphor-icons/react";
+import { Plus, User, X } from "@phosphor-icons/react";
 import { WidgetAdd } from "@solar-icons/react";
 import { type KeyboardEvent, type MouseEvent, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../common/EmptyState";
@@ -17,14 +17,20 @@ type CommunityPostProps = {
   onCommentCountChange: (postId: string, total: number) => void;
 };
 
-function getAvatarLabel(label: string): string {
-  return label
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word.charAt(0))
-    .join("")
-    .toUpperCase() || "K";
+const avatarPlaceholderTones = [
+  "bg-[rgba(240,83,28,0.16)] text-kreis-orange",
+  "bg-[rgba(46,75,60,0.14)] text-kreis-forest",
+  "bg-[rgba(255,167,79,0.22)] text-kreis-forest"
+] as const;
+
+function getStableToneIndex(value: string): number {
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) % avatarPlaceholderTones.length;
+  }
+
+  return hash;
 }
 
 function getDetailTime(time: string): string {
@@ -77,12 +83,17 @@ function CommunityPost({ post, accessToken, expanded = false, onOpen, onCommentC
         />
       ) : null}
       <span
-        className="mt-1 grid size-10 place-items-center overflow-hidden rounded-full bg-kreis-event-surface text-[11px] font-medium uppercase leading-none text-kreis-orange"
+        className={cn(
+          "mt-1 grid size-10 place-items-center overflow-hidden rounded-full",
+          post.authorAvatarUrl ? "bg-kreis-event-surface" : avatarPlaceholderTones[getStableToneIndex(`${post.author}-${post.id}`)]
+        )}
         aria-hidden="true"
       >
         {post.authorAvatarUrl ? (
           <img className="size-full object-cover" src={post.authorAvatarUrl} alt="" loading="lazy" decoding="async" />
-        ) : post.icon || getAvatarLabel(post.author)}
+        ) : (
+          <User className="size-[21px]" weight="fill" aria-hidden="true" />
+        )}
       </span>
 
       <div className="min-w-0">

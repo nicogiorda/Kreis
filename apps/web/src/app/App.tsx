@@ -617,9 +617,13 @@ export default function App() {
               )}
               {!isEventDetail && screen === "profile" && (
                 <ProfileScreen
+                  communities={communities}
+                  events={events}
                   profile={userProfile}
+                  profileEmail={authSession.user.email}
                   profileLoadStatus={profileLoadStatus}
                   themeMode={themeMode}
+                  onOpenEventDetails={openEventDetails}
                   onToggleTheme={toggleTheme}
                   onLogout={logoutUser}
                 />

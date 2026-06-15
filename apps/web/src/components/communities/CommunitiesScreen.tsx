@@ -20,7 +20,7 @@ type CommunityPostProps = {
 const avatarPlaceholderTones = [
   "bg-[rgba(240,83,28,0.16)] text-kreis-orange",
   "bg-[rgba(46,75,60,0.14)] text-kreis-forest",
-  "bg-[rgba(255,167,79,0.22)] text-kreis-forest"
+  "bg-[rgba(255,167,79,0.22)] text-[#ffa74f]"
 ] as const;
 
 function getStableToneIndex(value: string): number {

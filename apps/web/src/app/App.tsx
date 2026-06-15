@@ -625,13 +625,13 @@ function AuthenticatedApp({ session }: { session: Session }) {
 
   return (
     <>
-      <PullToRefresh disabled={composerOpen} onRefresh={refreshAppData} />
-      <div
-        className={cn(
-          "app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden md:px-6",
-          isEventDetail ? "pb-0" : "pb-[var(--bottom-nav-clearance)]"
-        )}
-      >
+      <PullToRefresh disabled={composerOpen} onRefresh={refreshAppData}>
+        <div
+          className={cn(
+            "app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden md:px-6",
+            isEventDetail ? "pb-0" : "pb-[var(--bottom-nav-clearance)]"
+          )}
+        >
             {screen !== "profile" && screen !== "home" && screen !== "events" && screen !== "communities" ? (
               <Header
                 globalQuery={globalQuery}
@@ -723,7 +723,8 @@ function AuthenticatedApp({ session }: { session: Session }) {
               onCreateEvent={createEvent}
               onCreatePost={createPost}
             />
-      </div>
+        </div>
+      </PullToRefresh>
       {!isEventDetail && <BottomNav screen={screen} onNavigate={navigate} />}
     </>
   );

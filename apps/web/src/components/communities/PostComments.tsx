@@ -401,7 +401,9 @@ export function PostComments({
   }, [accessToken, onCountChange, postId]);
 
   useEffect(() => {
-    if (open && status === "idle") void loadComments();
+    if (!open || status !== "idle") return;
+
+    void Promise.resolve().then(loadComments);
   }, [loadComments, open, status]);
 
   function openThread(): void {

@@ -86,22 +86,6 @@ export type RegisterInput = {
   topicos: number[];
 };
 
-export type AuthSession = {
-  access_token: string;
-  refresh_token?: string;
-  expires_at?: number;
-  expires_in?: number;
-  [key: string]: unknown;
-};
-
-export type AuthResult = {
-  session: AuthSession;
-  user: {
-    id: string;
-    email?: string;
-  };
-};
-
 export async function listTopics(signal?: AbortSignal): Promise<TopicCatalogItem[]> {
   const response = await requestJson<{ topicos: TopicCatalogItem[] }>("/api/v1/users/topicos", { signal });
   return response.topicos;
@@ -127,25 +111,5 @@ export async function register(input: RegisterInput): Promise<void> {
   await requestJson("/api/v1/auth/register", {
     method: "POST",
     body: JSON.stringify(input)
-  });
-}
-
-export async function login(email: string, password: string): Promise<AuthResult> {
-  return requestJson<AuthResult>("/api/v1/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password })
-  });
-}
-
-export async function refreshSession(refreshToken: string): Promise<AuthResult> {
-  return requestJson<AuthResult>("/api/v1/auth/refresh", {
-    method: "POST",
-    body: JSON.stringify({ refresh_token: refreshToken })
-  });
-}
-
-export async function logout(): Promise<void> {
-  await requestJson("/api/v1/auth/logout", {
-    method: "POST"
   });
 }

@@ -1,7 +1,7 @@
 import { ArrowLeft, Plus } from "@phosphor-icons/react";
 import { type ChangeEvent, type ReactNode, useEffect, useLayoutEffect, useState } from "react";
-import { ApiRequestError, classifyCertificate, listFaculties, listTopics, login, register } from "../../api/auth";
-import type { AuthResult, CertificateClassificationResult, FacultyCatalogItem, TopicCatalogItem } from "../../api/auth";
+import { ApiRequestError, classifyCertificate, listFaculties, listTopics, register } from "../../api/auth";
+import type { CertificateClassificationResult, FacultyCatalogItem, TopicCatalogItem } from "../../api/auth";
 import onboardingEventsUrl from "../../assets/auth/onboarding-events.webp";
 import signUpOneUrl from "../../assets/auth/signup-1.webp";
 import signUpTwoUrl from "../../assets/auth/signup-2.webp";
@@ -12,11 +12,8 @@ import invertedLogoUrl from "../../assets/brand/svgs/IMAGOTIPO-INVERTIDO.svg";
 import greetingCharacterUrl from "../../assets/characters/kreisito_saludando.webp";
 import { LoadingState } from "../common/LoadingState";
 import { cn } from "../../utils/cn";
+import { useAuth } from "../../auth/useAuth";
 import { AuthDecorLayer, AuthScreenFrame, AuthShell } from "./AuthLayout";
-
-type AuthFlowProps = {
-  onComplete: (auth: AuthResult) => void;
-};
 
 type AuthStep = "welcome" | "events" | "communities" | "university" | "interests" | "profile" | "password" | "certificate" | "login";
 type CatalogStatus = "loading" | "ready" | "error";
@@ -467,7 +464,8 @@ function CertificateScreen({
   );
 }
 
-function LoginScreen({ onBack, onComplete }: { onBack: () => void; onComplete: (auth: AuthResult) => void }) {
+function LoginScreen({ onBack }: { onBack: () => void }) {
+  const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -478,7 +476,7 @@ function LoginScreen({ onBack, onComplete }: { onBack: () => void; onComplete: (
     setError(null);
 
     try {
-      onComplete(await login(email.trim(), password));
+      await signIn(email.trim(), password);
     } catch (requestError) {
       setError(getAuthErrorMessage(requestError));
     } finally {
@@ -502,7 +500,8 @@ function LoginScreen({ onBack, onComplete }: { onBack: () => void; onComplete: (
   );
 }
 
-export function AuthFlow({ onComplete }: AuthFlowProps) {
+export function AuthFlow() {
+  const { signIn } = useAuth();
   const [step, setStep] = useState<AuthStep>("welcome");
   const [draft, setDraft] = useState<SignupDraft>(emptySignupDraft);
   const [topics, setTopics] = useState<TopicCatalogItem[]>([]);
@@ -605,7 +604,7 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
         topicos: draft.topicIds.map(Number)
       });
 
-      onComplete(await login(email, draft.password));
+      await signIn(email, draft.password);
     } catch (requestError) {
       setSubmissionError(getAuthErrorMessage(requestError));
     } finally {
@@ -634,7 +633,7 @@ export function AuthFlow({ onComplete }: AuthFlowProps) {
           }}
         />
       )}
-      {step === "login" && <LoginScreen onBack={() => setStep("welcome")} onComplete={onComplete} />}
+      {step === "login" && <LoginScreen onBack={() => setStep("welcome")} />}
     </AuthShell>
   );
 }

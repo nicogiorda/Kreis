@@ -1,3 +1,5 @@
+/* global process, URL, window, document, navigator, caches, requestAnimationFrame, HTMLInputElement, HTMLSelectElement, Event, console */
+
 import { execFileSync, execSync } from "node:child_process";
 
 const baseUrl = process.env.AUTH_LAYOUT_URL ?? process.argv[2] ?? "http://127.0.0.1:5173";

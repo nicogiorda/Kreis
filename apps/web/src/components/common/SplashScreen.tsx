@@ -1,46 +1,44 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { AnimationEvent } from "react";
 import splashIsotypeUrl from "../../assets/brand/isotype-inverted-splash.svg";
 import splashLogoUrl from "../../assets/brand/logo-inverted.png";
+import { markStartup } from "../../startup/startup-debug";
 
-const SPLASH_DURATION_MS = 2180;
-const REDUCED_MOTION_DURATION_MS = 720;
+export type SplashPhase = "intro" | "holding" | "exiting";
+
+type SplashScreenProps = {
+  phase: SplashPhase;
+  onExitComplete: () => void;
+};
 
 function clearFirstPaintFallback(): void {
   document.getElementById("kreis-first-paint")?.remove();
 }
 
-export function SplashScreen() {
-  const [visible, setVisible] = useState(true);
-
+export function SplashScreen({ phase, onExitComplete }: SplashScreenProps) {
   useEffect(() => {
     const firstPaintFrame = window.requestAnimationFrame(() => {
       clearFirstPaintFallback();
     });
 
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const timeout = window.setTimeout(
-      () => setVisible(false),
-      prefersReducedMotion ? REDUCED_MOTION_DURATION_MS : SPLASH_DURATION_MS,
-    );
+    markStartup("splash-mounted");
 
     return () => {
       window.cancelAnimationFrame(firstPaintFrame);
-      window.clearTimeout(timeout);
       clearFirstPaintFallback();
     };
   }, []);
 
-  if (!visible) return null;
-
   function handleExitAnimationEnd(event: AnimationEvent<HTMLElement>): void {
     if (event.currentTarget !== event.target) return;
+    if (phase !== "exiting") return;
 
-    setVisible(false);
+    markStartup("splash-exit-end");
+    onExitComplete();
   }
 
   return (
-    <section className="splash-screen fixed left-0 top-0 z-[100] w-full overflow-hidden bg-kreis-orange text-[oklch(97%_0.025_76)] pointer-events-auto isolate" role="status" aria-label="Cargando Kreis" onAnimationEnd={handleExitAnimationEnd}>
+    <section className={`splash-screen splash-screen--${phase} fixed left-0 top-0 z-[100] w-full overflow-hidden bg-kreis-orange text-[oklch(97%_0.025_76)] pointer-events-auto isolate`} role="status" aria-label="Cargando Kreis" onAnimationEnd={handleExitAnimationEnd}>
       <div className="splash-layout-frame">
         <div className="hidden" aria-hidden="true">
           <span />

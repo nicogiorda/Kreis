@@ -19,6 +19,7 @@ import { ComposerModal } from "../components/composer/ComposerModal";
 import { CommunitiesScreen } from "../components/communities/CommunitiesScreen";
 import { EventDetailScreen } from "../components/events/EventDetailScreen";
 import { EventsScreen } from "../components/events/EventsScreen";
+import { PullToRefresh } from "../components/common/PullToRefresh";
 import { SplashScreen, type SplashPhase } from "../components/common/SplashScreen";
 import { ServiceWorkerUpdateBanner } from "../components/common/ServiceWorkerUpdateBanner";
 import { StartupDebugPanel } from "../components/common/StartupDebugPanel";
@@ -567,8 +568,64 @@ function AuthenticatedApp({ session }: { session: Session }) {
       .finally(() => setComposerSubmitting(false));
   }
 
+  async function refreshAppData(): Promise<void> {
+    const [
+      upcomingEventsResult,
+      eventsResult,
+      communitiesResult,
+      postsResult,
+      profileResult,
+      topicsResult,
+      eventDetailResult
+    ] = await Promise.allSettled([
+      listUpcomingEvents(accessToken),
+      listAllEvents(accessToken),
+      listCommunities(accessToken),
+      listPosts(accessToken),
+      getMyProfile(accessToken),
+      listTopics(),
+      eventDetailId ? getEventDetail(eventDetailId, accessToken) : Promise.resolve(null)
+    ]);
+
+    if (upcomingEventsResult.status === "fulfilled") setUpcomingEvents(upcomingEventsResult.value);
+    if (eventsResult.status === "fulfilled") {
+      setEvents(() => {
+        if (eventDetailResult.status !== "fulfilled" || !eventDetailResult.value) return eventsResult.value;
+
+        return eventsResult.value.map((item) => item.id === eventDetailResult.value?.id ? eventDetailResult.value : item);
+      });
+    }
+    if (upcomingEventsResult.status === "fulfilled" && eventsResult.status === "fulfilled") {
+      setEventLoadStatus("ready");
+    }
+    if (communitiesResult.status === "fulfilled") setCommunities(communitiesResult.value);
+    if (postsResult.status === "fulfilled") setActivity(postsResult.value);
+    if (profileResult.status === "fulfilled") {
+      setUserProfile(profileResult.value);
+      setProfileLoadStatus("ready");
+    }
+    if (topicsResult.status === "fulfilled") {
+      setEventTopics(topicsResult.value.map((topic) => ({
+        id: topic.id_topico,
+        name: topic.topico
+      })));
+      setEventTopicsStatus("ready");
+    }
+    if (eventDetailResult.status === "fulfilled" && eventDetailResult.value) {
+      setUpcomingEvents((items) => items.map((item) => item.id === eventDetailResult.value?.id ? eventDetailResult.value : item));
+    }
+
+    const failed = [upcomingEventsResult, eventsResult, communitiesResult, postsResult, profileResult, topicsResult, eventDetailResult]
+      .some((result) => result.status === "rejected");
+
+    if (failed) {
+      throw new Error("Refresh failed");
+    }
+  }
+
   return (
     <>
+      <PullToRefresh disabled={composerOpen} onRefresh={refreshAppData} />
       <div
         className={cn(
           "app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden md:px-6",

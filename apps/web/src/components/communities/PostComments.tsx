@@ -292,13 +292,13 @@ function DetailCommentNode({
 }: CommentNodeProps) {
   const isReplying = replyingTo === comment.id;
   const hasReplies = comment.replies.length > 0;
-  const indent = depth === 0 ? 0 : depth === 1 ? 20 : 37;
+  const indent = depth === 0 ? 0 : 18;
 
   return (
     <div className="relative min-w-0" style={{ marginLeft: indent }}>
       {hasReplies ? (
         <span
-          className="pointer-events-none absolute bottom-[-17px] left-0 top-[70px] w-px bg-kreis-line"
+          className="pointer-events-none absolute bottom-0 left-0 top-[70px] w-px bg-kreis-line"
           aria-hidden="true"
         />
       ) : null}
@@ -498,7 +498,7 @@ export function PostComments({
 
       {open ? (
         expanded ? (
-          <div className="relative ml-[-48px] mt-[13px] grid gap-[14px] pt-[14px] before:pointer-events-none before:absolute before:left-[calc(var(--page-gutter)*-1)] before:top-0 before:h-px before:w-screen before:bg-kreis-line">
+          <div className="relative ml-[-52px] mt-[13px] grid gap-[14px] pt-[14px] before:pointer-events-none before:absolute before:left-[calc(var(--page-gutter)*-1)] before:top-0 before:h-px before:w-screen before:bg-kreis-line">
             {status === "loading" ? (
               <LoadingState label="Cargando comentarios" variant="inline" className="ml-12" />
             ) : null}

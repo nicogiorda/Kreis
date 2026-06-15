@@ -214,7 +214,7 @@ export function CommunitiesScreen({
 
   if (expandedPost) {
     return (
-      <section className="grid min-w-0 w-full max-w-[430px] animate-[rise_220ms_ease-out] pt-[29px] sm:mx-auto" data-screen="communities-post-detail">
+      <section className="grid min-w-0 w-full max-w-[430px] animate-[rise_220ms_ease-out] pt-[max(29px,calc(env(safe-area-inset-top)+14px))] sm:mx-auto" data-screen="communities-post-detail">
         <h1 className="sr-only">Detalle de post</h1>
 
         <div className="mb-[15px] flex h-[37px] items-center justify-end">

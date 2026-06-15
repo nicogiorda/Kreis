@@ -8,6 +8,7 @@ type PostResponse = {
   autor: {
     nombre: string;
     apellido: string;
+    avatar_url?: string | null;
   };
   comunidad: {
     id: string;
@@ -70,6 +71,7 @@ function adaptPost(post: PostResponse): ActivityPost {
     communityName: post.comunidad.nombre,
     icon: getCommunityIcon(post.comunidad.nombre),
     author: `${post.autor.nombre} ${post.autor.apellido}`.trim(),
+    authorAvatarUrl: post.autor.avatar_url ?? null,
     time: formatPostTime(post.created_at),
     title: "Nuevo post",
     text: post.cuerpo,

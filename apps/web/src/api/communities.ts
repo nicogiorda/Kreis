@@ -42,13 +42,18 @@ function getCommunityIcon(name: string): string {
 }
 
 function adaptCommunity(community: CommunityResponse): Community {
-  const category = community.topicos[0]?.topico ?? "General";
+  const topics = community.topicos.map((topic) => ({
+    id: topic.id_topico,
+    name: topic.topico
+  }));
+  const category = topics[0]?.name ?? "General";
 
   return {
     id: community.id,
     name: community.nombre,
     members: community.miembros,
     category,
+    topics,
     icon: getCommunityIcon(community.nombre),
     joined: community.joined,
     recommended: true,

@@ -163,6 +163,7 @@ export type UserProfileWithRelations = {
   rol: string;
   verificado: boolean;
   created_at: Date;
+  avatar_url: string | null;
   facultad: { id_facultad: bigint; nombre: string };
   evento: EventSummary[];                                       // eventos creados por el usuario
   user_evento: Array<{ evento: EventSummary }>;                // eventos en que se anoto
@@ -240,3 +241,14 @@ export async function listFacultades(): Promise<FacultadCatalogItem[]> {
   });
 }
 
+
+export async function updateUserAvatarUrl(
+  legajo: number,
+  avatarUrl: string
+): Promise<UserProfileWithRelations> {
+  return prisma.usuario.update({
+    where: { legajo },
+    data: { avatar_url: avatarUrl },
+    include: userProfileInclude
+  });
+}

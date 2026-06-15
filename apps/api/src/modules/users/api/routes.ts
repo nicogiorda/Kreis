@@ -18,10 +18,12 @@
 //     - 404 si el token es valido pero el usuario no tiene perfil en la BD
 //     - 200 con el perfil serializado si todo esta bien
 
-import { Router } from "express";
+import multer from "multer";
+import sharp from "sharp";
+import { type NextFunction, type Request, type Response, Router } from "express";
 import { createClient } from "@supabase/supabase-js";
 import { config } from "../../../core/config";
-import { findUserProfileByAuthId, listFacultades, listTopicos, updateUserRol } from "../data/users-repository";
+import { findUserProfileByAuthId, listFacultades, listTopicos, updateUserAvatarUrl, updateUserRol } from "../data/users-repository";
 import { serializeUserProfile } from "./serialize-user-profile";
 
 // Cliente Supabase con la anon key, usado unicamente para verificar el JWT
@@ -30,6 +32,57 @@ const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
 
+const supabaseAdmin = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false }
+});
+
+const avatarFieldName = "avatar";
+const avatarBucketName = "profile-images";
+const maxAvatarSizeBytes = 2 * 1024 * 1024;
+const allowedAvatarMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: maxAvatarSizeBytes,
+    files: 1
+  },
+  fileFilter(_request, file, callback) {
+    if (!allowedAvatarMimeTypes.has(file.mimetype)) {
+      callback(new Error("La foto de perfil debe ser JPG, PNG o WebP."));
+      return;
+    }
+
+    callback(null, true);
+  }
+});
+
+
+function uploadAvatar(request: Request, response: Response, next: NextFunction): void {
+  avatarUpload.single(avatarFieldName)(request, response, (error) => {
+    if (!error) {
+      next();
+      return;
+    }
+
+    if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+      response.status(413).json({
+        error: {
+          code: "avatar_too_large",
+          message: "La foto de perfil no puede superar los 2 MB."
+        }
+      });
+      return;
+    }
+
+    response.status(400).json({
+      error: {
+        code: "invalid_avatar_file",
+        message: error instanceof Error ? error.message : "Foto de perfil invalida."
+      }
+    });
+  });
+}
 export function createUsersRouter(): Router {
   const router = Router();
 
@@ -118,6 +171,93 @@ export function createUsersRouter(): Router {
     }
   });
 
+  // POST /users/me/avatar
+  // Actualiza la foto de perfil del usuario autenticado.
+  // Requiere header: Authorization: Bearer <jwt>
+  // Body multipart/form-data: avatar=<archivo JPG|PNG|WebP>
+  router.post("/me/avatar", uploadAvatar, async (request, response, next) => {
+    try {
+      const authHeader = request.headers["authorization"];
+      const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+      if (!token) {
+        response.status(401).json({
+          error: {
+            code: "unauthorized",
+            message: "Se requiere autenticacion"
+          }
+        });
+        return;
+      }
+
+      const { data, error } = await supabase.auth.getUser(token);
+
+      if (error || !data.user) {
+        response.status(401).json({
+          error: {
+            code: "invalid_token",
+            message: "Token invalido o expirado"
+          }
+        });
+        return;
+      }
+
+      if (!request.file) {
+        response.status(400).json({
+          error: {
+            code: "missing_avatar",
+            message: `El archivo debe enviarse en el campo ${avatarFieldName}.`
+          }
+        });
+        return;
+      }
+
+      const user = await findUserProfileByAuthId(data.user.id);
+
+      if (!user) {
+        response.status(404).json({
+          error: {
+            code: "profile_not_found",
+            message: "Perfil de usuario no encontrado"
+          }
+        });
+        return;
+      }
+
+      const avatarBuffer = await sharp(request.file.buffer)
+        .rotate()
+        .resize(512, 512, { fit: "cover" })
+        .webp({ quality: 80 })
+        .toBuffer();
+      const avatarPath = `profiles/${user.legajo}/avatar.webp`;
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from(avatarBucketName)
+        .upload(avatarPath, avatarBuffer, {
+          contentType: "image/webp",
+          upsert: true
+        });
+
+      if (uploadError) {
+        response.status(502).json({
+          error: {
+            code: "avatar_upload_failed",
+            message: uploadError.message
+          }
+        });
+        return;
+      }
+
+      const { data: publicUrlData } = supabaseAdmin.storage
+        .from(avatarBucketName)
+        .getPublicUrl(avatarPath);
+      const avatarUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
+      const updatedUser = await updateUserAvatarUrl(user.legajo, avatarUrl);
+
+      response.json({ user: serializeUserProfile(updatedUser) });
+    } catch (error) {
+      next(error);
+    }
+  });
   // [DEV ONLY] Cambia el rol de un usuario por legajo.
   // Esta ruta NO existe en producción — devuelve 404 si NODE_ENV es "production".
   // Sirve para testear rutas protegidas por rol sin tocar la base de datos manualmente.

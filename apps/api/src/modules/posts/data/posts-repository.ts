@@ -7,7 +7,8 @@ const postInclude = {
     select: {
       legajo: true,
       nombre: true,
-      apellido: true
+      apellido: true,
+      avatar_url: true
     }
   },
   comunidad: {
@@ -33,6 +34,7 @@ export type CommunityPost = {
     legajo: number;
     nombre: string;
     apellido: string;
+    avatar_url: string | null;
   };
   comunidad: {
     id_comunidad: bigint;

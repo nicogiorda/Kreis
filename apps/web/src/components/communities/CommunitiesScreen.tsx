@@ -77,13 +77,12 @@ function CommunityPost({ post, accessToken, expanded = false, onOpen, onCommentC
         />
       ) : null}
       <span
-        className={cn(
-          "mt-1 grid size-10 place-items-center rounded-full bg-kreis-event-surface text-[11px] font-medium uppercase leading-none text-kreis-orange",
-          expanded && "text-transparent"
-        )}
+        className="mt-1 grid size-10 place-items-center overflow-hidden rounded-full bg-kreis-event-surface text-[11px] font-medium uppercase leading-none text-kreis-orange"
         aria-hidden="true"
       >
-        {expanded ? null : post.icon || getAvatarLabel(post.communityName)}
+        {post.authorAvatarUrl ? (
+          <img className="size-full object-cover" src={post.authorAvatarUrl} alt="" loading="lazy" decoding="async" />
+        ) : post.icon || getAvatarLabel(post.author)}
       </span>
 
       <div className="min-w-0">

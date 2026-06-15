@@ -597,6 +597,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
                   events={homeEvents}
                   eventLoadStatus={eventLoadStatus}
                   communities={visibleCommunities}
+                  profileTopics={userProfile?.topics ?? []}
                   homeTab={homeTab}
                   themeMode={themeMode}
                   onHomeTab={setHomeTab}

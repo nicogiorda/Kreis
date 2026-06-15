@@ -6,6 +6,7 @@ import { EventCard } from "../events/EventCard";
 import { HeroBanner } from "./HeroBanner";
 import type { Community, EventLoadStatus, HomeTab, KreisEvent, ThemeMode } from "../../types";
 import { cn } from "../../utils/cn";
+import { normalize } from "../../utils/text";
 
 function pairItems<T>(items: T[]): T[][] {
   const pairs: T[][] = [];
@@ -44,10 +45,21 @@ function CommunityShelf({ title, communities, onToggleJoin }: CommunityShelfProp
   );
 }
 
+function getCommunityInterestScore(community: Community, profileTopicSet: Set<string>): number {
+  if (!profileTopicSet.size) return 0;
+
+  const communityTopics = community.topics?.length
+    ? community.topics.map((topic) => topic.name)
+    : [community.category];
+
+  return communityTopics.reduce((score, topic) => score + (profileTopicSet.has(normalize(topic)) ? 1 : 0), 0);
+}
+
 type HomeScreenProps = {
   events: KreisEvent[];
   eventLoadStatus: EventLoadStatus;
   communities: Community[];
+  profileTopics?: string[];
   homeTab: HomeTab;
   themeMode: ThemeMode;
   onHomeTab: (tab: HomeTab) => void;
@@ -62,6 +74,7 @@ export function HomeScreen({
   events,
   eventLoadStatus,
   communities,
+  profileTopics = [],
   homeTab,
   themeMode,
   onHomeTab,
@@ -71,8 +84,28 @@ export function HomeScreen({
   onToggleTheme,
   onToggleJoin
 }: HomeScreenProps) {
-  const recommendedCommunities = communities.filter((community) => community.recommended);
-  const popularCommunities = communities.filter((community) => community.popular).sort((current, next) => next.members - current.members);
+  const visibleCommunities = communities.filter((community) => community.status !== "Pendiente");
+  const profileTopicSet = new Set(profileTopics.map((topic) => normalize(topic)).filter(Boolean));
+  const recommendedCommunitiesByInterest = visibleCommunities
+    .map((community) => ({
+      community,
+      score: getCommunityInterestScore(community, profileTopicSet)
+    }))
+    .filter(({ community, score }) => score > 0 && !community.joined)
+    .sort((current, next) => next.score - current.score || next.community.members - current.community.members || current.community.name.localeCompare(next.community.name))
+    .map(({ community }) => community);
+  const recommendedCommunities = visibleCommunities.filter((community) => community.recommended && !community.joined);
+  const generalRecommendedCommunities = visibleCommunities.filter((community) => community.recommended);
+  const fallbackRecommendedCommunities = recommendedCommunities.length
+    ? recommendedCommunitiesByInterest.length
+      ? recommendedCommunitiesByInterest
+      : recommendedCommunities
+    : generalRecommendedCommunities.length
+      ? generalRecommendedCommunities
+      : visibleCommunities;
+  const popularCommunities = [...visibleCommunities]
+    .sort((current, next) => next.members - current.members || current.name.localeCompare(next.name))
+    .slice(0, 12);
   const eventsPanelRef = useRef<HTMLDivElement>(null);
   const communitiesPanelRef = useRef<HTMLDivElement>(null);
   const [tabPanelHeight, setTabPanelHeight] = useState(0);
@@ -167,9 +200,9 @@ export function HomeScreen({
                   aria-hidden={homeTab !== "communities"}
                   inert={homeTab !== "communities"}
                 >
-                  {communities.length ? (
+                  {visibleCommunities.length ? (
                     <div className="grid gap-[22px]">
-                      <CommunityShelf title="Recomendadas para vos" communities={recommendedCommunities} onToggleJoin={onToggleJoin} />
+                      <CommunityShelf title="Recomendadas para vos" communities={fallbackRecommendedCommunities} onToggleJoin={onToggleJoin} />
                       <CommunityShelf title="Más populares" communities={popularCommunities} onToggleJoin={onToggleJoin} />
                     </div>
                   ) : (

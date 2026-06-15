@@ -44,6 +44,7 @@ export type Community = {
   name: string;
   members: number;
   category: string;
+  topics?: KreisTopic[];
   icon: string;
   joined: boolean;
   recommended: boolean;
@@ -59,6 +60,7 @@ export type ActivityPost = {
   communityName: string;
   icon: string;
   author: string;
+  authorAvatarUrl?: string | null;
   time: string;
   title: string;
   text: string;

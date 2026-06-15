@@ -8,7 +8,8 @@ export function serializePost(post: CommunityPost) {
     autor: {
       legajo: post.usuario.legajo,
       nombre: post.usuario.nombre,
-      apellido: post.usuario.apellido
+      apellido: post.usuario.apellido,
+      avatar_url: post.usuario.avatar_url
     },
     comunidad: {
       id: post.comunidad.id_comunidad.toString(),

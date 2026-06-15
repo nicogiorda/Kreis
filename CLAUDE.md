@@ -2,7 +2,7 @@
 
 ## Producto
 
-Kreis es una PWA mobile-first para estudiantes universitarios (centro actual: UADE). Ayuda a descubrir eventos del campus, unirse a comunidades de interés y publicar posts dentro de esas comunidades. El tono es energético, cálido, local y estudiantil — no una plataforma corporativa de eventos.
+Kreis es una PWA mobile-first para estudiantes universitarios (centro actual: UADE). Ayuda a descubrir eventos del campus, unirse a comunidades de interés y publicar posts dentro de las mismas. El tono es energético, cálido, local y estudiantil — no una plataforma corporativa de eventos.
 
 ## Stack técnico
 

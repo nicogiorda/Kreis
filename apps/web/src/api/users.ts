@@ -1,4 +1,4 @@
-import { bearerTokenHeaders, requestJson } from "./client";
+import { bearerTokenHeaders, requestFormData, requestJson } from "./client";
 
 type UserProfileResponse = {
   legajo: number;
@@ -6,6 +6,7 @@ type UserProfileResponse = {
   apellido: string;
   rol?: string;
   verificado?: boolean;
+  avatar_url?: string | null;
   facultad: {
     nombre: string;
   };
@@ -25,6 +26,7 @@ export type KreisUserProfile = {
   faculty: string;
   role?: string;
   verified?: boolean;
+  avatarUrl?: string | null;
   topics: string[];
   stats: {
     createdEvents: number;
@@ -50,6 +52,32 @@ export async function getMyProfile(accessToken: string, signal?: AbortSignal): P
     faculty: response.user.facultad.nombre,
     role: response.user.rol,
     verified: response.user.verificado,
+    avatarUrl: response.user.avatar_url ?? null,
+    topics: response.user.topicos?.map((topic) => topic.topico).filter(Boolean) ?? [],
+    stats: {
+      createdEvents: countItems(response.user.eventos_creados),
+      enrolledEvents: countItems(response.user.eventos_anotado),
+      createdCommunities: countItems(response.user.comunidades_creadas),
+      joinedCommunities: countItems(response.user.comunidades_miembro)
+    }
+  };
+}
+
+export async function uploadMyAvatar(accessToken: string, avatar: File): Promise<KreisUserProfile> {
+  const formData = new FormData();
+  formData.append("avatar", avatar);
+
+  const response = await requestFormData<{ user: UserProfileResponse }>("/api/v1/users/me/avatar", formData, {
+    headers: bearerTokenHeaders(accessToken)
+  });
+
+  return {
+    legajo: response.user.legajo,
+    name: `${response.user.nombre} ${response.user.apellido}`.trim(),
+    faculty: response.user.facultad.nombre,
+    role: response.user.rol,
+    verified: response.user.verificado,
+    avatarUrl: response.user.avatar_url ?? null,
     topics: response.user.topicos?.map((topic) => topic.topico).filter(Boolean) ?? [],
     stats: {
       createdEvents: countItems(response.user.eventos_creados),

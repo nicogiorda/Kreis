@@ -57,6 +57,7 @@ export function serializeUserProfile(user: UserProfileWithRelations) {
     rol: user.rol,
     verificado: user.verificado,
     created_at: serializeDate(user.created_at),
+    avatar_url: user.avatar_url,
     facultad: {
       id_facultad: serializeBigInt(user.facultad.id_facultad),
       nombre: user.facultad.nombre

@@ -25,6 +25,7 @@ function serializeEvent(event: EventSummary) {
     ubicacion: event.ubicacion,
     fecha_inicio: serializeDate(event.fecha_inicio),
     descripcion: event.descripcion,
+    imagen_url: event.imagen_url,
     estado: event.estado,
     created_at: serializeDate(event.created_at),
     topicos: event.evento_topico.map((et) => ({

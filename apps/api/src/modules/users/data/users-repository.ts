@@ -42,6 +42,7 @@ const userProfileInclude = {
       ubicacion: true,
       fecha_inicio: true,
       descripcion: true,
+      imagen_url: true,
       estado: true,
       created_at: true,
       // Topicos asociados al evento (tabla intermedia evento_topico -> topico)
@@ -63,6 +64,7 @@ const userProfileInclude = {
           ubicacion: true,
           fecha_inicio: true,
           descripcion: true,
+          imagen_url: true,
           estado: true,
           created_at: true,
           evento_topico: {
@@ -136,6 +138,7 @@ type EventSummary = {
   ubicacion: string | null;
   fecha_inicio: Date;
   descripcion: string | null;
+  imagen_url: string | null;
   estado: string;
   created_at: Date;
   evento_topico: EventTopico[];

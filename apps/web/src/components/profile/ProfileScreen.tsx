@@ -1,6 +1,6 @@
 import { GearSix, PencilSimple, SignOut } from "@phosphor-icons/react";
 import { AltArrowRight, MapPoint, UsersGroupRounded } from "@solar-icons/react";
-import { useMemo, useState } from "react";
+import { type ChangeEvent, useMemo, useRef, useState } from "react";
 import type { KreisUserProfile } from "../../api/users";
 import type { Community, KreisEvent, ThemeMode } from "../../types";
 import { cn } from "../../utils/cn";
@@ -18,6 +18,7 @@ type ProfileScreenProps = {
   themeMode: ThemeMode;
   onOpenEventDetails: (eventId: string) => void;
   onToggleTheme: () => void;
+  onUploadAvatar: (file: File) => Promise<void>;
   onLogout: () => void;
 };
 
@@ -112,24 +113,42 @@ export function ProfileScreen({
   themeMode,
   onOpenEventDetails,
   onToggleTheme,
+  onUploadAvatar,
   onLogout
 }: ProfileScreenProps) {
   const [activeTab, setActiveTab] = useState<ProfileTab>("created-events");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const displayName = profile?.name || "Mi perfil";
   const facultyLabel = profile?.faculty ? `UADE | ${profile.faculty}` : "UADE";
   const joinedCommunities = useMemo(
     () => communities.filter((community) => community.joined && community.status !== "Pendiente"),
     [communities]
   );
-  const createdEvents = useMemo(() => {
-    const createdCount = profile?.stats.createdEvents ?? 0;
-    if (!createdCount) return [];
-    return events.slice(0, createdCount);
-  }, [events, profile?.stats.createdEvents]);
+  const createdEvents = profile?.createdEvents ?? [];
   const interestedEvents = useMemo(() => events.filter((event) => event.interested), [events]);
   const activeIndex = Math.max(0, getTabIndex(activeTab));
   const nextThemeLabel = themeMode === "dark" ? "Modo claro" : "Modo oscuro";
+
+  async function handleAvatarChange(event: ChangeEvent<HTMLInputElement>): Promise<void> {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    setAvatarUploading(true);
+    setAvatarError(null);
+
+    try {
+      await onUploadAvatar(file);
+    } catch {
+      setAvatarError("No pudimos actualizar la foto.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
 
   return (
     <section className="mx-auto w-full max-w-[357px] animate-[rise_220ms_ease-out] pb-6 pt-[max(64px,calc(env(safe-area-inset-top)+12px))] text-kreis-ink" data-screen="profile">
@@ -182,15 +201,28 @@ export function ProfileScreen({
               <img className="size-full object-cover" src={profile.avatarUrl} alt="" loading="lazy" decoding="async" />
             ) : null}
           </div>
+          <input
+            ref={avatarInputRef}
+            className="hidden"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={(event) => void handleAvatarChange(event)}
+          />
           <button
-            className="absolute bottom-[3px] right-0 grid size-7 place-items-center rounded-full border-0 bg-kreis-orange p-0 text-kreis-cream shadow-none transition-transform duration-150 ease-out active:scale-95"
+            className="absolute bottom-[3px] right-0 grid size-7 place-items-center rounded-full border-0 bg-kreis-orange p-0 text-kreis-cream shadow-none transition-transform duration-150 ease-out active:scale-95 disabled:opacity-70"
             type="button"
-            aria-label="Editar foto de perfil"
-            title="La edicion de foto estara disponible proximamente"
+            aria-label={avatarUploading ? "Subiendo foto de perfil" : "Editar foto de perfil"}
+            title="Cambiar foto de perfil"
+            disabled={avatarUploading || profileLoadStatus !== "ready"}
+            onClick={() => avatarInputRef.current?.click()}
           >
             <PencilSimple className="size-[14px]" weight="bold" aria-hidden="true" />
           </button>
         </div>
+
+        {avatarError ? (
+          <p className="m-0 mt-[8px] text-center text-[12px] font-normal leading-[15px] text-kreis-orange">{avatarError}</p>
+        ) : null}
 
         <h2 className="m-0 mt-[13px] max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-center text-[24px] font-bold leading-[30px] text-kreis-ink">
           {displayName}

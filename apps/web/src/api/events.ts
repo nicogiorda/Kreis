@@ -2,12 +2,12 @@ import type { EventTone, KreisEvent } from "../types";
 import { normalize } from "../utils/text";
 import { bearerTokenHeaders, requestJson } from "./client";
 
-type EventTopic = {
+export type EventTopic = {
   id_topico: string;
   topico: string;
 };
 
-type EventSummary = {
+export type EventSummary = {
   id_evento: string;
   nombre: string;
   ubicacion: string | null;
@@ -15,7 +15,7 @@ type EventSummary = {
   descripcion: string | null;
   imagen_url?: string | null;
   topicos: EventTopic[];
-  interested: boolean;
+  interested?: boolean;
 };
 
 type EventDetail = EventSummary & {
@@ -78,7 +78,7 @@ function getEventTone(category: string): EventTone {
   return "orange";
 }
 
-function adaptEvent(event: EventSummary): KreisEvent {
+export function adaptEvent(event: EventSummary): KreisEvent {
   const startDate = new Date(event.fecha_inicio);
   const day = getDatePart(startDate, "day");
   const month = getDatePart(startDate, "month").replace(".", "").toUpperCase();
@@ -101,7 +101,7 @@ function adaptEvent(event: EventSummary): KreisEvent {
     topics,
     icon: getEventIcon(event.nombre),
     tone: getEventTone(category),
-    interested: event.interested,
+    interested: Boolean(event.interested),
     description: event.descripcion ?? "Todavia no hay una descripcion para este evento.",
     time: timeFormatter.format(startDate),
     official,

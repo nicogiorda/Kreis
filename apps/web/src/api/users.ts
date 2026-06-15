@@ -1,3 +1,5 @@
+import type { KreisEvent } from "../types";
+import { adaptEvent, type EventSummary } from "./events";
 import { bearerTokenHeaders, requestFormData, requestJson } from "./client";
 
 type UserProfileResponse = {
@@ -10,8 +12,8 @@ type UserProfileResponse = {
   facultad: {
     nombre: string;
   };
-  eventos_creados?: unknown[];
-  eventos_anotado?: unknown[];
+  eventos_creados?: EventSummary[];
+  eventos_anotado?: EventSummary[];
   comunidades_creadas?: unknown[];
   comunidades_miembro?: unknown[];
   topicos?: Array<{
@@ -28,6 +30,7 @@ export type KreisUserProfile = {
   verified?: boolean;
   avatarUrl?: string | null;
   topics: string[];
+  createdEvents: KreisEvent[];
   stats: {
     createdEvents: number;
     enrolledEvents: number;
@@ -40,27 +43,34 @@ function countItems(items: unknown[] | undefined): number {
   return Array.isArray(items) ? items.length : 0;
 }
 
+function mapUserProfile(user: UserProfileResponse): KreisUserProfile {
+  const createdEvents = user.eventos_creados?.map(adaptEvent) ?? [];
+
+  return {
+    legajo: user.legajo,
+    name: `${user.nombre} ${user.apellido}`.trim(),
+    faculty: user.facultad.nombre,
+    role: user.rol,
+    verified: user.verificado,
+    avatarUrl: user.avatar_url ?? null,
+    topics: user.topicos?.map((topic) => topic.topico).filter(Boolean) ?? [],
+    createdEvents,
+    stats: {
+      createdEvents: createdEvents.length,
+      enrolledEvents: countItems(user.eventos_anotado),
+      createdCommunities: countItems(user.comunidades_creadas),
+      joinedCommunities: countItems(user.comunidades_miembro)
+    }
+  };
+}
+
 export async function getMyProfile(accessToken: string, signal?: AbortSignal): Promise<KreisUserProfile> {
   const response = await requestJson<{ user: UserProfileResponse }>("/api/v1/users/me", {
     headers: bearerTokenHeaders(accessToken),
     signal
   });
 
-  return {
-    legajo: response.user.legajo,
-    name: `${response.user.nombre} ${response.user.apellido}`.trim(),
-    faculty: response.user.facultad.nombre,
-    role: response.user.rol,
-    verified: response.user.verificado,
-    avatarUrl: response.user.avatar_url ?? null,
-    topics: response.user.topicos?.map((topic) => topic.topico).filter(Boolean) ?? [],
-    stats: {
-      createdEvents: countItems(response.user.eventos_creados),
-      enrolledEvents: countItems(response.user.eventos_anotado),
-      createdCommunities: countItems(response.user.comunidades_creadas),
-      joinedCommunities: countItems(response.user.comunidades_miembro)
-    }
-  };
+  return mapUserProfile(response.user);
 }
 
 export async function uploadMyAvatar(accessToken: string, avatar: File): Promise<KreisUserProfile> {
@@ -71,19 +81,5 @@ export async function uploadMyAvatar(accessToken: string, avatar: File): Promise
     headers: bearerTokenHeaders(accessToken)
   });
 
-  return {
-    legajo: response.user.legajo,
-    name: `${response.user.nombre} ${response.user.apellido}`.trim(),
-    faculty: response.user.facultad.nombre,
-    role: response.user.rol,
-    verified: response.user.verificado,
-    avatarUrl: response.user.avatar_url ?? null,
-    topics: response.user.topicos?.map((topic) => topic.topico).filter(Boolean) ?? [],
-    stats: {
-      createdEvents: countItems(response.user.eventos_creados),
-      enrolledEvents: countItems(response.user.eventos_anotado),
-      createdCommunities: countItems(response.user.comunidades_creadas),
-      joinedCommunities: countItems(response.user.comunidades_miembro)
-    }
-  };
+  return mapUserProfile(response.user);
 }

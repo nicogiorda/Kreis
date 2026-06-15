@@ -11,7 +11,7 @@ import {
 import { createPendingEvent, getEventDetail, listAllEvents, listUpcomingEvents, toggleEventInterest as persistEventInterest } from "../api/events";
 import { uploadEventImage } from "../api/event-images";
 import { createPost as persistPost, listPosts } from "../api/posts";
-import { getMyProfile } from "../api/users";
+import { getMyProfile, uploadMyAvatar } from "../api/users";
 import type { KreisUserProfile } from "../api/users";
 import { AuthFlow } from "../components/auth/AuthFlow";
 import { AuthViewport } from "../components/auth/AuthLayout";
@@ -381,6 +381,14 @@ export default function App() {
     routerNavigate(screenRoutes.home, { replace: true });
   }
 
+  async function uploadProfileAvatar(file: File): Promise<void> {
+    const accessToken = authSession?.session.access_token;
+    if (!accessToken) throw new Error("Missing auth session.");
+
+    const nextProfile = await uploadMyAvatar(accessToken, file);
+    setUserProfile(nextProfile);
+  }
+
   function reloadEventTopics(): void {
     setEventTopicsStatus("loading");
     setEventTopicsReloadKey((current) => current + 1);
@@ -625,6 +633,7 @@ export default function App() {
                   themeMode={themeMode}
                   onOpenEventDetails={openEventDetails}
                   onToggleTheme={toggleTheme}
+                  onUploadAvatar={uploadProfileAvatar}
                   onLogout={logoutUser}
                 />
               )}

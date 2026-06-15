@@ -12,13 +12,13 @@ export default defineConfig({
     react(),
     VitePWA({
       injectRegister: null,
-      registerType: "autoUpdate",
+      registerType: "prompt",
       workbox: {
         cacheId: "kreis-web-app",
         cleanupOutdatedCaches: true,
-        clientsClaim: true,
+        clientsClaim: false,
         navigateFallback: "/index.html",
-        skipWaiting: true,
+        skipWaiting: false,
         globPatterns: ["**/*.{js,css,html,png,svg,webp,woff,woff2}"],
         runtimeCaching: [
           {

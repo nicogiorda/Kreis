@@ -1,30 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
+import { supabaseBrowser } from "../lib/supabase-browser";
 
 const eventImagesBucket = "event-images";
 const maxImageWidth = 1280;
 const maxImageHeight = 720;
 const imageQuality = 0.75;
-
-function getSupabaseWebClient(accessToken: string) {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Supabase web env vars are missing");
-  }
-
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    },
-    global: {
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      }
-    }
-  });
-}
 
 function getImageDimensions(width: number, height: number) {
   const scale = Math.min(maxImageWidth / width, maxImageHeight / height, 1);
@@ -94,11 +73,10 @@ export async function compressEventImage(file: File): Promise<File> {
   return new File([blob], `${crypto.randomUUID()}.webp`, { type: "image/webp" });
 }
 
-export async function uploadEventImage(file: File, accessToken: string): Promise<string> {
+export async function uploadEventImage(file: File, _accessToken: string): Promise<string> {
   const optimizedImage = await compressEventImage(file);
   const path = `events/${optimizedImage.name}`;
-  const supabase = getSupabaseWebClient(accessToken);
-  const { error } = await supabase.storage
+  const { error } = await supabaseBrowser.storage
     .from(eventImagesBucket)
     .upload(path, optimizedImage, {
       cacheControl: "31536000",
@@ -110,7 +88,7 @@ export async function uploadEventImage(file: File, accessToken: string): Promise
     throw new Error(error.message);
   }
 
-  const { data } = supabase.storage.from(eventImagesBucket).getPublicUrl(path);
+  const { data } = supabaseBrowser.storage.from(eventImagesBucket).getPublicUrl(path);
 
   return data.publicUrl;
 }

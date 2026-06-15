@@ -209,7 +209,11 @@ export function CommunitiesScreen({
   const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
 
   useEffect(() => {
-    if (expandedPostId && !expandedPost) setExpandedPostId(null);
+    if (!expandedPostId || expandedPost) return;
+
+    const frameId = window.requestAnimationFrame(() => setExpandedPostId(null));
+
+    return () => window.cancelAnimationFrame(frameId);
   }, [expandedPost, expandedPostId]);
 
   if (expandedPost) {

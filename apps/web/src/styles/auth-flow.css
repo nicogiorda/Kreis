@@ -30,7 +30,10 @@
     overscroll-behavior: none;
     padding-block: 0;
     padding-inline: calc(22px + env(safe-area-inset-left)) calc(22px + env(safe-area-inset-right));
-    animation: splash-exit 360ms cubic-bezier(0.7, 0, 0.84, 0) 1780ms both;
+  }
+
+  .splash-screen--exiting {
+    animation: splash-exit 360ms cubic-bezier(0.7, 0, 0.84, 0) both;
   }
 
   .splash-layout-frame {
@@ -107,7 +110,11 @@
   }
 
   .splash-screen {
-    animation: splash-exit 180ms cubic-bezier(0.7, 0, 0.84, 0) 560ms both !important;
+    animation: none !important;
+  }
+
+  .splash-screen--exiting {
+    animation: splash-exit 180ms cubic-bezier(0.7, 0, 0.84, 0) both !important;
   }
 
   .splash-mark-shell,

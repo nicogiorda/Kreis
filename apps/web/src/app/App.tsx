@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { listTopics, logout, refreshSession } from "../api/auth";
-import type { AuthResult } from "../api/auth";
+import type { Session } from "@supabase/supabase-js";
+import { listTopics } from "../api/auth";
 import {
   createCommunity as persistCommunity,
   joinCommunity,
@@ -19,27 +19,23 @@ import { ComposerModal } from "../components/composer/ComposerModal";
 import { CommunitiesScreen } from "../components/communities/CommunitiesScreen";
 import { EventDetailScreen } from "../components/events/EventDetailScreen";
 import { EventsScreen } from "../components/events/EventsScreen";
-import { SplashScreen } from "../components/common/SplashScreen";
+import { SplashScreen, type SplashPhase } from "../components/common/SplashScreen";
+import { ServiceWorkerUpdateBanner } from "../components/common/ServiceWorkerUpdateBanner";
+import { StartupDebugPanel } from "../components/common/StartupDebugPanel";
 import { ViewportDebugPanel } from "../components/common/ViewportDebugPanel";
 import { HomeScreen } from "../components/home/HomeScreen";
 import { BottomNav } from "../components/navigation/BottomNav";
 import { Header } from "../components/navigation/Header";
 import { ProfileScreen } from "../components/profile/ProfileScreen";
 import type { ActivityPost, Community, ComposerMode, CreateCommunityInput, CreateEventInput, CreatePostInput, EventLoadStatus, HomeTab, KreisEvent, KreisTopic, Screen, ThemeMode } from "../types";
-import {
-  authRefreshLeadMs,
-  clearStoredAuthSession,
-  getAuthSessionExpiryMs,
-  isAuthSessionExpired,
-  readStoredAuthSession,
-  shouldRefreshAuthSession,
-  storeAuthSession
-} from "../utils/auth-session";
+import { useAuth } from "../auth/useAuth";
+import { markStartup, measureStartup, updateStartupDebug } from "../startup/startup-debug";
 import { cn } from "../utils/cn";
 import { scrollTop } from "../utils/navigation";
 import { normalize } from "../utils/text";
 
 const themeStorageKey = "kreis-theme-mode-v2";
+const splashMinimumDurationMs = 2_180;
 const screenRoutes: Record<Screen, string> = {
   home: "/",
   events: "/events",
@@ -91,9 +87,113 @@ function getInitialThemeMode(): ThemeMode {
   return "light";
 }
 
+function useStartupSplash(authStatus: string): {
+  visible: boolean;
+  phase: SplashPhase;
+  handleExitComplete: () => void;
+} {
+  const [minimumFinished, setMinimumFinished] = useState(false);
+  const [phase, setPhase] = useState<SplashPhase>("intro");
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setMinimumFinished(true);
+      markStartup("splash-minimum-finished");
+    }, splashMinimumDurationMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
+    updateStartupDebug({ splashPhase: phase });
+  }, [phase]);
+
+  useEffect(() => {
+    if (!visible) return;
+    if (phase === "exiting") return;
+
+    if (!minimumFinished) return;
+
+    const nextPhase: SplashPhase = authStatus === "initializing" ? "holding" : "exiting";
+    if (phase === nextPhase) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      if (nextPhase === "exiting") markStartup("splash-exit-start");
+      setPhase(nextPhase);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [authStatus, minimumFinished, phase, visible]);
+
+  return {
+    visible,
+    phase,
+    handleExitComplete: () => {
+      setVisible(false);
+      measureStartup("splash-exit", "splash-exit-start", "splash-exit-end");
+    }
+  };
+}
+
+function AuthRecoveryScreen() {
+  const { error, retryInitialization, continueWithoutSession } = useAuth();
+
+  return (
+    <AuthViewport>
+      <section className="grid h-full min-h-dvh place-items-center bg-kreis-forest px-6 text-center text-kreis-cream">
+        <div className="w-full max-w-[330px]">
+          <h1 className="m-0 font-sans text-[26px] font-medium leading-tight">No pudimos recuperar tu sesion.</h1>
+          <p className="mt-3 mb-0 text-[15px] leading-snug text-[rgba(247,237,218,0.68)]">
+            {error ?? "Reintentá o entrá sin sesion para volver al inicio."}
+          </p>
+          <div className="mt-6 grid gap-3">
+            <button className="h-[42px] rounded-[16px] border-0 bg-kreis-cream text-[16px] font-medium text-kreis-forest" type="button" onClick={() => void retryInitialization()}>
+              Reintentar
+            </button>
+            <button className="h-[42px] rounded-[16px] border-0 bg-[rgba(247,237,218,0.16)] text-[16px] font-medium text-kreis-cream" type="button" onClick={() => void continueWithoutSession()}>
+              Continuar sin sesion
+            </button>
+          </div>
+        </div>
+      </section>
+    </AuthViewport>
+  );
+}
+
+function UnauthenticatedApp() {
+  return (
+    <AuthViewport>
+      <AuthFlow />
+    </AuthViewport>
+  );
+}
+
 export default function App() {
-  const [authSession, setAuthSessionState] = useState<AuthResult | null>(null);
-  const [authBootstrapping, setAuthBootstrapping] = useState(true);
+  const { status, session } = useAuth();
+  const splash = useStartupSplash(status);
+
+  return (
+    <>
+      <ViewportDebugPanel />
+      <StartupDebugPanel />
+      <ServiceWorkerUpdateBanner />
+      {status === "authenticated" && session ? (
+        <AuthenticatedApp session={session} />
+      ) : status === "recovery-error" ? (
+        <AuthRecoveryScreen />
+      ) : (
+        <UnauthenticatedApp />
+      )}
+      {splash.visible ? <SplashScreen phase={splash.phase} onExitComplete={splash.handleExitComplete} /> : null}
+    </>
+  );
+}
+
+function AuthenticatedApp({ session }: { session: Session }) {
+  const { signOut } = useAuth();
+  const accessToken = session.access_token;
+  const profileEmail = session.user.email;
   const [events, setEvents] = useState<KreisEvent[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<KreisEvent[]>([]);
   const [eventLoadStatus, setEventLoadStatus] = useState<EventLoadStatus>("loading");
@@ -138,73 +238,6 @@ export default function App() {
     return matchesQuery(`${community.name} ${community.category} ${community.pulse} ${community.description ?? ""}`);
   });
 
-  const applyAuthSession = useCallback((auth: AuthResult | null): void => {
-    setAuthSessionState(auth);
-
-    if (auth) {
-      storeAuthSession(auth);
-      return;
-    }
-
-    clearStoredAuthSession();
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function restoreSession(): Promise<void> {
-      const storedSession = readStoredAuthSession();
-
-      if (!storedSession) {
-        setAuthBootstrapping(false);
-        return;
-      }
-
-      try {
-        const refreshToken = storedSession.session.refresh_token;
-
-        if (isAuthSessionExpired(storedSession) && !refreshToken) {
-          throw new Error("Stored session expired without a refresh token.");
-        }
-
-        const nextSession = refreshToken && shouldRefreshAuthSession(storedSession)
-          ? await refreshSession(refreshToken)
-          : storedSession;
-
-        if (!cancelled) applyAuthSession(nextSession);
-      } catch {
-        if (!cancelled) applyAuthSession(null);
-      } finally {
-        if (!cancelled) setAuthBootstrapping(false);
-      }
-    }
-
-    void restoreSession();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [applyAuthSession]);
-
-  useEffect(() => {
-    if (!authSession) return;
-
-    const refreshToken = authSession.session.refresh_token;
-    const expiryMs = getAuthSessionExpiryMs(authSession);
-
-    if (!refreshToken || expiryMs === null) return;
-
-    const refreshDelay = Math.max(0, expiryMs - Date.now() - authRefreshLeadMs);
-
-    const timeoutId = window.setTimeout(() => {
-      void refreshSession(refreshToken)
-        .then(applyAuthSession)
-        .catch(() => applyAuthSession(null));
-    }, refreshDelay);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [applyAuthSession, authSession]);
-
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -218,9 +251,11 @@ export default function App() {
   }, [themeMode]);
 
   useEffect(() => {
-    const accessToken = authSession?.session.access_token;
-    if (!accessToken) return;
+    markStartup("app-shell-mounted");
+    updateStartupDebug({ appShellMounted: true });
+  }, []);
 
+  useEffect(() => {
     const controller = new AbortController();
 
     void Promise.all([
@@ -237,12 +272,9 @@ export default function App() {
       });
 
     return () => controller.abort();
-  }, [authSession, eventReloadKey]);
+  }, [accessToken, eventReloadKey]);
 
   useEffect(() => {
-    const accessToken = authSession?.session.access_token;
-    if (!accessToken) return;
-
     const controller = new AbortController();
 
     void Promise.all([
@@ -261,7 +293,7 @@ export default function App() {
       });
 
     return () => controller.abort();
-  }, [authSession]);
+  }, [accessToken]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -285,9 +317,6 @@ export default function App() {
   }, [eventTopicsReloadKey]);
 
   useEffect(() => {
-    const accessToken = authSession?.session.access_token;
-    if (!accessToken) return;
-
     const controller = new AbortController();
 
     void getMyProfile(accessToken, controller.signal)
@@ -300,11 +329,10 @@ export default function App() {
       });
 
     return () => controller.abort();
-  }, [authSession]);
+  }, [accessToken]);
 
   useEffect(() => {
-    const accessToken = authSession?.session.access_token;
-    if (!eventDetailId || !accessToken) return;
+    if (!eventDetailId) return;
 
     const controller = new AbortController();
 
@@ -318,7 +346,7 @@ export default function App() {
       });
 
     return () => controller.abort();
-  }, [authSession, eventDetailId]);
+  }, [accessToken, eventDetailId]);
 
   useEffect(() => {
     if (routeScreens[activeRoute]) return;
@@ -368,8 +396,7 @@ export default function App() {
   }
 
   function logoutUser(): void {
-    void logout().catch(() => undefined);
-    applyAuthSession(null);
+    void signOut().catch(() => undefined);
     setUserProfile(null);
     setProfileLoadStatus("loading");
     setEvents([]);
@@ -382,9 +409,6 @@ export default function App() {
   }
 
   async function uploadProfileAvatar(file: File): Promise<void> {
-    const accessToken = authSession?.session.access_token;
-    if (!accessToken) throw new Error("Missing auth session.");
-
     const nextProfile = await uploadMyAvatar(accessToken, file);
     setUserProfile(nextProfile);
   }
@@ -413,9 +437,8 @@ export default function App() {
   }
 
   function toggleJoin(communityId: string): void {
-    const accessToken = authSession?.session.access_token;
     const community = communities.find((item) => item.id === communityId);
-    if (!accessToken || !community) return;
+    if (!community) return;
 
     const previousJoined = community.joined;
     const previousMembers = community.members;
@@ -474,9 +497,8 @@ export default function App() {
   }
 
   function toggleEventInterest(eventId: string): void {
-    const accessToken = authSession?.session.access_token;
     const event = events.find((item) => item.id === eventId);
-    if (!accessToken || !event) return;
+    if (!event) return;
 
     const previousInterest = event.interested;
     updateEventInterest(eventId, !previousInterest);
@@ -488,8 +510,6 @@ export default function App() {
 
   function createCommunity({ name, description, topicIds }: CreateCommunityInput): void {
     if (!name || !description || !topicIds.length) return;
-    const accessToken = authSession?.session.access_token;
-    if (!accessToken) return;
 
     setComposerSubmitting(true);
     setComposerError(null);
@@ -507,9 +527,6 @@ export default function App() {
 
   function createEvent({ title, date, place, topicIds, description, coverFile }: CreateEventInput): void {
     if (!title || !date || !place || !topicIds.length || !description) return;
-
-    const accessToken = authSession?.session.access_token;
-    if (!accessToken) return;
 
     setComposerSubmitting(true);
     setComposerError(null);
@@ -534,8 +551,7 @@ export default function App() {
   }
 
   function createPost({ communityId, postText }: CreatePostInput): void {
-    const accessToken = authSession?.session.access_token;
-    if (!accessToken || !communityId || !postText) return;
+    if (!communityId || !postText) return;
 
     setComposerSubmitting(true);
     setComposerError(null);
@@ -553,16 +569,12 @@ export default function App() {
 
   return (
     <>
-      <SplashScreen />
-      <ViewportDebugPanel />
-      {authBootstrapping ? null : authSession ? (
-        <>
-          <div
-            className={cn(
-              "app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden md:px-6",
-              isEventDetail ? "pb-0" : "pb-[var(--bottom-nav-clearance)]"
-            )}
-          >
+      <div
+        className={cn(
+          "app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden md:px-6",
+          isEventDetail ? "pb-0" : "pb-[var(--bottom-nav-clearance)]"
+        )}
+      >
             {screen !== "profile" && screen !== "home" && screen !== "events" && screen !== "communities" ? (
               <Header
                 globalQuery={globalQuery}
@@ -613,7 +625,7 @@ export default function App() {
               )}
               {!isEventDetail && screen === "communities" && (
                 <CommunitiesScreen
-                  accessToken={authSession.session.access_token}
+                  accessToken={accessToken}
                   communities={communities}
                   posts={activity}
                   themeMode={themeMode}
@@ -628,7 +640,7 @@ export default function App() {
                   communities={communities}
                   events={events}
                   profile={userProfile}
-                  profileEmail={authSession.user.email}
+                  profileEmail={profileEmail}
                   profileLoadStatus={profileLoadStatus}
                   themeMode={themeMode}
                   onOpenEventDetails={openEventDetails}
@@ -653,14 +665,8 @@ export default function App() {
               onCreateEvent={createEvent}
               onCreatePost={createPost}
             />
-          </div>
-          {!isEventDetail && <BottomNav screen={screen} onNavigate={navigate} />}
-        </>
-      ) : (
-        <AuthViewport>
-          <AuthFlow onComplete={applyAuthSession} />
-        </AuthViewport>
-      )}
+      </div>
+      {!isEventDetail && <BottomNav screen={screen} onNavigate={navigate} />}
     </>
   );
 }

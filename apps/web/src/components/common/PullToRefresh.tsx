@@ -13,7 +13,7 @@ const activationDistance = 24;
 const triggerDistance = 74;
 const refreshHoldDistance = 56;
 const maxPullDistance = 112;
-const completionHoldMs = 760;
+const completionHoldMs = 260;
 
 function dampPullDistance(distance: number): number {
   return maxPullDistance * (1 - Math.exp(-distance / maxPullDistance));
@@ -25,6 +25,12 @@ function isAtScrollTop(): boolean {
 
 function isInteractiveTarget(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && Boolean(target.closest("button, input, textarea, select, a, [role='button'], [data-pull-refresh-ignore='true']"));
+}
+
+function settleViewportAtTop(): void {
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  window.requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }));
+  window.setTimeout(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }), 120);
 }
 
 function getLabel(state: PullState): string {
@@ -56,7 +62,7 @@ export function PullToRefresh({ children, disabled = false, onRefresh }: PullToR
   const progress = Math.min(pullDistance / triggerDistance, 1);
   const visible = state !== "idle" || pullDistance > 0;
   const label = getLabel(state);
-  const displayDistance = state === "refreshing" || state === "done" || state === "error"
+  const displayDistance = state === "refreshing"
     ? refreshHoldDistance
     : pullDistance;
 
@@ -87,6 +93,7 @@ export function PullToRefresh({ children, disabled = false, onRefresh }: PullToR
       setIsTracking(false);
       updatePullDistance(0);
       setState((current) => current === "refreshing" ? current : "idle");
+      settleViewportAtTop();
     }
 
     async function finishRefresh(): Promise<void> {
@@ -100,10 +107,12 @@ export function PullToRefresh({ children, disabled = false, onRefresh }: PullToR
       } catch {
         setState("error");
       } finally {
+        updatePullDistance(0);
+        settleViewportAtTop();
         window.setTimeout(() => {
           refreshingRef.current = false;
-          updatePullDistance(0);
           setState("idle");
+          settleViewportAtTop();
         }, completionHoldMs);
       }
     }
@@ -117,7 +126,6 @@ export function PullToRefresh({ children, disabled = false, onRefresh }: PullToR
       startXRef.current = touch.clientX;
       trackingRef.current = true;
       activatedRef.current = false;
-      setIsTracking(true);
     }
 
     function handleTouchMove(event: TouchEvent): void {
@@ -146,6 +154,7 @@ export function PullToRefresh({ children, disabled = false, onRefresh }: PullToR
       if (!activatedRef.current && deltaY < activationDistance) return;
 
       activatedRef.current = true;
+      setIsTracking(true);
       const nextDistance = dampPullDistance(deltaY - activationDistance);
       event.preventDefault();
       updatePullDistance(nextDistance);
@@ -170,6 +179,7 @@ export function PullToRefresh({ children, disabled = false, onRefresh }: PullToR
 
       updatePullDistance(0);
       setState("idle");
+      settleViewportAtTop();
     }
 
     window.addEventListener("touchstart", handleTouchStart, { passive: true });

@@ -200,6 +200,12 @@ html[data-theme="dark"] {
     background: var(--auth-safe-area-bg);
   }
 
+  html.post-detail-open,
+  html.post-detail-open body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   button {
     cursor: pointer;
   }
@@ -433,6 +439,78 @@ html[data-theme="dark"] {
 
   .bottom-nav button:active {
     transform: scale(0.965);
+  }
+
+  .post-detail-viewport {
+    position: fixed;
+    inset-inline: 0;
+    top: var(--visual-viewport-top, 0px);
+    z-index: 50;
+    display: grid;
+    width: 100%;
+    max-width: 430px;
+    height: var(--visual-viewport-height, 100dvh);
+    min-height: 0;
+    margin-inline: auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    overflow: hidden;
+    background: var(--app-bg);
+    color: var(--ink);
+  }
+
+  .post-detail-header {
+    display: flex;
+    min-height: 0;
+    flex: none;
+    align-items: center;
+    justify-content: flex-end;
+    padding: max(29px, calc(env(safe-area-inset-top) + 14px)) var(--page-gutter) 15px;
+  }
+
+  .post-detail-scroll {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-inline: var(--page-gutter);
+    padding-bottom: 18px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .post-detail-composer {
+    flex: none;
+    background: var(--app-bg);
+    padding: 10px 22px max(10px, env(safe-area-inset-bottom));
+  }
+
+  .post-detail-composer[data-keyboard-open="true"] {
+    padding-bottom: 8px;
+  }
+
+  .post-detail-composer-input {
+    display: block;
+    width: 100%;
+    min-height: 38px;
+    max-height: 120px;
+    resize: none;
+    overflow: hidden;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(10, 10, 10, 0.08);
+    padding: 11px 44px 11px 16px;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 15px;
+    outline: none;
+    box-shadow: none;
+  }
+
+  .post-detail-composer-input::placeholder {
+    color: var(--muted);
+  }
+
+  .post-detail-composer-input:focus {
+    box-shadow: 0 0 0 2px rgba(240, 83, 28, 0.2);
   }
 
   @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {

@@ -1,11 +1,12 @@
 import { Plus, User, X } from "@phosphor-icons/react";
 import { WidgetAdd } from "@solar-icons/react";
-import { type KeyboardEvent, type MouseEvent, useEffect, useMemo, useState } from "react";
+import { type KeyboardEvent, type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import { EmptyState } from "../common/EmptyState";
 import { ThemeToggleIcon } from "../common/Icons";
 import type { ActivityPost, Community, ThemeMode } from "../../types";
 import { cn } from "../../utils/cn";
-import { PostComments } from "./PostComments";
+import { useVisualViewport } from "../../hooks/useVisualViewport";
+import { PostComments, PostDetailCommentsLayout } from "./PostComments";
 
 const allCommunitiesFilter = "all";
 
@@ -13,6 +14,7 @@ type CommunityPostProps = {
   post: ActivityPost;
   accessToken: string;
   expanded?: boolean;
+  renderComments?: boolean;
   onOpen?: (postId: string) => void;
   onCommentCountChange: (postId: string, total: number) => void;
 };
@@ -46,7 +48,7 @@ function getDetailTime(time: string): string {
   return normalized;
 }
 
-function CommunityPost({ post, accessToken, expanded = false, onOpen, onCommentCountChange }: CommunityPostProps) {
+function CommunityPost({ post, accessToken, expanded = false, renderComments = true, onOpen, onCommentCountChange }: CommunityPostProps) {
   function openPost(): void {
     if (expanded) return;
     onOpen?.(post.id);
@@ -126,18 +128,26 @@ function CommunityPost({ post, accessToken, expanded = false, onOpen, onCommentC
           {post.text}
         </p>
 
-        <PostComments
-          accessToken={accessToken}
-          expanded={expanded}
-          initialCount={post.comments}
-          onExpand={() => onOpen?.(post.id)}
-          postId={post.id}
-          score={post.score}
-          onCountChange={onCommentCountChange}
-        />
+        {renderComments ? (
+          <PostComments
+            accessToken={accessToken}
+            expanded={expanded}
+            initialCount={post.comments}
+            onExpand={() => onOpen?.(post.id)}
+            postId={post.id}
+            score={post.score}
+            onCountChange={onCommentCountChange}
+          />
+        ) : null}
       </div>
     </article>
   );
+}
+
+function getKeyboardDebugEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+
+  return new URLSearchParams(window.location.search).get("keyboard-debug") === "1";
 }
 
 type CommunityFilterRailProps = {
@@ -203,6 +213,7 @@ export function CommunitiesScreen({
 }: CommunitiesScreenProps) {
   const [activeFilter, setActiveFilter] = useState(allCommunitiesFilter);
   const [expandedPostId, setExpandedPostId] = useState<string | null>(null);
+  const postDetailScrollRef = useRef<HTMLDivElement | null>(null);
   const joinedCommunities = useMemo(
     () => communities.filter((community) => community.joined && community.status !== "Pendiente"),
     [communities]
@@ -219,6 +230,9 @@ export function CommunitiesScreen({
   );
   const expandedPost = expandedPostId ? feedPosts.find((post) => post.id === expandedPostId) ?? null : null;
   const expandedPostOpen = Boolean(expandedPost);
+  const visualViewport = useVisualViewport(expandedPostOpen);
+  const keyboardDebug = getKeyboardDebugEnabled();
+  const [keyboardDebugMetrics, setKeyboardDebugMetrics] = useState("");
   const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
 
   useEffect(() => {
@@ -235,12 +249,64 @@ export function CommunitiesScreen({
     return () => onPostDetailChange?.(false);
   }, [expandedPostOpen, onPostDetailChange]);
 
+  useEffect(() => {
+    if (!expandedPostOpen) return;
+
+    document.documentElement.classList.add("post-detail-open");
+
+    return () => {
+      document.documentElement.classList.remove("post-detail-open");
+    };
+  }, [expandedPostOpen]);
+
+  useEffect(() => {
+    if (!keyboardDebug || !expandedPostOpen) return;
+
+    let frameId = 0;
+    const scrollArea = postDetailScrollRef.current;
+
+    function updateMetrics(): void {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(() => {
+        const html = document.documentElement;
+        const body = document.body;
+        const root = document.getElementById("root");
+        const detailRoot = document.querySelector<HTMLElement>(".post-detail-viewport");
+        setKeyboardDebugMetrics([
+          `vv: ${Math.round(visualViewport.height)} top ${Math.round(visualViewport.offsetTop)}`,
+          `keyboard: ${visualViewport.keyboardOpen ? "open" : "closed"}`,
+          `html: ${Math.round(html.getBoundingClientRect().height)} ov ${getComputedStyle(html).overflow}`,
+          `body: ${Math.round(body.getBoundingClientRect().height)} ov ${getComputedStyle(body).overflow}`,
+          `root: ${Math.round(root?.getBoundingClientRect().height ?? 0)}`,
+          `detail: ${Math.round(detailRoot?.getBoundingClientRect().height ?? 0)}`,
+          `scroll: ${Math.round(scrollArea?.getBoundingClientRect().height ?? 0)} / ${scrollArea?.scrollTop.toFixed(0) ?? "0"}`
+        ].join("\n"));
+      });
+    }
+
+    updateMetrics();
+    scrollArea?.addEventListener("scroll", updateMetrics);
+    window.visualViewport?.addEventListener("resize", updateMetrics);
+    window.visualViewport?.addEventListener("scroll", updateMetrics);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      scrollArea?.removeEventListener("scroll", updateMetrics);
+      window.visualViewport?.removeEventListener("resize", updateMetrics);
+      window.visualViewport?.removeEventListener("scroll", updateMetrics);
+    };
+  }, [expandedPostOpen, keyboardDebug, visualViewport.height, visualViewport.keyboardOpen, visualViewport.offsetTop]);
+
   if (expandedPost) {
     return (
-      <section className="grid min-w-0 w-full max-w-[430px] animate-[rise_220ms_ease-out] pb-[calc(91px+env(safe-area-inset-bottom)+18px)] pt-[max(29px,calc(env(safe-area-inset-top)+14px))] sm:mx-auto" data-screen="communities-post-detail">
-        <h1 className="sr-only">Detalle de post</h1>
+      <section
+        className="post-detail-viewport animate-[rise_220ms_ease-out]"
+        data-keyboard-open={visualViewport.keyboardOpen ? "true" : "false"}
+        data-screen="communities-post-detail"
+      >
+        <header className="post-detail-header">
+          <h1 className="sr-only">Detalle de post</h1>
 
-        <div className="mb-[15px] flex h-[37px] items-center justify-end">
           <button
             className="grid size-[37px] place-items-center rounded-[12px] border-0 bg-kreis-event-surface p-0 text-kreis-muted shadow-none transition-[transform,color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95"
             type="button"
@@ -249,14 +315,39 @@ export function CommunitiesScreen({
           >
             <X aria-hidden="true" size={19} weight="bold" />
           </button>
-        </div>
+        </header>
 
-        <CommunityPost
+        <PostDetailCommentsLayout
           accessToken={accessToken}
-          expanded
-          post={expandedPost}
-          onCommentCountChange={onCommentCountChange}
-        />
+          active={expandedPostOpen}
+          keyboardOpen={visualViewport.keyboardOpen}
+          postId={expandedPost.id}
+          onCountChange={onCommentCountChange}
+          initialCount={expandedPost.comments}
+          score={expandedPost.score}
+        >
+          {({ comments, composer }) => (
+            <>
+              <div ref={postDetailScrollRef} className="post-detail-scroll">
+                <CommunityPost
+                  accessToken={accessToken}
+                  expanded
+                  renderComments={false}
+                  post={expandedPost}
+                  onCommentCountChange={onCommentCountChange}
+                />
+                {comments}
+              </div>
+              {composer}
+            </>
+          )}
+        </PostDetailCommentsLayout>
+
+        {keyboardDebug ? (
+          <pre className="pointer-events-none absolute left-2 top-2 z-[70] m-0 max-w-[260px] whitespace-pre-wrap rounded-[10px] bg-black/75 px-2 py-1 text-[10px] leading-tight text-white">
+            {keyboardDebugMetrics}
+          </pre>
+        ) : null}
       </section>
     );
   }

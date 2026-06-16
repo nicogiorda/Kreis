@@ -1,6 +1,6 @@
 import { ChatRound, Heart } from "@solar-icons/react";
 import { ArrowBendDownRight, CaretDown, DotsThree, PaperPlaneTilt } from "@phosphor-icons/react";
-import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { type FormEvent, type ReactNode, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
 import { createPostComment, listPostComments } from "../../api/posts";
 import type { PostComment } from "../../types";
 import { CommentSkeletonList } from "../common/LoadingSkeleton";
@@ -183,73 +183,52 @@ function CommentForm({
 function DetailRootCommentForm({
   value,
   submitting,
+  keyboardOpen,
   onChange,
   onSubmit
 }: {
   value: string;
   submitting: boolean;
+  keyboardOpen?: boolean;
   onChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   const hasValue = value.trim().length > 0;
-  const formRef = useRef<HTMLFormElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const resizeTextarea = useCallback(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    textarea.style.height = "29px";
-    textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 29), 96)}px`;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 38), 120)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > 120 ? "auto" : "hidden";
   }, []);
 
   useEffect(() => {
     resizeTextarea();
   }, [resizeTextarea, value]);
 
-  useEffect(() => {
-    const formElement = formRef.current;
-
-    function updateKeyboardOffset(): void {
-      if (!formElement || !window.visualViewport) return;
-
-      const viewport = window.visualViewport;
-      const keyboardOffset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
-      const visibleKeyboardOffset = keyboardOffset > 80 ? keyboardOffset : 0;
-
-      formElement.style.transform = `translate3d(0, -${visibleKeyboardOffset}px, 0)`;
-    }
-
-    updateKeyboardOffset();
-    window.visualViewport?.addEventListener("resize", updateKeyboardOffset);
-    window.visualViewport?.addEventListener("scroll", updateKeyboardOffset);
-    window.addEventListener("orientationchange", updateKeyboardOffset);
-
-    return () => {
-      if (formElement) formElement.style.transform = "";
-      window.visualViewport?.removeEventListener("resize", updateKeyboardOffset);
-      window.visualViewport?.removeEventListener("scroll", updateKeyboardOffset);
-      window.removeEventListener("orientationchange", updateKeyboardOffset);
-    };
-  }, []);
-
   return (
     <form
-      ref={formRef}
-      className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[430px] bg-[var(--app-bg)] px-[22px] pb-[calc(42px+env(safe-area-inset-bottom))] pt-[19px] transition-transform duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+      className="post-detail-composer"
+      data-keyboard-open={keyboardOpen ? "true" : "false"}
       onSubmit={onSubmit}
     >
       <div className="relative">
         <textarea
           ref={textareaRef}
-          className="block h-[29px] max-h-24 min-h-[29px] w-full resize-none overflow-hidden rounded-[10px] border-0 bg-[rgba(10,10,10,0.08)] px-4 py-[7px] pr-11 text-[12px] font-normal leading-[15px] text-kreis-ink outline-none shadow-none placeholder:text-kreis-muted focus:ring-2 focus:ring-kreis-orange/20"
+          className="post-detail-composer-input"
+          aria-label="Escribir comentario"
           maxLength={2000}
           placeholder="Unite a la conversacion"
           rows={1}
           value={value}
           onChange={(event) => {
             onChange(event.target.value);
-            window.requestAnimationFrame(resizeTextarea);
+            window.requestAnimationFrame(() => {
+              resizeTextarea();
+            });
           }}
         />
         <button
@@ -489,6 +468,332 @@ function DetailCommentNode({
   );
 }
 
+type PostCommentThread = ReturnType<typeof usePostCommentThread>;
+
+type PostCommentThreadState = {
+  postId: string;
+  status: "idle" | "loading" | "ready" | "error";
+  comments: PostComment[];
+  rootBody: string;
+  replyingTo: string | null;
+  replyBody: string;
+  submitting: boolean;
+  error: string | null;
+  liked: boolean;
+};
+
+function createInitialThreadState(postId: string): PostCommentThreadState {
+  return {
+    postId,
+    status: "idle",
+    comments: [],
+    rootBody: "",
+    replyingTo: null,
+    replyBody: "",
+    submitting: false,
+    error: null,
+    liked: false
+  };
+}
+
+function usePostCommentThread({
+  postId,
+  accessToken,
+  active,
+  onCountChange
+}: {
+  postId: string;
+  accessToken: string;
+  active: boolean;
+  onCountChange: (postId: string, total: number) => void;
+}) {
+  const [threadState, setThreadState] = useState<PostCommentThreadState>(() => createInitialThreadState(postId));
+  const currentThread = threadState.postId === postId ? threadState : createInitialThreadState(postId);
+
+  const updateThread = useCallback((updater: (current: PostCommentThreadState) => PostCommentThreadState): void => {
+    setThreadState((current) => updater(current.postId === postId ? current : createInitialThreadState(postId)));
+  }, [postId]);
+
+  const updateCurrentThread = useCallback((targetPostId: string, patch: Partial<PostCommentThreadState>): void => {
+    setThreadState((current) => current.postId === targetPostId ? { ...current, ...patch } : current);
+  }, []);
+
+  const setRootBody = useCallback((value: string): void => {
+    updateThread((current) => ({ ...current, rootBody: value }));
+  }, [updateThread]);
+
+  const setReplyBody = useCallback((value: string): void => {
+    updateThread((current) => ({ ...current, replyBody: value }));
+  }, [updateThread]);
+
+  const setLiked = useCallback((value: SetStateAction<boolean>): void => {
+    updateThread((current) => ({
+      ...current,
+      liked: typeof value === "function" ? value(current.liked) : value
+    }));
+  }, [updateThread]);
+
+  const loadComments = useCallback(async (): Promise<void> => {
+    if (!postId) return;
+
+    updateThread((current) => ({
+      ...current,
+      status: "loading",
+      error: null
+    }));
+
+    try {
+      const result = await listPostComments(postId, accessToken);
+      updateCurrentThread(postId, {
+        comments: result.comments,
+        status: "ready"
+      });
+      onCountChange(postId, result.total);
+    } catch (loadError) {
+      updateCurrentThread(postId, {
+        error: loadError instanceof Error ? loadError.message : "No pudimos cargar los comentarios.",
+        status: "error"
+      });
+    }
+  }, [accessToken, onCountChange, postId, updateCurrentThread, updateThread]);
+
+  useEffect(() => {
+    if (!active || !postId || currentThread.status !== "idle") return;
+
+    void Promise.resolve().then(loadComments);
+  }, [active, currentThread.status, loadComments, postId]);
+
+  function startReply(commentId: string): void {
+    updateThread((current) => ({
+      ...current,
+      replyingTo: commentId,
+      replyBody: "",
+      error: null
+    }));
+  }
+
+  function cancelReply(): void {
+    updateThread((current) => ({
+      ...current,
+      replyingTo: null,
+      replyBody: ""
+    }));
+  }
+
+  async function submitComment(body: string, parentId?: string): Promise<void> {
+    if (!body.trim() || !postId) return;
+
+    updateThread((current) => ({
+      ...current,
+      submitting: true,
+      error: null
+    }));
+
+    try {
+      const result = await createPostComment(postId, body.trim(), accessToken, parentId);
+
+      setThreadState((current) => {
+        if (current.postId !== postId) return current;
+
+        return {
+          ...current,
+          comments: parentId
+            ? insertReply(current.comments, parentId, result.comment)
+            : [...current.comments, result.comment],
+          rootBody: "",
+          replyingTo: null,
+          replyBody: "",
+          status: "ready"
+        };
+      });
+      onCountChange(postId, result.total);
+    } catch (submitError) {
+      updateCurrentThread(postId, {
+        error: submitError instanceof Error ? submitError.message : "No pudimos publicar el comentario."
+      });
+    } finally {
+      updateCurrentThread(postId, {
+        submitting: false
+      });
+    }
+  }
+
+  return {
+    status: currentThread.status,
+    comments: currentThread.comments,
+    rootBody: currentThread.rootBody,
+    replyingTo: currentThread.replyingTo,
+    replyBody: currentThread.replyBody,
+    submitting: currentThread.submitting,
+    error: currentThread.error,
+    liked: currentThread.liked,
+    setRootBody,
+    setReplyBody,
+    setLiked,
+    loadComments,
+    startReply,
+    cancelReply,
+    submitComment
+  };
+}
+
+export function PostDetailCommentsContent({
+  initialCount,
+  score,
+  thread
+}: {
+  initialCount: number;
+  score?: number;
+  thread: PostCommentThread;
+}) {
+  const displayedScore = typeof score === "number" ? score + (thread.liked ? 1 : 0) : undefined;
+
+  return (
+    <section className="mt-[12px]">
+      <div className="flex h-[27px] items-center gap-[25px] text-[12px] font-normal leading-[15px] text-kreis-muted">
+        {typeof displayedScore === "number" ? (
+          <button
+            className={cn(
+              "inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-inherit shadow-none transition-colors duration-150",
+              thread.liked ? "text-kreis-orange" : "text-inherit"
+            )}
+            type="button"
+            aria-label={thread.liked ? "Quitar like" : "Dar like"}
+            aria-pressed={thread.liked}
+            onClick={() => thread.setLiked((current) => !current)}
+          >
+            <Heart aria-hidden="true" size={16} weight={thread.liked ? "Bold" : "Outline"} />
+            {displayedScore}
+          </button>
+        ) : null}
+        <span className="inline-flex items-center gap-1.5">
+          <ChatRound aria-hidden="true" size={16} weight="Bold" />
+          {initialCount}
+        </span>
+        <button
+          className="ml-auto grid size-[27px] place-items-center border-0 bg-transparent p-0 text-inherit shadow-none"
+          type="button"
+          aria-label="Mas opciones"
+        >
+          <DotsThree aria-hidden="true" size={19} weight="bold" />
+        </button>
+      </div>
+
+      <div className="relative ml-[-52px] mt-[13px] grid gap-[14px] pt-[14px] before:pointer-events-none before:absolute before:left-[calc(var(--page-gutter)*-1)] before:top-0 before:h-px before:w-screen before:bg-kreis-line">
+        {thread.status === "loading" ? (
+          <LoadingState label="Cargando comentarios" variant="inline" className="ml-12" />
+        ) : null}
+
+        {thread.status === "error" ? (
+          <button
+            className="ml-12 w-max border-0 bg-transparent p-0 text-[12px] font-medium leading-[15px] text-kreis-orange shadow-none"
+            type="button"
+            onClick={() => void thread.loadComments()}
+          >
+            Reintentar
+          </button>
+        ) : null}
+
+        {thread.error ? <p className="m-0 ml-12 text-[12px] font-medium leading-[15px] text-kreis-orange">{thread.error}</p> : null}
+
+        {thread.status === "ready" && thread.comments.length === 0 ? (
+          <p className="m-0 ml-12 text-[12px] font-normal leading-[15px] text-kreis-muted">Todavia no hay comentarios.</p>
+        ) : null}
+
+        {thread.comments.length ? (
+          <div className="grid gap-[17px]">
+            {thread.comments.map((comment) => (
+              <DetailCommentNode
+                comment={comment}
+                depth={0}
+                key={comment.id}
+                replyingTo={thread.replyingTo}
+                replyBody={thread.replyBody}
+                submitting={thread.submitting}
+                onReplyStart={thread.startReply}
+                onReplyCancel={thread.cancelReply}
+                onReplyBodyChange={thread.setReplyBody}
+                onReplySubmit={(event, parentId) => {
+                  event.preventDefault();
+                  void thread.submitComment(thread.replyBody, parentId);
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+export function PostDetailCommentComposer({
+  thread,
+  keyboardOpen
+}: {
+  thread: PostCommentThread;
+  keyboardOpen: boolean;
+}) {
+  return (
+    <DetailRootCommentForm
+      keyboardOpen={keyboardOpen}
+      value={thread.rootBody}
+      submitting={thread.submitting}
+      onChange={thread.setRootBody}
+      onSubmit={(event) => {
+        event.preventDefault();
+        void thread.submitComment(thread.rootBody);
+      }}
+    />
+  );
+}
+
+export function PostDetailCommentsLayout({
+  postId,
+  initialCount,
+  score,
+  accessToken,
+  active,
+  keyboardOpen,
+  onCountChange,
+  children
+}: {
+  postId: string;
+  initialCount: number;
+  score?: number;
+  accessToken: string;
+  active: boolean;
+  keyboardOpen: boolean;
+  onCountChange: (postId: string, total: number) => void;
+  children: (parts: { comments: ReactNode; composer: ReactNode }) => ReactNode;
+}) {
+  const thread = usePostCommentThread({
+    postId,
+    accessToken,
+    active,
+    onCountChange
+  });
+
+  return (
+    <>
+      {children({
+        comments: (
+          <PostDetailCommentsContent
+            initialCount={initialCount}
+            score={score}
+            thread={thread}
+          />
+        ),
+        composer: (
+          <PostDetailCommentComposer
+            keyboardOpen={keyboardOpen}
+            thread={thread}
+          />
+        )
+      })}
+    </>
+  );
+}
+
 export function PostComments({
   postId,
   initialCount,
@@ -499,37 +804,14 @@ export function PostComments({
   onCountChange
 }: PostCommentsProps) {
   const [internalOpen, setInternalOpen] = useState(false);
-  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
-  const [comments, setComments] = useState<PostComment[]>([]);
-  const [rootBody, setRootBody] = useState("");
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyBody, setReplyBody] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [liked, setLiked] = useState(false);
   const open = expanded ?? internalOpen;
-  const displayedScore = typeof score === "number" ? score + (liked ? 1 : 0) : undefined;
-
-  const loadComments = useCallback(async (): Promise<void> => {
-    setStatus("loading");
-    setError(null);
-
-    try {
-      const result = await listPostComments(postId, accessToken);
-      setComments(result.comments);
-      onCountChange(postId, result.total);
-      setStatus("ready");
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "No pudimos cargar los comentarios.");
-      setStatus("error");
-    }
-  }, [accessToken, onCountChange, postId]);
-
-  useEffect(() => {
-    if (!open || status !== "idle") return;
-
-    void Promise.resolve().then(loadComments);
-  }, [loadComments, open, status]);
+  const thread = usePostCommentThread({
+    postId,
+    accessToken,
+    active: open,
+    onCountChange
+  });
+  const displayedScore = typeof score === "number" ? score + (thread.liked ? 1 : 0) : undefined;
 
   function openThread(): void {
     if (open) return;
@@ -542,40 +824,6 @@ export function PostComments({
     setInternalOpen(true);
   }
 
-  function startReply(commentId: string): void {
-    setReplyingTo(commentId);
-    setReplyBody("");
-    setError(null);
-  }
-
-  function cancelReply(): void {
-    setReplyingTo(null);
-    setReplyBody("");
-  }
-
-  async function submitComment(body: string, parentId?: string): Promise<void> {
-    if (!body.trim()) return;
-
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      const result = await createPostComment(postId, body.trim(), accessToken, parentId);
-
-      setComments((current) => parentId
-        ? insertReply(current, parentId, result.comment)
-        : [...current, result.comment]);
-      onCountChange(postId, result.total);
-      setRootBody("");
-      cancelReply();
-      setStatus("ready");
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "No pudimos publicar el comentario.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   return (
     <section className="mt-[12px]">
       <div className={cn(
@@ -586,17 +834,17 @@ export function PostComments({
           <button
             className={cn(
               "inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-inherit shadow-none transition-colors duration-150",
-              liked ? "text-kreis-orange" : "text-inherit"
+              thread.liked ? "text-kreis-orange" : "text-inherit"
             )}
             type="button"
-            aria-label={liked ? "Quitar like" : "Dar like"}
-            aria-pressed={liked}
+            aria-label={thread.liked ? "Quitar like" : "Dar like"}
+            aria-pressed={thread.liked}
             onClick={(event) => {
               event.stopPropagation();
-              setLiked((current) => !current);
+              thread.setLiked((current) => !current);
             }}
           >
-            <Heart aria-hidden="true" size={16} weight={liked ? "Bold" : "Outline"} />
+            <Heart aria-hidden="true" size={16} weight={thread.liked ? "Bold" : "Outline"} />
             {displayedScore}
           </button>
         ) : null}
@@ -627,42 +875,42 @@ export function PostComments({
         expanded ? (
           <>
             <div className="relative ml-[-52px] mt-[13px] grid gap-[14px] pt-[14px] before:pointer-events-none before:absolute before:left-[calc(var(--page-gutter)*-1)] before:top-0 before:h-px before:w-screen before:bg-kreis-line">
-              {status === "loading" ? (
+              {thread.status === "loading" ? (
                 <LoadingState label="Cargando comentarios" variant="inline" className="ml-12" />
               ) : null}
 
-              {status === "error" ? (
+              {thread.status === "error" ? (
                 <button
                   className="ml-12 w-max border-0 bg-transparent p-0 text-[12px] font-medium leading-[15px] text-kreis-orange shadow-none"
                   type="button"
-                  onClick={() => void loadComments()}
+                  onClick={() => void thread.loadComments()}
                 >
                   Reintentar
                 </button>
               ) : null}
 
-              {error ? <p className="m-0 ml-12 text-[12px] font-medium leading-[15px] text-kreis-orange">{error}</p> : null}
+              {thread.error ? <p className="m-0 ml-12 text-[12px] font-medium leading-[15px] text-kreis-orange">{thread.error}</p> : null}
 
-              {status === "ready" && comments.length === 0 ? (
+              {thread.status === "ready" && thread.comments.length === 0 ? (
                 <p className="m-0 ml-12 text-[12px] font-normal leading-[15px] text-kreis-muted">Todavia no hay comentarios.</p>
               ) : null}
 
-              {comments.length ? (
+              {thread.comments.length ? (
                 <div className="grid gap-[17px]">
-                  {comments.map((comment) => (
+                  {thread.comments.map((comment) => (
                     <DetailCommentNode
                       comment={comment}
                       depth={0}
                       key={comment.id}
-                      replyingTo={replyingTo}
-                      replyBody={replyBody}
-                      submitting={submitting}
-                      onReplyStart={startReply}
-                      onReplyCancel={cancelReply}
-                      onReplyBodyChange={setReplyBody}
+                      replyingTo={thread.replyingTo}
+                      replyBody={thread.replyBody}
+                      submitting={thread.submitting}
+                      onReplyStart={thread.startReply}
+                      onReplyCancel={thread.cancelReply}
+                      onReplyBodyChange={thread.setReplyBody}
                       onReplySubmit={(event, parentId) => {
                         event.preventDefault();
-                        void submitComment(replyBody, parentId);
+                        void thread.submitComment(thread.replyBody, parentId);
                       }}
                     />
                   ))}
@@ -671,53 +919,53 @@ export function PostComments({
             </div>
 
             <DetailRootCommentForm
-              value={rootBody}
-              submitting={submitting}
-              onChange={setRootBody}
+              value={thread.rootBody}
+              submitting={thread.submitting}
+              onChange={thread.setRootBody}
               onSubmit={(event) => {
                 event.preventDefault();
-                void submitComment(rootBody);
+                void thread.submitComment(thread.rootBody);
               }}
             />
           </>
         ) : (
           <div className="mt-3 grid gap-3 rounded-[15px] border border-kreis-line bg-kreis-event-surface p-3">
-            {status === "loading" ? (
+            {thread.status === "loading" ? (
               <CommentSkeletonList />
             ) : null}
 
-            {status === "error" ? (
+            {thread.status === "error" ? (
               <button
                 className="w-max border-0 bg-transparent p-0 text-[0.78rem] font-black text-kreis-orange shadow-none"
                 type="button"
-                onClick={() => void loadComments()}
+                onClick={() => void thread.loadComments()}
               >
                 Reintentar
               </button>
             ) : null}
 
-            {error ? <p className="m-0 text-[0.78rem] font-bold leading-[1.35] text-kreis-orange">{error}</p> : null}
+            {thread.error ? <p className="m-0 text-[0.78rem] font-bold leading-[1.35] text-kreis-orange">{thread.error}</p> : null}
 
-            {status === "ready" && comments.length === 0 ? (
+            {thread.status === "ready" && thread.comments.length === 0 ? (
               <p className="m-0 text-[0.8rem] leading-[1.4] text-kreis-muted">Todavia no hay comentarios. Podes abrir el hilo.</p>
             ) : null}
 
-            {comments.length ? (
+            {thread.comments.length ? (
               <div className="grid gap-3">
-                {comments.map((comment) => (
+                {thread.comments.map((comment) => (
                   <CommentNode
                     comment={comment}
                     depth={0}
                     key={comment.id}
-                    replyingTo={replyingTo}
-                    replyBody={replyBody}
-                    submitting={submitting}
-                    onReplyStart={startReply}
-                    onReplyCancel={cancelReply}
-                    onReplyBodyChange={setReplyBody}
+                    replyingTo={thread.replyingTo}
+                    replyBody={thread.replyBody}
+                    submitting={thread.submitting}
+                    onReplyStart={thread.startReply}
+                    onReplyCancel={thread.cancelReply}
+                    onReplyBodyChange={thread.setReplyBody}
                     onReplySubmit={(event, parentId) => {
                       event.preventDefault();
-                      void submitComment(replyBody, parentId);
+                      void thread.submitComment(thread.replyBody, parentId);
                     }}
                   />
                 ))}
@@ -725,13 +973,13 @@ export function PostComments({
             ) : null}
 
             <CommentForm
-              value={rootBody}
+              value={thread.rootBody}
               placeholder="Sumate a la conversacion..."
-              submitting={submitting}
-              onChange={setRootBody}
+              submitting={thread.submitting}
+              onChange={thread.setRootBody}
               onSubmit={(event) => {
                 event.preventDefault();
-                void submitComment(rootBody);
+                void thread.submitComment(thread.rootBody);
               }}
             />
           </div>

@@ -27,6 +27,7 @@ type CommentResponse = {
     legajo: number;
     nombre: string;
     apellido: string;
+    avatar_url?: string | null;
   };
   respuestas: CommentResponse[];
 };
@@ -89,7 +90,8 @@ function adaptComment(comment: CommentResponse): PostComment {
     createdAt: comment.created_at,
     author: {
       legajo: comment.autor.legajo,
-      name: `${comment.autor.nombre} ${comment.autor.apellido}`.trim()
+      name: `${comment.autor.nombre} ${comment.autor.apellido}`.trim(),
+      avatarUrl: comment.autor.avatar_url ?? null
     },
     replies: comment.respuestas.map(adaptComment)
   };

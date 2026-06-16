@@ -212,6 +212,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const [composerMode, setComposerMode] = useState<ComposerMode>("post");
   const [composerSubmitting, setComposerSubmitting] = useState(false);
   const [composerError, setComposerError] = useState<string | null>(null);
+  const [communityPostDetailOpen, setCommunityPostDetailOpen] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => getInitialThemeMode());
   const location = useLocation();
   const routerNavigate = useNavigate();
@@ -220,6 +221,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const activeEvent = eventDetailId ? events.find((event) => event.id === eventDetailId) : undefined;
   const isEventDetail = Boolean(eventDetailId);
   const screen = isEventDetail ? "events" : routeScreens[activeRoute] ?? "home";
+  const hideBottomNav = isEventDetail || (screen === "communities" && communityPostDetailOpen);
 
   const query = normalize(globalQuery.trim());
   const matchesQuery = (text: string): boolean => !query || normalize(text).includes(query);
@@ -570,10 +572,10 @@ function AuthenticatedApp({ session }: { session: Session }) {
   return (
     <>
       <div
-        className={cn(
-          "app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden md:px-6",
-          isEventDetail ? "pb-0" : "pb-[var(--bottom-nav-clearance)]"
-        )}
+          className={cn(
+            "app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden md:px-6",
+            hideBottomNav ? "pb-0" : "pb-[var(--bottom-nav-clearance)]"
+          )}
       >
             {screen !== "profile" && screen !== "home" && screen !== "events" && screen !== "communities" ? (
               <Header
@@ -633,6 +635,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
                   onCreateCommunity={() => openComposer("community")}
                   onCreatePost={() => openComposer("post")}
                   onCommentCountChange={updatePostCommentCount}
+                  onPostDetailChange={setCommunityPostDetailOpen}
                   onToggleTheme={toggleTheme}
                 />
               )}
@@ -667,7 +670,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
               onCreatePost={createPost}
             />
       </div>
-      {!isEventDetail && <BottomNav screen={screen} onNavigate={navigate} />}
+      {!hideBottomNav && <BottomNav screen={screen} onNavigate={navigate} />}
     </>
   );
 }

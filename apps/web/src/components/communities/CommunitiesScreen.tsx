@@ -186,6 +186,7 @@ type CommunitiesScreenProps = {
   onCreateCommunity: () => void;
   onCreatePost: () => void;
   onCommentCountChange: (postId: string, total: number) => void;
+  onPostDetailChange?: (open: boolean) => void;
   onToggleTheme: () => void;
 };
 
@@ -197,6 +198,7 @@ export function CommunitiesScreen({
   onCreateCommunity,
   onCreatePost,
   onCommentCountChange,
+  onPostDetailChange,
   onToggleTheme
 }: CommunitiesScreenProps) {
   const [activeFilter, setActiveFilter] = useState(allCommunitiesFilter);
@@ -216,6 +218,7 @@ export function CommunitiesScreen({
     [joinedCommunityIds, posts, selectedFilter]
   );
   const expandedPost = expandedPostId ? feedPosts.find((post) => post.id === expandedPostId) ?? null : null;
+  const expandedPostOpen = Boolean(expandedPost);
   const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
 
   useEffect(() => {
@@ -226,9 +229,15 @@ export function CommunitiesScreen({
     return () => window.cancelAnimationFrame(frameId);
   }, [expandedPost, expandedPostId]);
 
+  useEffect(() => {
+    onPostDetailChange?.(expandedPostOpen);
+
+    return () => onPostDetailChange?.(false);
+  }, [expandedPostOpen, onPostDetailChange]);
+
   if (expandedPost) {
     return (
-      <section className="grid min-w-0 w-full max-w-[430px] animate-[rise_220ms_ease-out] pt-[max(29px,calc(env(safe-area-inset-top)+14px))] sm:mx-auto" data-screen="communities-post-detail">
+      <section className="grid min-w-0 w-full max-w-[430px] animate-[rise_220ms_ease-out] pb-[calc(91px+env(safe-area-inset-bottom)+18px)] pt-[max(29px,calc(env(safe-area-inset-top)+14px))] sm:mx-auto" data-screen="communities-post-detail">
         <h1 className="sr-only">Detalle de post</h1>
 
         <div className="mb-[15px] flex h-[37px] items-center justify-end">

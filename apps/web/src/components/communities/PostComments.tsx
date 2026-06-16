@@ -83,6 +83,45 @@ function getCommentLikeSeed(comment: PostComment): number {
   return Number.parseInt(comment.id.replace(/\D/g, "").slice(-1), 10) % 3 || 1;
 }
 
+function getCommentAvatarLabel(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word.charAt(0))
+    .join("")
+    .toUpperCase() || "K";
+}
+
+function CommentAvatar({
+  comment,
+  size = "normal"
+}: {
+  comment: PostComment;
+  size?: "normal" | "detail";
+}) {
+  const sizeClass = size === "detail" ? "size-10" : "size-7";
+  const labelClass = size === "detail" ? "text-[0.78rem]" : "text-[0.65rem]";
+
+  return (
+    <span
+      className={cn(
+        "grid flex-none place-items-center overflow-hidden rounded-full bg-kreis-beige font-black uppercase text-kreis-orange",
+        sizeClass,
+        labelClass,
+        size === "detail" ? "mt-1" : "mt-0.5"
+      )}
+      aria-hidden="true"
+    >
+      {comment.author.avatarUrl ? (
+        <img className="size-full object-cover" src={comment.author.avatarUrl} alt="" loading="lazy" decoding="async" />
+      ) : (
+        getCommentAvatarLabel(comment.author.name)
+      )}
+    </span>
+  );
+}
+
 function CommentForm({
   value,
   placeholder,
@@ -141,6 +180,48 @@ function CommentForm({
   );
 }
 
+function DetailRootCommentForm({
+  value,
+  submitting,
+  onChange,
+  onSubmit
+}: {
+  value: string;
+  submitting: boolean;
+  onChange: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const hasValue = value.trim().length > 0;
+
+  return (
+    <form
+      className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[430px] bg-[var(--app-bg)] px-[22px] pb-[calc(42px+env(safe-area-inset-bottom))] pt-[19px]"
+      onSubmit={onSubmit}
+    >
+      <div className="relative">
+        <input
+          className="h-[29px] w-full rounded-[10px] border-0 bg-[rgba(10,10,10,0.08)] px-4 pr-11 text-[12px] font-normal leading-[15px] text-kreis-ink outline-none shadow-none placeholder:text-kreis-muted focus:ring-2 focus:ring-kreis-orange/20"
+          maxLength={2000}
+          placeholder="Unite a la conversacion"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <button
+          className={cn(
+            "absolute right-1 top-1/2 grid size-[23px] -translate-y-1/2 place-items-center rounded-full border-0 bg-kreis-orange p-0 text-kreis-cream shadow-none transition-[opacity,transform] duration-150 active:scale-95",
+            hasValue ? "opacity-100" : "pointer-events-none opacity-0"
+          )}
+          type="submit"
+          aria-label="Publicar comentario"
+          disabled={submitting || !hasValue}
+        >
+          <PaperPlaneTilt aria-hidden="true" className={cn(submitting && "animate-pulse")} size={13} weight="fill" />
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function CommentNode({
   comment,
   depth,
@@ -159,9 +240,7 @@ function CommentNode({
   return (
     <article className="min-w-0">
       <div className="flex items-start gap-2.5">
-        <span className="mt-0.5 grid size-7 flex-none place-items-center rounded-full bg-kreis-beige text-[0.65rem] font-black uppercase text-kreis-orange">
-          {comment.author.name.slice(0, 2)}
-        </span>
+        <CommentAvatar comment={comment} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <strong className="text-[0.8rem] leading-none text-kreis-ink">{comment.author.name}</strong>
@@ -304,7 +383,7 @@ function DetailCommentNode({
       ) : null}
 
       <article className="relative grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2">
-        <span className="mt-1 grid size-10 rounded-full bg-kreis-event-surface" aria-hidden="true" />
+        <CommentAvatar comment={comment} size="detail" />
         <div className="min-w-0">
           <div className="flex min-w-0 items-baseline gap-1.5">
             <strong className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-medium leading-[15px] text-kreis-ink">
@@ -500,49 +579,61 @@ export function PostComments({
 
       {open ? (
         expanded ? (
-          <div className="relative ml-[-52px] mt-[13px] grid gap-[14px] pt-[14px] before:pointer-events-none before:absolute before:left-[calc(var(--page-gutter)*-1)] before:top-0 before:h-px before:w-screen before:bg-kreis-line">
-            {status === "loading" ? (
-              <LoadingState label="Cargando comentarios" variant="inline" className="ml-12" />
-            ) : null}
+          <>
+            <div className="relative ml-[-52px] mt-[13px] grid gap-[14px] pt-[14px] before:pointer-events-none before:absolute before:left-[calc(var(--page-gutter)*-1)] before:top-0 before:h-px before:w-screen before:bg-kreis-line">
+              {status === "loading" ? (
+                <LoadingState label="Cargando comentarios" variant="inline" className="ml-12" />
+              ) : null}
 
-            {status === "error" ? (
-              <button
-                className="ml-12 w-max border-0 bg-transparent p-0 text-[12px] font-medium leading-[15px] text-kreis-orange shadow-none"
-                type="button"
-                onClick={() => void loadComments()}
-              >
-                Reintentar
-              </button>
-            ) : null}
+              {status === "error" ? (
+                <button
+                  className="ml-12 w-max border-0 bg-transparent p-0 text-[12px] font-medium leading-[15px] text-kreis-orange shadow-none"
+                  type="button"
+                  onClick={() => void loadComments()}
+                >
+                  Reintentar
+                </button>
+              ) : null}
 
-            {error ? <p className="m-0 ml-12 text-[12px] font-medium leading-[15px] text-kreis-orange">{error}</p> : null}
+              {error ? <p className="m-0 ml-12 text-[12px] font-medium leading-[15px] text-kreis-orange">{error}</p> : null}
 
-            {status === "ready" && comments.length === 0 ? (
-              <p className="m-0 ml-12 text-[12px] font-normal leading-[15px] text-kreis-muted">Todavia no hay comentarios.</p>
-            ) : null}
+              {status === "ready" && comments.length === 0 ? (
+                <p className="m-0 ml-12 text-[12px] font-normal leading-[15px] text-kreis-muted">Todavia no hay comentarios.</p>
+              ) : null}
 
-            {comments.length ? (
-              <div className="grid gap-[17px]">
-                {comments.map((comment) => (
-                  <DetailCommentNode
-                    comment={comment}
-                    depth={0}
-                    key={comment.id}
-                    replyingTo={replyingTo}
-                    replyBody={replyBody}
-                    submitting={submitting}
-                    onReplyStart={startReply}
-                    onReplyCancel={cancelReply}
-                    onReplyBodyChange={setReplyBody}
-                    onReplySubmit={(event, parentId) => {
-                      event.preventDefault();
-                      void submitComment(replyBody, parentId);
-                    }}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </div>
+              {comments.length ? (
+                <div className="grid gap-[17px]">
+                  {comments.map((comment) => (
+                    <DetailCommentNode
+                      comment={comment}
+                      depth={0}
+                      key={comment.id}
+                      replyingTo={replyingTo}
+                      replyBody={replyBody}
+                      submitting={submitting}
+                      onReplyStart={startReply}
+                      onReplyCancel={cancelReply}
+                      onReplyBodyChange={setReplyBody}
+                      onReplySubmit={(event, parentId) => {
+                        event.preventDefault();
+                        void submitComment(replyBody, parentId);
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <DetailRootCommentForm
+              value={rootBody}
+              submitting={submitting}
+              onChange={setRootBody}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submitComment(rootBody);
+              }}
+            />
+          </>
         ) : (
           <div className="mt-3 grid gap-3 rounded-[15px] border border-kreis-line bg-kreis-event-surface p-3">
             {status === "loading" ? (

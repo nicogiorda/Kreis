@@ -10,6 +10,7 @@ export function serializeComment(comment: PostCommentTree): {
     legajo: number;
     nombre: string;
     apellido: string;
+    avatar_url: string | null;
   };
   respuestas: ReturnType<typeof serializeComment>[];
 } {
@@ -22,7 +23,8 @@ export function serializeComment(comment: PostCommentTree): {
     autor: {
       legajo: comment.usuario.legajo,
       nombre: comment.usuario.nombre,
-      apellido: comment.usuario.apellido
+      apellido: comment.usuario.apellido,
+      avatar_url: comment.usuario.avatar_url
     },
     respuestas: comment.respuestas.map(serializeComment)
   };

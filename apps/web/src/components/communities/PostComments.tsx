@@ -407,7 +407,7 @@ function DetailCommentNode({
         />
       ) : null}
 
-      <article className="relative grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2">
+      <article className="relative grid w-full min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2">
         <CommentAvatar comment={comment} size="detail" />
         <div className="min-w-0">
           <div className="flex min-w-0 items-baseline gap-1.5">
@@ -679,7 +679,7 @@ export function PostDetailCommentsContent({
         </button>
       </div>
 
-      <div className="relative ml-[-52px] mt-[13px] grid gap-[14px] pt-[14px] before:pointer-events-none before:absolute before:left-[calc(var(--page-gutter)*-1)] before:top-0 before:h-px before:w-screen before:bg-kreis-line">
+      <div className="relative mt-[13px] grid gap-[14px] border-t border-kreis-line pt-[14px]">
         {thread.status === "loading" ? (
           <LoadingState label="Cargando comentarios" variant="inline" className="ml-12" />
         ) : null}
@@ -874,7 +874,7 @@ export function PostComments({
       {open ? (
         expanded ? (
           <>
-            <div className="relative ml-[-52px] mt-[13px] grid gap-[14px] pt-[14px] before:pointer-events-none before:absolute before:left-[calc(var(--page-gutter)*-1)] before:top-0 before:h-px before:w-screen before:bg-kreis-line">
+            <div className="relative mt-[13px] grid gap-[14px] border-t border-kreis-line pt-[14px]">
               {thread.status === "loading" ? (
                 <LoadingState label="Cargando comentarios" variant="inline" className="ml-12" />
               ) : null}

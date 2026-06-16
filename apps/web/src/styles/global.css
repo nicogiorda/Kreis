@@ -447,6 +447,7 @@ html[data-theme="dark"] {
     top: var(--visual-viewport-top, 0px);
     z-index: 50;
     display: grid;
+    --post-detail-gutter: 22px;
     width: 100%;
     max-width: 430px;
     height: var(--visual-viewport-height, 100dvh);
@@ -471,15 +472,22 @@ html[data-theme="dark"] {
     min-height: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding-inline: var(--page-gutter);
     padding-bottom: 18px;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .post-detail-content {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 430px;
+    margin-inline: auto;
+    padding-inline: var(--post-detail-gutter);
   }
 
   .post-detail-composer {
     flex: none;
     background: var(--app-bg);
-    padding: 10px 22px max(10px, env(safe-area-inset-bottom));
+    padding: 10px var(--post-detail-gutter) max(10px, env(safe-area-inset-bottom));
   }
 
   .post-detail-composer[data-keyboard-open="true"] {

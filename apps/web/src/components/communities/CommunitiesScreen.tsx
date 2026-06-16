@@ -329,14 +329,16 @@ export function CommunitiesScreen({
           {({ comments, composer }) => (
             <>
               <div ref={postDetailScrollRef} className="post-detail-scroll">
-                <CommunityPost
-                  accessToken={accessToken}
-                  expanded
-                  renderComments={false}
-                  post={expandedPost}
-                  onCommentCountChange={onCommentCountChange}
-                />
-                {comments}
+                <div className="post-detail-content">
+                  <CommunityPost
+                    accessToken={accessToken}
+                    expanded
+                    renderComments={false}
+                    post={expandedPost}
+                    onCommentCountChange={onCommentCountChange}
+                  />
+                  {comments}
+                </div>
               </div>
               {composer}
             </>

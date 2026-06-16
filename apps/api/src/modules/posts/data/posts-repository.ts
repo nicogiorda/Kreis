@@ -61,6 +61,7 @@ export type PostComment = {
     legajo: number;
     nombre: string;
     apellido: string;
+    avatar_url: string | null;
   };
 };
 
@@ -92,7 +93,8 @@ const commentInclude = {
     select: {
       legajo: true,
       nombre: true,
-      apellido: true
+      apellido: true,
+      avatar_url: true
     }
   }
 } as const;

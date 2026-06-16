@@ -77,6 +77,7 @@ export type PostComment = {
   author: {
     legajo: number;
     name: string;
+    avatarUrl?: string | null;
   };
   replies: PostComment[];
 };

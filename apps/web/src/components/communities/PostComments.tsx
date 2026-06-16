@@ -1,6 +1,6 @@
 import { ChatRound, Heart } from "@solar-icons/react";
 import { ArrowBendDownRight, CaretDown, DotsThree, PaperPlaneTilt } from "@phosphor-icons/react";
-import { type FormEvent, useCallback, useEffect, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { createPostComment, listPostComments } from "../../api/posts";
 import type { PostComment } from "../../types";
 import { CommentSkeletonList } from "../common/LoadingSkeleton";
@@ -192,19 +192,65 @@ function DetailRootCommentForm({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   const hasValue = value.trim().length > 0;
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const resizeTextarea = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = "29px";
+    textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 29), 96)}px`;
+  }, []);
+
+  useEffect(() => {
+    resizeTextarea();
+  }, [resizeTextarea, value]);
+
+  useEffect(() => {
+    const formElement = formRef.current;
+
+    function updateKeyboardOffset(): void {
+      if (!formElement || !window.visualViewport) return;
+
+      const viewport = window.visualViewport;
+      const keyboardOffset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      const visibleKeyboardOffset = keyboardOffset > 80 ? keyboardOffset : 0;
+
+      formElement.style.transform = `translate3d(0, -${visibleKeyboardOffset}px, 0)`;
+    }
+
+    updateKeyboardOffset();
+    window.visualViewport?.addEventListener("resize", updateKeyboardOffset);
+    window.visualViewport?.addEventListener("scroll", updateKeyboardOffset);
+    window.addEventListener("orientationchange", updateKeyboardOffset);
+
+    return () => {
+      if (formElement) formElement.style.transform = "";
+      window.visualViewport?.removeEventListener("resize", updateKeyboardOffset);
+      window.visualViewport?.removeEventListener("scroll", updateKeyboardOffset);
+      window.removeEventListener("orientationchange", updateKeyboardOffset);
+    };
+  }, []);
 
   return (
     <form
-      className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[430px] bg-[var(--app-bg)] px-[22px] pb-[calc(42px+env(safe-area-inset-bottom))] pt-[19px]"
+      ref={formRef}
+      className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[430px] bg-[var(--app-bg)] px-[22px] pb-[calc(42px+env(safe-area-inset-bottom))] pt-[19px] transition-transform duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
       onSubmit={onSubmit}
     >
       <div className="relative">
-        <input
-          className="h-[29px] w-full rounded-[10px] border-0 bg-[rgba(10,10,10,0.08)] px-4 pr-11 text-[12px] font-normal leading-[15px] text-kreis-ink outline-none shadow-none placeholder:text-kreis-muted focus:ring-2 focus:ring-kreis-orange/20"
+        <textarea
+          ref={textareaRef}
+          className="block h-[29px] max-h-24 min-h-[29px] w-full resize-none overflow-hidden rounded-[10px] border-0 bg-[rgba(10,10,10,0.08)] px-4 py-[7px] pr-11 text-[12px] font-normal leading-[15px] text-kreis-ink outline-none shadow-none placeholder:text-kreis-muted focus:ring-2 focus:ring-kreis-orange/20"
           maxLength={2000}
           placeholder="Unite a la conversacion"
+          rows={1}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => {
+            onChange(event.target.value);
+            window.requestAnimationFrame(resizeTextarea);
+          }}
         />
         <button
           className={cn(

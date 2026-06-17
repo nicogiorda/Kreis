@@ -7,7 +7,7 @@ import signUpOneUrl from "../../assets/auth/signup-1.webp";
 import signUpTwoUrl from "../../assets/auth/signup-2.webp";
 import signUpThreeUrl from "../../assets/auth/signup-3.webp";
 import signUpFourUrl from "../../assets/auth/signup-4.webp";
-import certificateGuidePlaceholderUrl from "../../assets/auth/certificate-guide-placeholder.svg";
+import certificateGuideUrl from "../../assets/auth/guia_certificado.png";
 import wordmarkUrl from "../../assets/auth/welcome-wordmark.svg";
 import invertedLogoUrl from "../../assets/brand/svgs/IMAGOTIPO-INVERTIDO.svg";
 import greetingCharacterUrl from "../../assets/characters/kreisito_saludando.webp";
@@ -470,8 +470,7 @@ function CertificateScreen({
               <X aria-hidden="true" weight="bold" />
             </button>
             <h2 className="auth-redesign-certificate-guide-title">Como descargarlo</h2>
-            <p className="auth-redesign-certificate-guide-copy">Guia provisoria. Despues podemos reemplazar esta imagen por la captura final con todos los pasos.</p>
-            <img className="auth-redesign-certificate-guide-image" src={certificateGuidePlaceholderUrl} alt="Guia provisoria para descargar el certificado de alumno regular" />
+            <img className="auth-redesign-certificate-guide-image" src={certificateGuideUrl} alt="Guia para descargar el certificado de alumno regular" />
             <button className="auth-redesign-certificate-guide-button" type="button" onClick={() => setGuideOpen(false)}>Entendido</button>
           </div>
         </section>

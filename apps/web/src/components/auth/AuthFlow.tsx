@@ -1,4 +1,4 @@
-import { ArrowLeft, Plus } from "@phosphor-icons/react";
+import { ArrowLeft, Plus, X } from "@phosphor-icons/react";
 import { type ChangeEvent, type ReactNode, useEffect, useLayoutEffect, useState } from "react";
 import { ApiRequestError, classifyCertificate, listFaculties, listTopics, register } from "../../api/auth";
 import type { CertificateClassificationResult, FacultyCatalogItem, TopicCatalogItem } from "../../api/auth";
@@ -7,6 +7,7 @@ import signUpOneUrl from "../../assets/auth/signup-1.webp";
 import signUpTwoUrl from "../../assets/auth/signup-2.webp";
 import signUpThreeUrl from "../../assets/auth/signup-3.webp";
 import signUpFourUrl from "../../assets/auth/signup-4.webp";
+import certificateGuidePlaceholderUrl from "../../assets/auth/certificate-guide-placeholder.svg";
 import wordmarkUrl from "../../assets/auth/welcome-wordmark.svg";
 import invertedLogoUrl from "../../assets/brand/svgs/IMAGOTIPO-INVERTIDO.svg";
 import greetingCharacterUrl from "../../assets/characters/kreisito_saludando.webp";
@@ -431,6 +432,8 @@ function CertificateScreen({
   onFileSelect: (file: File | null) => void;
   onSubmit: () => void;
 }) {
+  const [guideOpen, setGuideOpen] = useState(false);
+
   function handleFileChange(event: ChangeEvent<HTMLInputElement>): void {
     onFileSelect(event.target.files?.[0] ?? null);
   }
@@ -455,11 +458,24 @@ function CertificateScreen({
           </>
         )}
       </label>
-      <p className="auth-redesign-certificate-help">¿No sabes donde encontrarlo?</p>
+      <button className="auth-redesign-certificate-help" type="button" onClick={() => setGuideOpen(true)}>¿No sabes donde encontrarlo?</button>
       {error ? <p className="auth-redesign-error auth-redesign-error--certificate">{error}</p> : null}
       <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--certificate auth-redesign-button--green-text" disabled={submitting || !fileName} onClick={onSubmit}>
         {submitting ? <LoadingState label="Validando certificado" variant="button" /> : "Validar"}
       </PrimaryButton>
+      {guideOpen ? (
+        <section className="auth-redesign-certificate-guide" role="dialog" aria-modal="true" aria-label="Como descargar tu certificado">
+          <div className="auth-redesign-certificate-guide-panel">
+            <button className="auth-redesign-certificate-guide-close" type="button" aria-label="Cerrar guia" onClick={() => setGuideOpen(false)}>
+              <X aria-hidden="true" weight="bold" />
+            </button>
+            <h2 className="auth-redesign-certificate-guide-title">Como descargarlo</h2>
+            <p className="auth-redesign-certificate-guide-copy">Guia provisoria. Despues podemos reemplazar esta imagen por la captura final con todos los pasos.</p>
+            <img className="auth-redesign-certificate-guide-image" src={certificateGuidePlaceholderUrl} alt="Guia provisoria para descargar el certificado de alumno regular" />
+            <button className="auth-redesign-certificate-guide-button" type="button" onClick={() => setGuideOpen(false)}>Entendido</button>
+          </div>
+        </section>
+      ) : null}
     </AuthScreenFrame>
   );
 }

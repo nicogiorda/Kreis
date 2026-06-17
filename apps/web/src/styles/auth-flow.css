@@ -849,16 +849,108 @@
 
   .auth-redesign-certificate-help {
     position: absolute;
-    top: 54.69%;
-    left: 0;
+    top: calc(37.79% + 162px);
+    left: 6.62%;
     z-index: 5;
-    width: 100%;
+    width: 86.77%;
     margin: 0;
+    border: 0;
+    background: transparent;
+    padding: 0;
     color: rgba(247, 237, 218, 0.5);
     font-size: 14px;
     font-weight: 500;
     line-height: 18px;
     text-align: center;
+  }
+
+  .auth-redesign-certificate-help:active {
+    color: #f7edda;
+  }
+
+  .auth-redesign-certificate-guide {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: grid;
+    place-items: center;
+    background: rgba(9, 51, 44, 0.82);
+    padding:
+      max(18px, env(safe-area-inset-top))
+      18px
+      max(18px, env(safe-area-inset-bottom));
+  }
+
+  .auth-redesign-certificate-guide-panel {
+    position: relative;
+    display: grid;
+    width: min(100%, 356px);
+    max-height: 100%;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: 12px;
+    border-radius: 24px;
+    background: #f7edda;
+    padding: 20px 16px 16px;
+    color: #2e4b3c;
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.22);
+  }
+
+  .auth-redesign-certificate-guide-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border: 0;
+    border-radius: 14px;
+    background: rgba(46, 75, 60, 0.1);
+    color: #2e4b3c;
+    padding: 0;
+  }
+
+  .auth-redesign-certificate-guide-close svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .auth-redesign-certificate-guide-title {
+    margin: 0;
+    padding-right: 42px;
+    font-family: "Amsi Pro", Arial, sans-serif;
+    font-size: 25px;
+    font-weight: 900;
+    line-height: 1.05;
+  }
+
+  .auth-redesign-certificate-guide-copy {
+    margin: 0;
+    padding-right: 6px;
+    color: rgba(46, 75, 60, 0.72);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.28;
+  }
+
+  .auth-redesign-certificate-guide-image {
+    width: 100%;
+    max-height: min(58vh, 500px);
+    border-radius: 18px;
+    object-fit: contain;
+    background: #2e4b3c;
+  }
+
+  .auth-redesign-certificate-guide-button {
+    display: grid;
+    height: 38px;
+    place-items: center;
+    border: 0;
+    border-radius: 15px;
+    background: #2e4b3c;
+    color: #f7edda;
+    font-size: 16px;
+    font-weight: 500;
   }
 
   .auth-redesign-error {

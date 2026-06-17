@@ -884,9 +884,9 @@
   .auth-redesign-certificate-guide-panel {
     position: relative;
     display: grid;
-    width: min(100%, 356px);
+    width: min(100%, 374px);
     max-height: 100%;
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     gap: 12px;
     border-radius: 24px;
     background: #f7edda;
@@ -924,21 +924,12 @@
     line-height: 1.05;
   }
 
-  .auth-redesign-certificate-guide-copy {
-    margin: 0;
-    padding-right: 6px;
-    color: rgba(46, 75, 60, 0.72);
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.28;
-  }
-
   .auth-redesign-certificate-guide-image {
     width: 100%;
-    max-height: min(58vh, 500px);
+    max-height: min(70vh, 620px);
     border-radius: 18px;
     object-fit: contain;
-    background: #2e4b3c;
+    background: #202020;
   }
 
   .auth-redesign-certificate-guide-button {

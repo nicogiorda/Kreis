@@ -13,6 +13,7 @@ import { uploadEventImage } from "../api/event-images";
 import { createPost as persistPost, listPosts } from "../api/posts";
 import { getMyProfile, uploadMyAvatar } from "../api/users";
 import type { KreisUserProfile } from "../api/users";
+import { AdminAccessDenied, AdminDashboard } from "../components/admin/AdminDashboard";
 import { AuthFlow } from "../components/auth/AuthFlow";
 import { AuthViewport } from "../components/auth/AuthLayout";
 import { ComposerModal } from "../components/composer/ComposerModal";
@@ -42,6 +43,7 @@ const screenRoutes: Record<Screen, string> = {
   communities: "/communities",
   profile: "/profile"
 };
+const adminRoute = "/admin";
 const eventDetailRoutePrefix = `${screenRoutes.events}/`;
 const routeScreens = Object.fromEntries(
   Object.entries(screenRoutes).map(([screen, path]) => [path, screen])
@@ -217,6 +219,10 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const location = useLocation();
   const routerNavigate = useNavigate();
   const activeRoute = normalizeRoute(location.pathname);
+  const isAdminRoute = activeRoute === adminRoute;
+  const isAdminEmail = profileEmail?.toLowerCase() === "kreis1app@gmail.com";
+  const isAdminRole = userProfile?.role?.toLowerCase() === "administrador";
+  const isAdminUser = isAdminRole || (profileLoadStatus !== "ready" && isAdminEmail);
   const eventDetailId = getEventDetailId(activeRoute);
   const activeEvent = eventDetailId ? events.find((event) => event.id === eventDetailId) : undefined;
   const isEventDetail = Boolean(eventDetailId);
@@ -256,6 +262,12 @@ function AuthenticatedApp({ session }: { session: Session }) {
     markStartup("app-shell-mounted");
     updateStartupDebug({ appShellMounted: true });
   }, []);
+
+  useEffect(() => {
+    if (!isAdminUser || isAdminRoute) return;
+
+    routerNavigate(adminRoute, { replace: true });
+  }, [isAdminRoute, isAdminUser, routerNavigate]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -351,6 +363,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
   }, [accessToken, eventDetailId]);
 
   useEffect(() => {
+    if (isAdminRoute) return;
     if (routeScreens[activeRoute]) return;
 
     if (eventDetailId) {
@@ -362,7 +375,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
     }
 
     routerNavigate(screenRoutes.home, { replace: true });
-  }, [activeEvent, activeRoute, eventDetailId, eventLoadStatus, routerNavigate]);
+  }, [activeEvent, activeRoute, eventDetailId, eventLoadStatus, isAdminRoute, routerNavigate]);
 
   useEffect(() => {
     scrollTop();
@@ -567,6 +580,20 @@ function AuthenticatedApp({ session }: { session: Session }) {
         setComposerError(getComposerErrorMessage(error));
       })
       .finally(() => setComposerSubmitting(false));
+  }
+
+  if (isAdminRoute) {
+    return isAdminUser ? (
+      <AdminDashboard
+        communities={communities}
+        events={events}
+        posts={activity}
+        profileEmail={profileEmail}
+        onBack={logoutUser}
+      />
+    ) : (
+      <AdminAccessDenied onBack={() => routerNavigate(screenRoutes.home)} />
+    );
   }
 
   return (

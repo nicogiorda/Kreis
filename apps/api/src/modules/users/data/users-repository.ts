@@ -179,6 +179,12 @@ export type UserProfileWithRelations = {
 // Se usa auth_id en lugar del legajo para que el endpoint sea seguro:
 // el auth_id se extrae del JWT verificado por Supabase, no lo puede
 // fabricar el cliente para acceder al perfil de otro usuario.
+export async function findUserAuthIdByLegajo(legajo: number): Promise<{ legajo: number; auth_id: string } | null> {
+  return prisma.usuario.findUnique({
+    where: { legajo },
+    select: { legajo: true, auth_id: true }
+  });
+}
 export async function findUserProfileByAuthId(authId: string): Promise<UserProfileWithRelations | null> {
   return prisma.usuario.findUnique({
     where: { auth_id: authId },

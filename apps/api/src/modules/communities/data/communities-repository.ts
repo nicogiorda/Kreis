@@ -10,6 +10,7 @@
 import { prisma } from "../../../core/database";
 
 const ACCEPTED_COMMUNITY_STATUS = "Aceptado";
+const PENDING_COMMUNITY_STATUS = "Pendiente";
 
 // Tipo principal que describe una comunidad con todas sus relaciones cargadas.
 // user_comunidad se filtra por legajo para saber si el usuario está unido (0 ó 1 registros).
@@ -93,7 +94,7 @@ export async function createCommunity(
       legajo,
       nombre: input.nombre,
       descripcion: input.descripcion ?? null,
-      estado: "Aceptado", // Creada temporalmente como Aceptado de manera predeterminada
+      estado: PENDING_COMMUNITY_STATUS,
       // Vincula los tópicos seleccionados en comunidad_topico
       comunidad_topico:
         input.topicos && input.topicos.length > 0
@@ -132,10 +133,10 @@ export async function createCommunity(
   });
 }
 
-// Devuelve TODAS las comunidades sin filtrar por estado, ordenadas primero por estado
-// (Pendiente primero) y luego por nombre. Solo para uso administrativo.
-export async function listAllCommunities(): Promise<CommunityWithRelations[]> {
+// Devuelve solo comunidades pendientes. Solo para uso administrativo.
+export async function listPendingCommunities(): Promise<CommunityWithRelations[]> {
   return prisma.comunidad.findMany({
+    where: { estado: PENDING_COMMUNITY_STATUS },
     include: {
       comunidad_topico: {
         include: {
@@ -156,7 +157,7 @@ export async function listAllCommunities(): Promise<CommunityWithRelations[]> {
         select: { user_comunidad: true }
       }
     },
-    orderBy: [{ estado: "asc" }, { nombre: "asc" }]
+    orderBy: { created_at: "asc" }
   });
 }
 

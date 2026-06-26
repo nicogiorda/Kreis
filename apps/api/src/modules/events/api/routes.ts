@@ -8,7 +8,9 @@ import {
   findUserByAuthId,
   listAcceptedEvents,
   listAcceptedEventsLimit,
-  toggleEventInterest
+  listPendingEvents,
+  toggleEventInterest,
+  updateEventStatus
 } from "../data/events-repository";
 import { serializeEvent } from "./serialize-event";
 import { serializeEventSummary } from "./serialize-event-summary";
@@ -50,7 +52,7 @@ function getBearerToken(authorizationHeader: string | undefined): string | null 
 }
 
 type AuthenticatedEventUser =
-  | { ok: true; user: { legajo: number } }
+  | { ok: true; user: { legajo: number; rol: string } }
   | { ok: false; status: number; error: { code: string; message: string } };
 
 async function authenticateEventUser(request: Request): Promise<AuthenticatedEventUser> {
@@ -96,6 +98,25 @@ async function authenticateEventUser(request: Request): Promise<AuthenticatedEve
   return { ok: true, user };
 }
 
+
+async function authenticateAdminEventUser(request: Request): Promise<AuthenticatedEventUser> {
+  const result = await authenticateEventUser(request);
+
+  if (!result.ok) return result;
+
+  if (result.user.rol !== "Administrador") {
+    return {
+      ok: false,
+      status: 403,
+      error: {
+        code: "forbidden",
+        message: "Esta accion requiere rol Administrador"
+      }
+    };
+  }
+
+  return result;
+}
 async function authenticateOptionalEventUser(
   request: Request
 ): Promise<AuthenticatedEventUser | { ok: true; user: null }> {
@@ -141,6 +162,82 @@ const eventCreationSchema = z.object({
 export function createEventsRouter(): Router {
   const router = Router();
 
+
+  router.get("/admin", async (request, response, next) => {
+    try {
+      const authenticatedUser = await authenticateAdminEventUser(request);
+
+      if (!authenticatedUser.ok) {
+        response.status(authenticatedUser.status).json({
+          error: authenticatedUser.error
+        });
+        return;
+      }
+
+      const events = await listPendingEvents();
+
+      response.json({
+        events: events.map((event) => serializeEvent(event))
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.patch("/admin/:id_evento/status", async (request, response, next) => {
+    try {
+      const authenticatedUser = await authenticateAdminEventUser(request);
+
+      if (!authenticatedUser.ok) {
+        response.status(authenticatedUser.status).json({
+          error: authenticatedUser.error
+        });
+        return;
+      }
+
+      const parsedParams = eventIdParamsSchema.safeParse(request.params);
+
+      if (!parsedParams.success) {
+        response.status(400).json({
+          error: {
+            code: "validation_error",
+            message: "Invalid event id",
+            details: parsedParams.error.flatten().fieldErrors
+          }
+        });
+        return;
+      }
+
+      const { estado } = request.body as { estado?: unknown };
+      const VALID_STATUSES = ["Pendiente", "Aceptado", "Rechazado"] as const;
+
+      if (!VALID_STATUSES.includes(estado as (typeof VALID_STATUSES)[number])) {
+        response.status(400).json({
+          error: {
+            code: "validation_error",
+            message: `El campo 'estado' debe ser uno de: ${VALID_STATUSES.join(", ")}`
+          }
+        });
+        return;
+      }
+
+      const event = await updateEventStatus(parsedParams.data.id_evento, estado as (typeof VALID_STATUSES)[number]);
+
+      if (!event) {
+        response.status(404).json({
+          error: {
+            code: "not_found",
+            message: "Evento no encontrado"
+          }
+        });
+        return;
+      }
+
+      response.json({ event: serializeEvent(event) });
+    } catch (error) {
+      next(error);
+    }
+  });
   router.post("/", async (request, response, next) => {
     try {
       const authenticatedUser = await authenticateEventUser(request);

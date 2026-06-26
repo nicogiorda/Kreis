@@ -11,6 +11,7 @@ import { prisma } from "../../../core/database";
 
 // Constantes para el campo estado — evita strings sueltos dispersos en las queries.
 const ACCEPTED_EVENT_STATUS = "Aceptado";
+const PENDING_EVENT_STATUS = "Pendiente";
 
 // Campos de usuario que se traen en cada consulta de evento.
 // Centralizado acá para no repetir el mismo select en listAcceptedEvents,
@@ -228,7 +229,7 @@ export async function createPendingEvent(input: CreateEventInput): Promise<Event
       descripcion: input.descripcion,
       imagen_url: input.imagen_url,
       // AL PRINCIPIO PONEMOS QUE SE CREE EN "ACEPTADO" PERO CUANDO HAYA MODERACIÓN SE CAMBIA A "PENDIENTE" '>
-      estado: ACCEPTED_EVENT_STATUS,
+      estado: PENDING_EVENT_STATUS,
       evento_topico: {
         create: uniqueTopicos.map((id_topico) => ({
           topico: {
@@ -246,10 +247,10 @@ export async function createPendingEvent(input: CreateEventInput): Promise<Event
 // Obtiene el legajo a partir del auth_id extraído del JWT.
 // Se usa al crear un evento: el cliente manda el token, nosotros
 // resolvemos quién es para registrarlo como creador.
-export async function findUserByAuthId(auth_id: string): Promise<{ legajo: number } | null> {
+export async function findUserByAuthId(auth_id: string): Promise<{ legajo: number; rol: string } | null> {
   return prisma.usuario.findUnique({
     where: { auth_id },
-    select: { legajo: true }
+    select: { legajo: true, rol: true }
   });
 }
 
@@ -308,4 +309,32 @@ export async function toggleEventInterest(
     interested: true
   };
 }
+export async function listPendingEvents(): Promise<EventWithRelations[]> {
+  return prisma.evento.findMany({
+    where: { estado: PENDING_EVENT_STATUS },
+    include: eventInclude,
+    orderBy: { created_at: "asc" }
+  });
+}
 
+export async function updateEventStatus(
+  id_evento: bigint,
+  estado: "Pendiente" | "Aceptado" | "Rechazado"
+): Promise<EventWithRelations | null> {
+  try {
+    return await prisma.evento.update({
+      where: { id_evento },
+      data: { estado },
+      include: eventInclude
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      (error as { code: string }).code === "P2025"
+    ) {
+      return null;
+    }
+    throw error;
+  }
+}

@@ -5,6 +5,7 @@ import { createDiscoveryRouter } from "../modules/discovery/api/routes";
 import { createEventsRouter } from "../modules/events/api/routes";
 import { createNotificationsRouter } from "../modules/notifications/api/routes";
 import { createPostsRouter } from "../modules/posts/api/routes";
+import { createReportsRouter } from "../modules/reports/api/routes";
 import { createUsersRouter } from "../modules/users/api/routes";
 
 export function registerRoutes(app: Application): void {
@@ -37,6 +38,7 @@ export function registerRoutes(app: Application): void {
   app.use("/api/v1/events", createEventsRouter());
   app.use("/api/v1/communities", createCommunitiesRouter());
   app.use("/api/v1/posts", createPostsRouter());
+  app.use("/api/v1/reports", createReportsRouter());
   app.use("/api/v1/discovery", createDiscoveryRouter());
   app.use("/api/v1/notifications", createNotificationsRouter());
 }

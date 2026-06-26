@@ -23,7 +23,7 @@ import sharp from "sharp";
 import { type NextFunction, type Request, type Response, Router } from "express";
 import { createClient } from "@supabase/supabase-js";
 import { config } from "../../../core/config";
-import { findUserProfileByAuthId, listFacultades, listTopicos, updateUserAvatarUrl, updateUserRol } from "../data/users-repository";
+import { findUserAuthIdByLegajo, findUserProfileByAuthId, listFacultades, listTopicos, updateUserAvatarUrl, updateUserRol } from "../data/users-repository";
 import { serializeUserProfile } from "./serialize-user-profile";
 
 // Cliente Supabase con la anon key, usado unicamente para verificar el JWT
@@ -82,6 +82,73 @@ function uploadAvatar(request: Request, response: Response, next: NextFunction):
       }
     });
   });
+}
+function getBearerToken(authorizationHeader: string | undefined): string | null {
+  if (!authorizationHeader) return null;
+
+  const [scheme, token] = authorizationHeader.split(" ");
+
+  if (scheme?.toLowerCase() !== "bearer" || !token) return null;
+
+  return token;
+}
+
+type AuthenticatedUser =
+  | { ok: true; user: { legajo: number; rol: string } }
+  | { ok: false; status: number; error: { code: string; message: string } };
+
+async function authenticateAdminUser(request: Request): Promise<AuthenticatedUser> {
+  const accessToken = getBearerToken(request.headers.authorization);
+
+  if (!accessToken) {
+    return {
+      ok: false,
+      status: 401,
+      error: {
+        code: "missing_token",
+        message: "Authorization Bearer token is required"
+      }
+    };
+  }
+
+  const { data, error } = await supabase.auth.getUser(accessToken);
+
+  if (error || !data.user) {
+    return {
+      ok: false,
+      status: 401,
+      error: {
+        code: "invalid_token",
+        message: error?.message ?? "Invalid access token"
+      }
+    };
+  }
+
+  const user = await findUserProfileByAuthId(data.user.id);
+
+  if (!user) {
+    return {
+      ok: false,
+      status: 403,
+      error: {
+        code: "profile_not_found",
+        message: "Authenticated user does not have a Kreis profile"
+      }
+    };
+  }
+
+  if (user.rol !== "Administrador") {
+    return {
+      ok: false,
+      status: 403,
+      error: {
+        code: "forbidden",
+        message: "Esta accion requiere rol Administrador"
+      }
+    };
+  }
+
+  return { ok: true, user: { legajo: user.legajo, rol: user.rol } };
 }
 export function createUsersRouter(): Router {
   const router = Router();
@@ -254,6 +321,71 @@ export function createUsersRouter(): Router {
       const updatedUser = await updateUserAvatarUrl(user.legajo, avatarUrl);
 
       response.json({ user: serializeUserProfile(updatedUser) });
+    } catch (error) {
+      next(error);
+    }
+  });
+  router.delete("/admin/:legajo", async (request, response, next) => {
+    try {
+      const authResult = await authenticateAdminUser(request);
+
+      if (!authResult.ok) {
+        response.status(authResult.status).json({ error: authResult.error });
+        return;
+      }
+
+      const legajo = Number(request.params.legajo);
+
+      if (!Number.isInteger(legajo) || legajo <= 0) {
+        response.status(400).json({
+          error: {
+            code: "validation_error",
+            message: "El parametro 'legajo' debe ser un entero positivo"
+          }
+        });
+        return;
+      }
+
+      if (authResult.user.legajo === legajo) {
+        response.status(400).json({
+          error: {
+            code: "cannot_delete_self",
+            message: "No podes eliminar tu propio usuario administrador desde esta ruta"
+          }
+        });
+        return;
+      }
+
+      const userToDelete = await findUserAuthIdByLegajo(legajo);
+
+      if (!userToDelete) {
+        response.status(404).json({
+          error: {
+            code: "not_found",
+            message: "Usuario no encontrado"
+          }
+        });
+        return;
+      }
+
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userToDelete.auth_id);
+
+      if (deleteError) {
+        response.status(502).json({
+          error: {
+            code: "user_delete_failed",
+            message: deleteError.message
+          }
+        });
+        return;
+      }
+
+      response.json({
+        user: {
+          legajo: userToDelete.legajo,
+          deleted: true
+        }
+      });
     } catch (error) {
       next(error);
     }

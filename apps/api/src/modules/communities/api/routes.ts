@@ -21,12 +21,12 @@ import { config } from "../../../core/config";
 import {
   createCommunity,
   findUserByAuthId,
-  listAllCommunities,
+  listPendingCommunities,
   listCommunities,
   setCommunityMembership,
   updateCommunityStatus
 } from "../data/communities-repository";
-import { serializeCommunity } from "./serialize-community";
+import { serializeCommunity, serializeCommunityModeration } from "./serialize-community";
 
 // Cliente de Supabase usado exclusivamente para verificar tokens JWT entrantes.
 // autoRefreshToken y persistSession en false porque este cliente es stateless (no guarda sesión).
@@ -344,9 +344,9 @@ export function createCommunitiesRouter(): Router {
         return;
       }
 
-      const communities = await listAllCommunities();
+      const communities = await listPendingCommunities();
 
-      response.json({ comunidades: communities.map(serializeCommunity) });
+      response.json({ comunidades: communities.map(serializeCommunityModeration) });
     } catch (error) {
       next(error);
     }

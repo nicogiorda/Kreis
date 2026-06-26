@@ -46,3 +46,16 @@ export function serializeCommunity(community: CommunityWithRelations) {
     created_at: community.created_at.toISOString()
   };
 }
+export function serializeCommunityModeration(community: CommunityWithRelations) {
+  return {
+    id: community.id_comunidad.toString(),
+    nombre: community.nombre,
+    estado: community.estado,
+    descripcion: community.descripcion,
+    topicos: community.comunidad_topico.map(({ topico }) => ({
+      id_topico: topico.id_topico.toString(),
+      topico: topico.topico
+    })),
+    created_at: community.created_at.toISOString()
+  };
+}

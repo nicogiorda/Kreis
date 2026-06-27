@@ -8,6 +8,7 @@ import { startServiceWorkerRegistration } from "./pwa/service-worker-updates";
 import { installGlobalStartupErrorListeners, markStartup } from "./startup/startup-debug";
 import "./styles/global.css";
 import "./styles/auth-flow.css";
+import "./styles/admin.css";
 
 markStartup("app-script-start");
 installGlobalStartupErrorListeners();

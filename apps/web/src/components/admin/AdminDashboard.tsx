@@ -1,22 +1,26 @@
-import { useMemo, useState } from "react";
 import {
-  ArrowLeft,
-  CalendarBlank,
+  AddCircle,
+  AltArrowRight,
+  CalendarMinimalistic,
   CheckCircle,
-  DotsThree,
+  CloseCircle,
   Flag,
-  MagnifyingGlass,
-  SealCheck,
-  ShieldCheck,
+  ForbiddenCircle,
+  Logout2,
+  Magnifier,
+  MapPoint,
+  Settings,
   UserCircle,
-  UsersThree,
-  WarningCircle,
-  XCircle
-} from "@phosphor-icons/react";
+  UsersGroupRounded
+} from "@solar-icons/react";
+import { useMemo, useState } from "react";
 import type { ActivityPost, Community, KreisEvent } from "../../types";
 import { cn } from "../../utils/cn";
 
-type AdminSection = "communities" | "events" | "reports" | "users";
+type AdminSection = "communities" | "events" | "users" | "reports";
+type CommunityView = "requests" | "approved";
+type EventView = "requests" | "published";
+type ReportView = "incoming" | "resolved";
 
 type AdminDashboardProps = {
   profileEmail?: string;
@@ -26,468 +30,477 @@ type AdminDashboardProps = {
   onBack: () => void;
 };
 
-type PendingItem = {
+type CommunityReview = {
+  id: string;
+  name: string;
+  author: string;
+  topics: string[];
+  description: string;
+  members?: number;
+};
+
+type EventReview = {
   id: string;
   title: string;
-  meta: string;
-  detail: string;
-  status: string;
+  day: string;
+  month: string;
+  place: string;
 };
 
-type ReportItem = {
+type ReportReview = {
   id: string;
-  target: string;
-  author: string;
-  community: string;
   reason: string;
-  excerpt: string;
+  community: string;
   age: string;
-  priority: "alta" | "media" | "baja";
+  content: string;
+  author: string;
 };
 
-type UserItem = {
+type UserReview = {
   id: string;
   name: string;
   email: string;
-  status: string;
-  reports: number;
-  activity: string;
 };
 
-const adminSections: Array<{ id: AdminSection; label: string; icon: typeof Flag }> = [
-  { id: "communities", label: "Comunidades", icon: UsersThree },
-  { id: "events", label: "Eventos", icon: CalendarBlank },
-  { id: "reports", label: "Reportes", icon: Flag },
-  { id: "users", label: "Usuarios", icon: UserCircle }
-];
+const adminSections = [
+  { id: "communities", label: "Comunidades", Icon: UsersGroupRounded },
+  { id: "events", label: "Eventos", Icon: CalendarMinimalistic },
+  { id: "users", label: "Usuarios", Icon: UserCircle },
+  { id: "reports", label: "Reportes", Icon: Flag }
+] satisfies Array<{ id: AdminSection; label: string; Icon: typeof UsersGroupRounded }>;
 
-const fallbackCommunities: PendingItem[] = [
+const fallbackCommunities: CommunityReview[] = [
   {
-    id: "community-data",
-    title: "Data Club UADE",
-    meta: "Tecnologia · 42 miembros esperando",
-    detail: "Comunidad para compartir proyectos, apuntes y busquedas de equipo.",
-    status: "Nueva"
+    id: "community-ufc",
+    name: "Grupo de UFC",
+    author: "Nicolas Giordano",
+    topics: ["Deporte", "Entretenimiento"],
+    description: "Comunidad que lo abarca todo sobre UFC. ¡A celebrar, fanáticos de las peleas!"
   },
   {
-    id: "community-marketing",
-    title: "Marketing y Creatividad",
-    meta: "Negocios · 31 miembros esperando",
-    detail: "Pide aprobacion para publicar actividades, referencias y trabajos practicos.",
-    status: "Revisar"
-  },
-  {
-    id: "community-running",
-    title: "Running Kreis",
-    meta: "Deportes · 76 miembros esperando",
-    detail: "Entrenamientos por zona y salidas abiertas para estudiantes.",
-    status: "Lista"
+    id: "community-cocina",
+    name: "Cocina Italiana",
+    author: "Nicolas Umansky",
+    topics: ["Gastronomía"],
+    description: "Si les gusta la cocina y andan buscando recetas o ideas, esta es tu comunidad."
   }
 ];
 
-const fallbackEvents: PendingItem[] = [
-  {
-    id: "event-design",
-    title: "After de diseno",
-    meta: "Vie 19:30 · Palermo",
-    detail: "Encuentro abierto para estudiantes de diseno y comunicacion.",
-    status: "Lugar externo"
-  },
+const fallbackEvents: EventReview[] = [
   {
     id: "event-football",
-    title: "Torneo relampago de futbol",
-    meta: "Sab 10:00 · Sede Monserrat",
-    detail: "Evento de comunidad deportiva con cupos limitados.",
-    status: "Cupos"
-  },
-  {
-    id: "event-finance",
-    title: "Finanzas personales",
-    meta: "Mar 18:00 · Aula magna",
-    detail: "Charla propuesta por estudiantes con invitado externo.",
-    status: "Invitado"
+    title: "Torneo de Futbol 5",
+    day: "26",
+    month: "MAY",
+    place: "Parque Sarmiento"
   }
 ];
 
-const fallbackReports: ReportItem[] = [
+const fallbackReports: ReportReview[] = [
   {
-    id: "report-running",
-    target: "Comentario",
-    author: "Gonzalo Martin Gomez",
-    community: "Running Kreis",
+    id: "report-language",
     reason: "Lenguaje agresivo",
-    excerpt: "No running",
-    age: "Hace 7 min",
-    priority: "alta"
-  },
-  {
-    id: "report-gastro",
-    target: "Posteo",
-    author: "Vito Nava",
-    community: "Gastronomia",
-    reason: "Spam o promocion",
-    excerpt: "Paso link para anotarse por fuera de la app.",
-    age: "Hace 34 min",
-    priority: "media"
-  },
-  {
-    id: "report-event",
-    target: "Evento",
-    author: "Nicolas Umansky",
-    community: "Eventos",
-    reason: "Datos incompletos",
-    excerpt: "El evento no informa organizador ni cupos.",
-    age: "Hoy",
-    priority: "baja"
+    community: "Emprendedores UADE",
+    age: "Hace 12 minutos",
+    content: "Contenido reportado por lenguaje agresivo dentro de una conversación.",
+    author: "Usuario Kreis"
   }
 ];
 
-const fallbackUsers: UserItem[] = [
-  {
-    id: "user-admin",
-    name: "Kreis Admin",
-    email: "kreis1app@gmail.com",
-    status: "Admin",
-    reports: 0,
-    activity: "Activo hoy"
-  },
-  {
-    id: "user-gonzalo",
-    name: "Gonzalo Martin Gomez",
-    email: "gmartin@uade.edu.ar",
-    status: "Verificado",
-    reports: 2,
-    activity: "12 dias"
-  },
-  {
-    id: "user-vito",
-    name: "Vito Nava",
-    email: "vnava@uade.edu.ar",
-    status: "Verificado",
-    reports: 1,
-    activity: "21 dias"
-  },
-  {
-    id: "user-nicolas",
-    name: "Nicolas Umansky",
-    email: "numansky@uade.edu.ar",
-    status: "Pendiente",
-    reports: 0,
-    activity: "Ayer"
-  }
+const fallbackUsers: UserReview[] = [
+  { id: "user-nicolas", name: "Nicolas Giordano", email: "ngiordano@uade.edu.ar" },
+  { id: "user-franco", name: "Franco Lan", email: "flan@uade.edu.ar" }
 ];
 
-function getPendingCommunities(communities: Community[]): PendingItem[] {
-  const pending = communities.filter((community) => {
-    const status = community.status?.toLowerCase() ?? "";
-    return status.includes("pending") || status.includes("pendiente");
-  });
+function toCommunityReviews(communities: Community[]): CommunityReview[] {
+  if (!communities.length) return fallbackCommunities;
 
-  if (!pending.length) return fallbackCommunities;
-
-  return pending.map((community) => ({
+  return communities.map((community) => ({
     id: community.id,
-    title: community.name,
-    meta: `${community.category} · ${community.members} miembros`,
-    detail: community.description ?? community.pulse,
-    status: "Pendiente"
+    name: community.name,
+    author: "Usuario Kreis",
+    topics: community.topics?.map((topic) => topic.name).filter(Boolean) ?? [community.category],
+    description: community.description ?? community.pulse,
+    members: community.members
   }));
 }
 
-function getPendingEvents(events: KreisEvent[]): PendingItem[] {
-  const pending = events.filter((event) => {
-    const text = `${event.title} ${event.category} ${event.description}`.toLowerCase();
-    return text.includes("pendiente") || text.includes("pending");
-  });
+function toEventReviews(events: KreisEvent[]): EventReview[] {
+  if (!events.length) return fallbackEvents;
 
-  if (!pending.length) return fallbackEvents;
-
-  return pending.map((event) => ({
+  return events.map((event) => ({
     id: event.id,
     title: event.title,
-    meta: `${event.day} ${event.month} · ${event.place}`,
-    detail: event.description,
-    status: event.official ? "Oficial" : "Pendiente"
+    day: event.day,
+    month: event.month,
+    place: event.place
   }));
 }
 
-function getReports(posts: ActivityPost[]): ReportItem[] {
+function toReportReviews(posts: ActivityPost[]): ReportReview[] {
   if (!posts.length) return fallbackReports;
 
-  return posts.slice(0, 3).map((post, index) => ({
+  return posts.slice(0, 5).map((post, index) => ({
     id: `report-${post.id}`,
-    target: "Posteo",
-    author: post.author || "Usuario Kreis",
+    reason: index === 0 ? "Lenguaje agresivo" : "Contenido inapropiado",
     community: post.communityName,
-    reason: ["Contenido fuera de tema", "Lenguaje agresivo", "Spam o promocion"][index] ?? "Revision manual",
-    excerpt: post.text,
-    age: index === 0 ? "Hace 12 min" : index === 1 ? "Hace 1 h" : "Hoy",
-    priority: index === 0 ? "alta" : index === 1 ? "media" : "baja"
+    age: index === 0 ? "Hace 12 minutos" : post.time,
+    content: post.text,
+    author: post.author
   }));
 }
 
-function AdminActionButtons({ approveLabel = "Aprobar" }: { approveLabel?: string }) {
+function SegmentedControl<T extends string>({
+  value,
+  options,
+  onChange,
+  label
+}: {
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  onChange: (value: T) => void;
+  label: string;
+}) {
   return (
-    <div className="kreis-admin-actions">
-      <button className="kreis-admin-action-primary" type="button">
-        <CheckCircle size={18} weight="bold" />
-        {approveLabel}
-      </button>
-      <button className="kreis-admin-action-muted" type="button">
-        <XCircle size={18} weight="bold" />
-        Rechazar
-      </button>
+    <div className="admin-segmented-control" role="tablist" aria-label={label}>
+      {options.map((option) => (
+        <button
+          className={cn(value === option.value && "is-active")}
+          type="button"
+          role="tab"
+          aria-selected={value === option.value}
+          key={option.value}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
     </div>
   );
 }
 
-function QueueItem({ item, active, onSelect }: { item: PendingItem; active?: boolean; onSelect: () => void }) {
+function CommunityCard({
+  community,
+  pending,
+  onApprove,
+  onReject
+}: {
+  community: CommunityReview;
+  pending: boolean;
+  onApprove?: () => void;
+  onReject?: () => void;
+}) {
   return (
-    <button className={cn("kreis-admin-queue-item", active && "is-active")} type="button" onClick={onSelect}>
-      <span>{item.status}</span>
-      <strong>{item.title}</strong>
-      <small>{item.meta}</small>
-    </button>
-  );
-}
-
-function CommunitiesPanel({ items }: { items: PendingItem[] }) {
-  const [selectedId, setSelectedId] = useState(items[0]?.id ?? "");
-  const selected = items.find((item) => item.id === selectedId) ?? items[0];
-
-  if (!selected) return null;
-
-  return (
-    <section className="kreis-admin-panel-grid">
-      <div className="kreis-admin-queue">
-        <div className="kreis-admin-section-title">
-          <span>Cola</span>
-          <strong>{items.length} pendientes</strong>
+    <article className="admin-community-card">
+      <div className="admin-community-card__heading">
+        <div>
+          <h2>{community.name}</h2>
+          <p>{community.author}</p>
         </div>
-        {items.map((item) => (
-          <QueueItem item={item} key={item.id} active={item.id === selected.id} onSelect={() => setSelectedId(item.id)} />
+        {pending ? (
+          <div className="admin-community-card__actions">
+            <button className="is-approve" type="button" onClick={onApprove}>
+              <CheckCircle size={11} weight="Linear" aria-hidden="true" />
+              Aceptar
+            </button>
+            <button className="is-reject" type="button" onClick={onReject}>
+              <CloseCircle size={11} weight="Linear" aria-hidden="true" />
+              Rechazar
+            </button>
+          </div>
+        ) : (
+          <span className="admin-community-card__members">{community.members ?? 0} miembros</span>
+        )}
+      </div>
+      <div className="admin-community-card__topics">
+        {community.topics.slice(0, 2).map((topic) => (
+          <span key={topic}>{topic}</span>
         ))}
       </div>
-
-      <article className="kreis-admin-review-detail">
-        <div className="kreis-admin-detail-header">
-          <span className="kreis-admin-badge">Comunidad</span>
-          <DotsThree size={24} weight="bold" />
-        </div>
-        <h2>{selected.title}</h2>
-        <p>{selected.detail}</p>
-        <div className="kreis-admin-detail-list">
-          <span>Categoria</span>
-          <strong>{selected.meta}</strong>
-          <span>Chequeo</span>
-          <strong>Nombre, descripcion y topicos listos para revision.</strong>
-        </div>
-        <AdminActionButtons />
-      </article>
-    </section>
+      <p className="admin-community-card__description">{community.description}</p>
+    </article>
   );
 }
 
-function EventsPanel({ items }: { items: PendingItem[] }) {
+function CommunitiesPanel({ communities }: { communities: CommunityReview[] }) {
+  const [view, setView] = useState<CommunityView>("requests");
+  const [reviewedIds, setReviewedIds] = useState<string[]>([]);
+  const pending = communities.filter((community) => !reviewedIds.includes(community.id));
+  const visible = view === "requests" ? pending : communities;
+
   return (
-    <section className="kreis-admin-events-layout">
-      <div className="kreis-admin-event-timeline">
-        {items.map((item, index) => (
-          <article className="kreis-admin-event-row" key={item.id}>
-            <div className="kreis-admin-date-chip">
-              <strong>{String(index + 1).padStart(2, "0")}</strong>
-              <span>rev</span>
-            </div>
-            <div>
-              <span>{item.status}</span>
-              <h2>{item.title}</h2>
-              <p>{item.meta}</p>
-              <small>{item.detail}</small>
-            </div>
-            <AdminActionButtons approveLabel="Publicar" />
-          </article>
+    <>
+      <SegmentedControl
+        value={view}
+        label="Estado de comunidades"
+        options={[
+          { value: "requests", label: "Solicitudes" },
+          { value: "approved", label: "Comunidades" }
+        ]}
+        onChange={setView}
+      />
+      <div className="admin-community-list">
+        {visible.map((community) => (
+          <CommunityCard
+            community={community}
+            pending={view === "requests"}
+            key={community.id}
+            onApprove={() => setReviewedIds((current) => [...current, community.id])}
+            onReject={() => setReviewedIds((current) => [...current, community.id])}
+          />
+        ))}
+        {!visible.length ? <p className="admin-empty-state">No hay solicitudes pendientes.</p> : null}
+      </div>
+    </>
+  );
+}
+
+function EventCard({ event }: { event: EventReview }) {
+  return (
+    <article className="admin-event-card">
+      <div className="admin-event-card__date" aria-label={`${event.day} ${event.month}`}>
+        <strong>{event.day}</strong>
+        <span>{event.month}</span>
+      </div>
+      <div className="admin-event-card__content">
+        <h2>{event.title}</h2>
+        <p>
+          <MapPoint size={10} weight="Linear" aria-hidden="true" />
+          {event.place}
+        </p>
+      </div>
+      <AltArrowRight className="admin-event-card__arrow" size={15} weight="Linear" aria-hidden="true" />
+    </article>
+  );
+}
+
+function EventsPanel({ events }: { events: EventReview[] }) {
+  const [view, setView] = useState<EventView>("requests");
+
+  return (
+    <>
+      <div className="admin-title-row">
+        <h1>Eventos</h1>
+        <button className="admin-create-event" type="button">
+          <AddCircle size={14} weight="Linear" aria-hidden="true" />
+          Crear evento
+        </button>
+      </div>
+      <SegmentedControl
+        value={view}
+        label="Estado de eventos"
+        options={[
+          { value: "requests", label: "Solicitudes" },
+          { value: "published", label: "Eventos" }
+        ]}
+        onChange={setView}
+      />
+      <div className="admin-event-list">
+        {events.map((event) => (
+          <EventCard event={event} key={event.id} />
         ))}
       </div>
-
-      <aside className="kreis-admin-checklist">
-        <h2>Antes de publicar</h2>
-        <p>Este bloque separa eventos de comunidades porque aca importa fecha, lugar, descripcion y riesgo de convocatoria.</p>
-        <ul>
-          <li>Fecha y horario claros</li>
-          <li>Lugar reconocible</li>
-          <li>Descripcion suficiente</li>
-          <li>No es academico obligatorio</li>
-        </ul>
-      </aside>
-    </section>
+    </>
   );
 }
 
-function ReportsPanel({ reports }: { reports: ReportItem[] }) {
-  const [selectedId, setSelectedId] = useState(reports[0]?.id ?? "");
-  const selected = reports.find((report) => report.id === selectedId) ?? reports[0];
-
-  if (!selected) return null;
-
-  return (
-    <section className="kreis-admin-report-layout">
-      <div className="kreis-admin-report-inbox">
-        {reports.map((report) => (
-          <button className={cn("kreis-admin-report-item", report.id === selected.id && "is-active")} key={report.id} type="button" onClick={() => setSelectedId(report.id)}>
-            <span className={cn("kreis-admin-priority", `is-${report.priority}`)} />
-            <strong>{report.reason}</strong>
-            <small>{report.community} · {report.age}</small>
-          </button>
-        ))}
-      </div>
-
-      <article className="kreis-admin-report-detail">
-        <div className="kreis-admin-detail-header">
-          <span className={cn("kreis-admin-badge", selected.priority === "alta" && "is-urgent")}>{selected.priority}</span>
-          <span>{selected.age}</span>
-        </div>
-        <h2>{selected.target} reportado</h2>
-        <p className="kreis-admin-report-copy">{selected.excerpt}</p>
-        <div className="kreis-admin-detail-list">
-          <span>Autor</span>
-          <strong>{selected.author}</strong>
-          <span>Comunidad</span>
-          <strong>{selected.community}</strong>
-          <span>Motivo</span>
-          <strong>{selected.reason}</strong>
-        </div>
-        <div className="kreis-admin-actions">
-          <button className="kreis-admin-action-primary" type="button">Marcar revisado</button>
-          <button className="kreis-admin-action-muted" type="button">Ocultar contenido</button>
-        </div>
-      </article>
-    </section>
+function UsersPanel({ users }: { users: UserReview[] }) {
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLocaleLowerCase("es");
+  const visibleUsers = users.filter((user) =>
+    `${user.name} ${user.email}`.toLocaleLowerCase("es").includes(normalizedQuery)
   );
-}
 
-function UsersPanel({ users }: { users: UserItem[] }) {
   return (
-    <section className="kreis-admin-users-layout">
-      <div className="kreis-admin-users-table">
-        {users.map((user) => (
-          <article className="kreis-admin-user-row" key={user.id}>
-            <div className="kreis-admin-avatar">{user.name.slice(0, 1)}</div>
-            <div>
-              <strong>{user.name}</strong>
-              <span>{user.email}</span>
+    <>
+      <label className="admin-user-search">
+        <Magnifier size={17} weight="Linear" aria-hidden="true" />
+        <input
+          type="search"
+          value={query}
+          placeholder="Buscar un usuario"
+          aria-label="Buscar un usuario"
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </label>
+      <div className="admin-user-list">
+        {visibleUsers.map((user) => (
+          <article className="admin-user-card" key={user.id}>
+            <div className="admin-user-card__avatar" aria-hidden="true" />
+            <div className="admin-user-card__identity">
+              <h2>{user.name}</h2>
+              <p>{user.email}</p>
             </div>
-            <small>{user.status}</small>
-            <small>{user.reports} reportes</small>
-            <button type="button" aria-label={`Mas opciones para ${user.name}`}>
-              <DotsThree size={23} weight="bold" />
+            <button type="button">
+              <ForbiddenCircle size={12} weight="Linear" aria-hidden="true" />
+              Suspender
             </button>
           </article>
         ))}
+        {!visibleUsers.length ? <p className="admin-empty-state">No encontramos usuarios.</p> : null}
+      </div>
+    </>
+  );
+}
+
+function ReportsPanel({ reports }: { reports: ReportReview[] }) {
+  const [view, setView] = useState<ReportView>("incoming");
+  const [resolvedIds, setResolvedIds] = useState<string[]>([]);
+  const [selectedReport, setSelectedReport] = useState<ReportReview | null>(null);
+  const visibleReports = reports.filter((report) =>
+    view === "resolved" ? resolvedIds.includes(report.id) : !resolvedIds.includes(report.id)
+  );
+
+  function resolveSelected(): void {
+    if (!selectedReport) return;
+    setResolvedIds((current) => [...current, selectedReport.id]);
+    setSelectedReport(null);
+  }
+
+  return (
+    <>
+      <SegmentedControl
+        value={view}
+        label="Estado de reportes"
+        options={[
+          { value: "incoming", label: "Entrantes" },
+          { value: "resolved", label: "Resueltos" }
+        ]}
+        onChange={setView}
+      />
+      <div className="admin-report-list">
+        {visibleReports.map((report) => (
+          <article className="admin-report-card" key={report.id}>
+            <div>
+              <h2>{report.reason}</h2>
+              <p>
+                {report.community} · {report.age}
+              </p>
+            </div>
+            <button type="button" onClick={() => setSelectedReport(report)}>
+              Ver detalle
+            </button>
+          </article>
+        ))}
+        {!visibleReports.length ? <p className="admin-empty-state">No hay reportes en esta sección.</p> : null}
       </div>
 
-      <aside className="kreis-admin-role-card">
-        <SealCheck size={25} weight="fill" />
-        <h2>Permisos</h2>
-        <p>El panel se muestra para usuarios con rol Administrador. Los estudiantes quedan dentro de la app principal.</p>
-      </aside>
-    </section>
+      {selectedReport ? (
+        <div className="admin-report-dialog-backdrop" role="presentation" onClick={() => setSelectedReport(null)}>
+          <section
+            className="admin-report-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-report-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              className="admin-report-dialog__close"
+              type="button"
+              aria-label="Cerrar detalle"
+              onClick={() => setSelectedReport(null)}
+            >
+              <CloseCircle size={24} weight="Linear" />
+            </button>
+            <span>Reporte</span>
+            <h2 id="admin-report-title">{selectedReport.reason}</h2>
+            <p>{selectedReport.content}</p>
+            <dl>
+              <div>
+                <dt>Autor</dt>
+                <dd>{selectedReport.author}</dd>
+              </div>
+              <div>
+                <dt>Comunidad</dt>
+                <dd>{selectedReport.community}</dd>
+              </div>
+            </dl>
+            {view === "incoming" ? (
+              <button className="admin-report-dialog__resolve" type="button" onClick={resolveSelected}>
+                Marcar como resuelto
+              </button>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
+    </>
   );
 }
 
 export function AdminDashboard({ profileEmail, communities, events, posts, onBack }: AdminDashboardProps) {
-  const [activeSection, setActiveSection] = useState<AdminSection>("reports");
-  const pendingCommunities = useMemo(() => getPendingCommunities(communities), [communities]);
-  const pendingEvents = useMemo(() => getPendingEvents(events), [events]);
-  const reports = useMemo(() => getReports(posts), [posts]);
-  const users = fallbackUsers;
-  const activeLabel = adminSections.find((section) => section.id === activeSection)?.label ?? "Admin";
+  const [activeSection, setActiveSection] = useState<AdminSection>("communities");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const communityReviews = useMemo(() => toCommunityReviews(communities), [communities]);
+  const eventReviews = useMemo(() => toEventReviews(events), [events]);
+  const reportReviews = useMemo(() => toReportReviews(posts), [posts]);
 
   return (
-    <div className="kreis-admin-page">
-      <header className="kreis-admin-header">
-        <button className="kreis-admin-back" type="button" onClick={onBack}>
-          <ArrowLeft size={20} />
-          Cerrar sesion
-        </button>
-        <div className="kreis-admin-brand">
-          <ShieldCheck size={25} weight="fill" />
-          <span>kreis</span>
-        </div>
-        <label className="kreis-admin-search">
-          <MagnifyingGlass size={17} />
-          <input type="search" placeholder="Buscar en administracion" />
-        </label>
-      </header>
-
-      <main className="kreis-admin-shell">
-        <aside className="kreis-admin-summary">
-          <span>Administracion</span>
-          <h1>Revision de Kreis</h1>
-          <p>{profileEmail ?? "kreis1app@gmail.com"}</p>
-
-          <div className="kreis-admin-counts">
-            <article>
-              <strong>{pendingCommunities.length}</strong>
-              <span>comunidades</span>
-            </article>
-            <article>
-              <strong>{pendingEvents.length}</strong>
-              <span>eventos</span>
-            </article>
-            <article>
-              <strong>{reports.length}</strong>
-              <span>reportes</span>
-            </article>
-          </div>
-        </aside>
-
-        <section className="kreis-admin-work">
-          <nav className="kreis-admin-tabs" aria-label="Secciones de administracion">
-            {adminSections.map((section) => {
-              const Icon = section.icon;
-              const active = activeSection === section.id;
-
+    <div className="admin-mobile-page">
+      <div className="admin-mobile-shell">
+        <header className="admin-mobile-header">
+          <nav className="admin-mobile-nav" aria-label="Secciones de administración">
+            {adminSections.map(({ id, label, Icon }) => {
+              const active = activeSection === id;
               return (
-                <button className={cn(active && "is-active")} type="button" aria-current={active ? "page" : undefined} key={section.id} onClick={() => setActiveSection(section.id)}>
-                  <Icon size={18} weight={active ? "fill" : "regular"} />
-                  {section.label}
+                <button
+                  className={cn(active && "is-active")}
+                  type="button"
+                  aria-label={label}
+                  aria-current={active ? "page" : undefined}
+                  key={id}
+                  onClick={() => {
+                    setActiveSection(id);
+                    setSettingsOpen(false);
+                  }}
+                >
+                  <Icon size={id === "events" ? 20 : 22} weight="Linear" aria-hidden="true" />
                 </button>
               );
             })}
           </nav>
-
-          <div className="kreis-admin-work-heading">
-            <div>
-              <span>Modulo</span>
-              <h2>{activeLabel}</h2>
+          <button
+            className={cn("admin-settings-button", settingsOpen && "is-active")}
+            type="button"
+            aria-label="Configuración"
+            aria-expanded={settingsOpen}
+            onClick={() => setSettingsOpen((current) => !current)}
+          >
+            <Settings size={25} weight="Linear" aria-hidden="true" />
+          </button>
+          {settingsOpen ? (
+            <div className="admin-settings-menu">
+              <span>{profileEmail ?? "Administrador"}</span>
+              <button type="button" onClick={onBack}>
+                <Logout2 size={18} weight="Linear" aria-hidden="true" />
+                Cerrar sesión
+              </button>
             </div>
-            <div className="kreis-admin-status">
-              <WarningCircle size={17} weight="bold" />
-              Frontend demo
-            </div>
-          </div>
+          ) : null}
+        </header>
 
-          {activeSection === "communities" ? <CommunitiesPanel items={pendingCommunities} /> : null}
-          {activeSection === "events" ? <EventsPanel items={pendingEvents} /> : null}
-          {activeSection === "reports" ? <ReportsPanel reports={reports} /> : null}
-          {activeSection === "users" ? <UsersPanel users={users} /> : null}
-        </section>
-      </main>
+        <main className={cn("admin-mobile-content", `admin-mobile-content--${activeSection}`)}>
+          {activeSection !== "events" ? (
+            <h1>{adminSections.find((section) => section.id === activeSection)?.label}</h1>
+          ) : null}
+          {activeSection === "communities" ? <CommunitiesPanel communities={communityReviews} /> : null}
+          {activeSection === "events" ? <EventsPanel events={eventReviews} /> : null}
+          {activeSection === "users" ? <UsersPanel users={fallbackUsers} /> : null}
+          {activeSection === "reports" ? <ReportsPanel reports={reportReviews} /> : null}
+        </main>
+      </div>
     </div>
   );
 }
 
 export function AdminAccessDenied({ onBack }: { onBack: () => void }) {
   return (
-    <div className="kreis-admin-page kreis-admin-page--denied">
-      <section className="kreis-admin-denied">
-        <ShieldCheck size={42} weight="fill" />
-        <h1>Acceso administrativo</h1>
-        <p>Este panel esta reservado para usuarios con permisos de administracion.</p>
-        <button type="button" onClick={onBack}>
-          Volver a Kreis
-        </button>
-      </section>
+    <div className="admin-access-denied">
+      <ForbiddenCircle size={42} weight="LineDuotone" aria-hidden="true" />
+      <h1>Acceso administrativo</h1>
+      <p>Este panel está reservado para usuarios con permisos de administración.</p>
+      <button type="button" onClick={onBack}>
+        Volver a Kreis
+      </button>
     </div>
   );
 }

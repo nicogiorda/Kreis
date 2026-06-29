@@ -17,8 +17,12 @@ type ApiRequestInit = RequestInit & {
   timeoutMs?: number;
 };
 
+type AuthTokenRefresher = () => Promise<string | null>;
+
 let firstApiRequestTracked = false;
 let firstApiResponseTracked = false;
+let authTokenRefresher: AuthTokenRefresher | null = null;
+let pendingAuthTokenRefresh: Promise<string | null> | null = null;
 
 export class ApiRequestError extends Error {
   constructor(
@@ -54,6 +58,39 @@ export class ApiNetworkError extends Error {
 
 export function bearerTokenHeaders(accessToken?: string): HeadersInit | undefined {
   return accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined;
+}
+
+export function registerAuthTokenRefresher(refresher: AuthTokenRefresher): () => void {
+  authTokenRefresher = refresher;
+
+  return () => {
+    if (authTokenRefresher === refresher) authTokenRefresher = null;
+  };
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (!authTokenRefresher) return null;
+  if (pendingAuthTokenRefresh) return pendingAuthTokenRefresh;
+
+  pendingAuthTokenRefresh = authTokenRefresher()
+    .catch(() => null)
+    .finally(() => {
+      pendingAuthTokenRefresh = null;
+    });
+
+  return pendingAuthTokenRefresh;
+}
+
+function replaceBearerToken(init: ApiRequestInit, accessToken: string): ApiRequestInit | null {
+  const headers = new Headers(init.headers);
+  if (!headers.has("Authorization")) return null;
+
+  headers.set("Authorization", `Bearer ${accessToken}`);
+  return { ...init, headers };
+}
+
+function hasAuthorizationHeader(init: ApiRequestInit): boolean {
+  return new Headers(init.headers).has("Authorization");
 }
 
 function getApiError(payload: ApiErrorPayload | null, status?: number): ApiRequestError {
@@ -145,6 +182,8 @@ async function requestWithRetry<T>(path: string, init: ApiRequestInit, parseResp
   const maxRetries = getRetryCount(method, init.retries);
   let attempt = 0;
   let lastError: unknown;
+  let requestInit = init;
+  let authRefreshAttempted = false;
 
   if (!firstApiRequestTracked) {
     firstApiRequestTracked = true;
@@ -159,7 +198,7 @@ async function requestWithRetry<T>(path: string, init: ApiRequestInit, parseResp
 
   while (attempt <= maxRetries) {
     try {
-      const response = await fetchWithTimeout(path, init);
+      const response = await fetchWithTimeout(path, requestInit);
       if (!firstApiResponseTracked) {
         firstApiResponseTracked = true;
         markStartup("first-api-response");
@@ -171,6 +210,25 @@ async function requestWithRetry<T>(path: string, init: ApiRequestInit, parseResp
           }
         });
       }
+
+      if (
+        response.status === 401
+        && !authRefreshAttempted
+        && !requestInit.signal?.aborted
+        && hasAuthorizationHeader(requestInit)
+      ) {
+        authRefreshAttempted = true;
+        const refreshedAccessToken = await refreshAccessToken();
+        const refreshedRequest = refreshedAccessToken
+          ? replaceBearerToken(requestInit, refreshedAccessToken)
+          : null;
+
+        if (refreshedRequest) {
+          requestInit = refreshedRequest;
+          continue;
+        }
+      }
+
       return await parseResponse(response);
     } catch (error) {
       lastError = error;
@@ -187,7 +245,7 @@ async function requestWithRetry<T>(path: string, init: ApiRequestInit, parseResp
         });
       }
 
-      if (init.signal?.aborted || attempt >= maxRetries || !(error instanceof ApiTimeoutError || error instanceof ApiNetworkError)) {
+      if (requestInit.signal?.aborted || attempt >= maxRetries || !(error instanceof ApiTimeoutError || error instanceof ApiNetworkError)) {
         throw error;
       }
 

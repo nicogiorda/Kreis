@@ -273,34 +273,51 @@ function AuthenticatedApp({ session }: { session: Session }) {
   useEffect(() => {
     const controller = new AbortController();
 
-    void Promise.all([
-      listUpcomingEvents(accessToken, controller.signal),
-      listAllEvents(accessToken, controller.signal)
-    ])
-      .then(([nextUpcomingEvents, nextEvents]) => {
-        setUpcomingEvents(nextUpcomingEvents);
+    async function loadEvents(): Promise<void> {
+      if (isAdminRoute) {
+        const nextEvents = await listAllEvents(accessToken, controller.signal);
+        setUpcomingEvents([]);
         setEvents(nextEvents);
         setEventLoadStatus("ready");
-      })
-      .catch(() => {
+        return;
+      }
+
+      const [nextUpcomingEvents, nextEvents] = await Promise.all([
+        listUpcomingEvents(accessToken, controller.signal),
+        listAllEvents(accessToken, controller.signal)
+      ]);
+      setUpcomingEvents(nextUpcomingEvents);
+      setEvents(nextEvents);
+      setEventLoadStatus("ready");
+    }
+
+    void loadEvents().catch(() => {
         if (!controller.signal.aborted) setEventLoadStatus("error");
       });
 
     return () => controller.abort();
-  }, [accessToken, eventReloadKey]);
+  }, [accessToken, eventReloadKey, isAdminRoute]);
 
   useEffect(() => {
     const controller = new AbortController();
 
-    void Promise.all([
-      listCommunities(accessToken, controller.signal),
-      listPosts(accessToken, controller.signal)
-    ])
-      .then(([nextCommunities, nextPosts]) => {
+    async function loadCommunityContent(): Promise<void> {
+      if (isAdminRoute) {
+        const nextCommunities = await listCommunities(accessToken, controller.signal);
         setCommunities(nextCommunities);
-        setActivity(nextPosts);
-      })
-      .catch(() => {
+        setActivity([]);
+        return;
+      }
+
+      const [nextCommunities, nextPosts] = await Promise.all([
+        listCommunities(accessToken, controller.signal),
+        listPosts(accessToken, controller.signal)
+      ]);
+      setCommunities(nextCommunities);
+      setActivity(nextPosts);
+    }
+
+    void loadCommunityContent().catch(() => {
         if (!controller.signal.aborted) {
           setCommunities([]);
           setActivity([]);
@@ -308,7 +325,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
       });
 
     return () => controller.abort();
-  }, [accessToken]);
+  }, [accessToken, isAdminRoute]);
 
   useEffect(() => {
     const controller = new AbortController();

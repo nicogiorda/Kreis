@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiNetworkError, ApiTimeoutError, requestJson } from "./client";
+import {
+  ApiNetworkError,
+  ApiTimeoutError,
+  bearerTokenHeaders,
+  registerAuthTokenRefresher,
+  requestJson
+} from "./client";
 
 describe("api client", () => {
   beforeEach(() => {
@@ -64,5 +70,50 @@ describe("api client", () => {
       message: "Nope",
       status: 400
     });
+  });
+
+  it("refreshes the bearer token once and retries an unauthorized request", async () => {
+    const refreshToken = vi.fn().mockResolvedValue("fresh-token");
+    const unregister = registerAuthTokenRefresher(refreshToken);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ error: { code: "invalid_token", message: "Expired" } }),
+        { status: 401 }
+      ))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(requestJson<{ ok: boolean }>("/api/v1/private", {
+      headers: bearerTokenHeaders("old-token")
+    })).resolves.toEqual({ ok: true });
+
+    expect(refreshToken).toHaveBeenCalledTimes(1);
+    expect(new Headers(fetchMock.mock.calls[1]?.[1]?.headers).get("Authorization")).toBe("Bearer fresh-token");
+    unregister();
+  });
+
+  it("shares one token refresh between concurrent unauthorized requests", async () => {
+    const refreshToken = vi.fn().mockResolvedValue("fresh-token");
+    const unregister = registerAuthTokenRefresher(refreshToken);
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      const authorization = new Headers(init?.headers).get("Authorization");
+      return Promise.resolve(
+        authorization === "Bearer fresh-token"
+          ? new Response(JSON.stringify({ ok: true }), { status: 200 })
+          : new Response(
+              JSON.stringify({ error: { code: "invalid_token", message: "Expired" } }),
+              { status: 401 }
+            )
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(Promise.all([
+      requestJson("/api/v1/private-a", { headers: bearerTokenHeaders("old-token") }),
+      requestJson("/api/v1/private-b", { headers: bearerTokenHeaders("old-token") })
+    ])).resolves.toEqual([{ ok: true }, { ok: true }]);
+
+    expect(refreshToken).toHaveBeenCalledTimes(1);
+    unregister();
   });
 });

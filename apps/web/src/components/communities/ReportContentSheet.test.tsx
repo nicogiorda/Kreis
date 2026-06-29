@@ -24,7 +24,13 @@ describe("ReportContentSheet", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Reportar comentario" }));
-    await user.click(screen.getByRole("button", { name: /Lenguaje agresivo o acoso/i }));
+    const reasonButton = screen.getByRole("button", { name: /Lenguaje agresivo o acoso/i });
+    await user.click(reasonButton);
+
+    expect(reasonButton).toHaveAttribute("aria-pressed", "true");
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Confirmar reporte" }));
 
     expect(await screen.findByRole("heading", { name: "Reporte enviado" })).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(
@@ -38,5 +44,18 @@ describe("ReportContentSheet", () => {
         })
       })
     );
+  });
+
+  it("uses the Kreis warm white instead of a pure white surface", () => {
+    render(
+      <ReportContentSheet
+        accessToken="token"
+        target={{ type: "Post", id: "9" }}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("dialog")).toHaveClass("bg-kreis-lace");
+    expect(screen.getByRole("dialog")).not.toHaveClass("bg-kreis-surface");
   });
 });

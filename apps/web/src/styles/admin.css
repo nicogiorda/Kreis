@@ -629,6 +629,21 @@
     animation: admin-dialog-enter 180ms ease-out;
   }
 
+
+  .admin-event-dialog-cover {
+    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 0.875rem;
+    background: rgba(10, 10, 10, 0.08);
+  }
+
+  .admin-event-dialog-cover img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
   .admin-report-dialog > span {
     color: #f0531c;
     font-size: 0.75rem;

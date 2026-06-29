@@ -12,6 +12,9 @@ import { prisma } from "../../../core/database";
 // Constantes para el campo estado — evita strings sueltos dispersos en las queries.
 const ACCEPTED_EVENT_STATUS = "Aceptado";
 const PENDING_EVENT_STATUS = "Pendiente";
+function currentEventsFilter(): { gte: Date } {
+  return { gte: new Date() };
+}
 
 // Campos de usuario que se traen en cada consulta de evento.
 // Centralizado acá para no repetir el mismo select en listAcceptedEvents,
@@ -124,7 +127,8 @@ export type EventInterestRegistration = {
 export async function listAcceptedEventsLimit(legajo?: number): Promise<EventSummary[]> {
   return prisma.evento.findMany({
     where: {
-      estado: ACCEPTED_EVENT_STATUS
+      estado: ACCEPTED_EVENT_STATUS,
+      fecha_inicio: currentEventsFilter()
     },
     select: {
       id_evento: true,
@@ -161,7 +165,8 @@ export async function listAcceptedEventsLimit(legajo?: number): Promise<EventSum
 export async function listAcceptedEvents(legajo?: number): Promise<EventSummary[]> {
   return prisma.evento.findMany({
     where: {
-      estado: ACCEPTED_EVENT_STATUS
+      estado: ACCEPTED_EVENT_STATUS,
+      fecha_inicio: currentEventsFilter()
     },
     select: {
       id_evento: true,
@@ -199,7 +204,8 @@ export async function findAcceptedEventById(id_evento: bigint): Promise<EventWit
   return prisma.evento.findFirst({
     where: {
       id_evento,
-      estado: ACCEPTED_EVENT_STATUS
+      estado: ACCEPTED_EVENT_STATUS,
+      fecha_inicio: currentEventsFilter()
     },
     include: eventInclude
   });
@@ -261,7 +267,8 @@ export async function toggleEventInterest(
   const event = await prisma.evento.findFirst({
     where: {
       id_evento,
-      estado: ACCEPTED_EVENT_STATUS
+      estado: ACCEPTED_EVENT_STATUS,
+      fecha_inicio: currentEventsFilter()
     },
     select: {
       id_evento: true

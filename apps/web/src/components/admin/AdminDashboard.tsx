@@ -10,24 +10,45 @@ import {
   Magnifier,
   MapPoint,
   Settings,
+  TrashBinMinimalistic,
   UserCircle,
   UsersGroupRounded
 } from "@solar-icons/react";
-import { useMemo, useState } from "react";
-import type { ActivityPost, Community, KreisEvent } from "../../types";
+import { useEffect, useMemo, useState } from "react";
+import {
+  deleteAdminUser,
+  listAdminCommunities,
+  listAdminEvents,
+  listAdminReports,
+  listAdminUsers,
+  updateAdminCommunityStatus,
+  updateAdminEventStatus,
+  updateAdminReportStatus,
+  type AdminCommunity,
+  type AdminEvent,
+  type AdminPublicationStatus,
+  type AdminReport,
+  type AdminReportStatus,
+  type AdminUser
+} from "../../api/admin";
+import type { Community, KreisEvent } from "../../types";
 import { cn } from "../../utils/cn";
+import { LoadingState } from "../common/LoadingState";
 
 type AdminSection = "communities" | "events" | "users" | "reports";
 type CommunityView = "requests" | "approved";
 type EventView = "requests" | "published";
 type ReportView = "incoming" | "resolved";
+type ResourceStatus = "loading" | "ready" | "error";
 
 type AdminDashboardProps = {
+  accessToken: string;
   profileEmail?: string;
   communities: Community[];
   events: KreisEvent[];
-  posts: ActivityPost[];
+  refreshKey?: number;
   onBack: () => void;
+  onCreateEvent: () => void;
 };
 
 type CommunityReview = {
@@ -37,6 +58,7 @@ type CommunityReview = {
   topics: string[];
   description: string;
   members?: number;
+  pending: boolean;
 };
 
 type EventReview = {
@@ -45,21 +67,10 @@ type EventReview = {
   day: string;
   month: string;
   place: string;
-};
-
-type ReportReview = {
-  id: string;
-  reason: string;
-  community: string;
-  age: string;
-  content: string;
-  author: string;
-};
-
-type UserReview = {
-  id: string;
-  name: string;
-  email: string;
+  description: string;
+  creator: string;
+  startsAt: string;
+  pending: boolean;
 };
 
 const adminSections = [
@@ -69,85 +80,104 @@ const adminSections = [
   { id: "reports", label: "Reportes", Icon: Flag }
 ] satisfies Array<{ id: AdminSection; label: string; Icon: typeof UsersGroupRounded }>;
 
-const fallbackCommunities: CommunityReview[] = [
-  {
-    id: "community-ufc",
-    name: "Grupo de UFC",
-    author: "Nicolas Giordano",
-    topics: ["Deporte", "Entretenimiento"],
-    description: "Comunidad que lo abarca todo sobre UFC. ¡A celebrar, fanáticos de las peleas!"
-  },
-  {
-    id: "community-cocina",
-    name: "Cocina Italiana",
-    author: "Nicolas Umansky",
-    topics: ["Gastronomía"],
-    description: "Si les gusta la cocina y andan buscando recetas o ideas, esta es tu comunidad."
-  }
-];
+const initialResourceStatus: Record<AdminSection, ResourceStatus> = {
+  communities: "loading",
+  events: "loading",
+  users: "loading",
+  reports: "loading"
+};
 
-const fallbackEvents: EventReview[] = [
-  {
-    id: "event-football",
-    title: "Torneo de Futbol 5",
-    day: "26",
-    month: "MAY",
-    place: "Parque Sarmiento"
-  }
-];
+const argentinaDateFormatter = new Intl.DateTimeFormat("es-AR", {
+  timeZone: "America/Argentina/Buenos_Aires",
+  day: "2-digit",
+  month: "short"
+});
 
-const fallbackReports: ReportReview[] = [
-  {
-    id: "report-language",
-    reason: "Lenguaje agresivo",
-    community: "Emprendedores UADE",
-    age: "Hace 12 minutos",
-    content: "Contenido reportado por lenguaje agresivo dentro de una conversación.",
-    author: "Usuario Kreis"
-  }
-];
+const argentinaDetailDateFormatter = new Intl.DateTimeFormat("es-AR", {
+  timeZone: "America/Argentina/Buenos_Aires",
+  dateStyle: "medium",
+  timeStyle: "short"
+});
 
-const fallbackUsers: UserReview[] = [
-  { id: "user-nicolas", name: "Nicolas Giordano", email: "ngiordano@uade.edu.ar" },
-  { id: "user-franco", name: "Franco Lan", email: "flan@uade.edu.ar" }
-];
-
-function toCommunityReviews(communities: Community[]): CommunityReview[] {
-  if (!communities.length) return fallbackCommunities;
-
-  return communities.map((community) => ({
-    id: community.id,
-    name: community.name,
-    author: "Usuario Kreis",
-    topics: community.topics?.map((topic) => topic.name).filter(Boolean) ?? [community.category],
-    description: community.description ?? community.pulse,
-    members: community.members
-  }));
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error && error.message ? error.message : "No pudimos completar la acción.";
 }
 
-function toEventReviews(events: KreisEvent[]): EventReview[] {
-  if (!events.length) return fallbackEvents;
+function formatEventDate(startsAt: string): { day: string; month: string } {
+  const date = new Date(startsAt);
+  const parts = argentinaDateFormatter.formatToParts(date);
 
-  return events.map((event) => ({
+  return {
+    day: parts.find((part) => part.type === "day")?.value ?? "--",
+    month: (parts.find((part) => part.type === "month")?.value ?? "---").replace(".", "").toUpperCase()
+  };
+}
+
+function formatReportAge(createdAt: string): string {
+  const elapsedMs = Date.now() - new Date(createdAt).getTime();
+  const elapsedMinutes = Math.max(0, Math.floor(elapsedMs / 60_000));
+
+  if (elapsedMinutes < 1) return "Ahora";
+  if (elapsedMinutes < 60) return `Hace ${elapsedMinutes} min`;
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `Hace ${elapsedHours} h`;
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  return `Hace ${elapsedDays} ${elapsedDays === 1 ? "día" : "días"}`;
+}
+
+function mapPendingCommunity(community: AdminCommunity): CommunityReview {
+  return {
+    id: community.id,
+    name: community.name,
+    author: community.creator?.name ?? "Usuario Kreis",
+    topics: community.topics,
+    description: community.description,
+    pending: true
+  };
+}
+
+function mapApprovedCommunity(community: Community): CommunityReview {
+  return {
+    id: community.id,
+    name: community.name,
+    author: "Comunidad de Kreis",
+    topics: community.topics?.map((topic) => topic.name) ?? [community.category],
+    description: community.description ?? community.pulse,
+    members: community.members,
+    pending: false
+  };
+}
+
+function mapPendingEvent(event: AdminEvent): EventReview {
+  const { day, month } = formatEventDate(event.startsAt);
+
+  return {
+    id: event.id,
+    title: event.name,
+    day,
+    month,
+    place: event.place,
+    description: event.description,
+    creator: event.creator.name,
+    startsAt: event.startsAt,
+    pending: true
+  };
+}
+
+function mapPublishedEvent(event: KreisEvent): EventReview {
+  return {
     id: event.id,
     title: event.title,
     day: event.day,
     month: event.month,
-    place: event.place
-  }));
-}
-
-function toReportReviews(posts: ActivityPost[]): ReportReview[] {
-  if (!posts.length) return fallbackReports;
-
-  return posts.slice(0, 5).map((post, index) => ({
-    id: `report-${post.id}`,
-    reason: index === 0 ? "Lenguaje agresivo" : "Contenido inapropiado",
-    community: post.communityName,
-    age: index === 0 ? "Hace 12 minutos" : post.time,
-    content: post.text,
-    author: post.author
-  }));
+    place: event.place,
+    description: event.description,
+    creator: event.organizer ?? "Kreis",
+    startsAt: `${event.date} ${event.time ?? ""}`.trim(),
+    pending: false
+  };
 }
 
 function SegmentedControl<T extends string>({
@@ -179,17 +209,49 @@ function SegmentedControl<T extends string>({
   );
 }
 
+function AdminResourceState({
+  status,
+  emptyMessage,
+  hasItems,
+  onRetry
+}: {
+  status: ResourceStatus;
+  emptyMessage: string;
+  hasItems: boolean;
+  onRetry: () => void;
+}) {
+  if (status === "loading") {
+    return <LoadingState className="admin-resource-loading" label="Cargando administración" />;
+  }
+
+  if (status === "error") {
+    return (
+      <div className="admin-resource-error" role="alert">
+        <p>No pudimos cargar esta sección.</p>
+        <button type="button" onClick={onRetry}>
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
+  return !hasItems ? <p className="admin-empty-state">{emptyMessage}</p> : null;
+}
+
 function CommunityCard({
   community,
-  pending,
+  busyAction,
   onApprove,
   onReject
 }: {
   community: CommunityReview;
-  pending: boolean;
-  onApprove?: () => void;
-  onReject?: () => void;
+  busyAction: string | null;
+  onApprove: () => void;
+  onReject: () => void;
 }) {
+  const approving = busyAction === `community:${community.id}:Aceptado`;
+  const rejecting = busyAction === `community:${community.id}:Rechazado`;
+
   return (
     <article className="admin-community-card">
       <div className="admin-community-card__heading">
@@ -197,15 +259,23 @@ function CommunityCard({
           <h2>{community.name}</h2>
           <p>{community.author}</p>
         </div>
-        {pending ? (
+        {community.pending ? (
           <div className="admin-community-card__actions">
-            <button className="is-approve" type="button" onClick={onApprove}>
-              <CheckCircle size={11} weight="Linear" aria-hidden="true" />
-              Aceptar
+            <button className="is-approve" type="button" disabled={Boolean(busyAction)} onClick={onApprove}>
+              {approving ? (
+                <LoadingState variant="button" label="Aceptando" />
+              ) : (
+                <CheckCircle size={11} weight="Linear" aria-hidden="true" />
+              )}
+              {!approving ? "Aceptar" : null}
             </button>
-            <button className="is-reject" type="button" onClick={onReject}>
-              <CloseCircle size={11} weight="Linear" aria-hidden="true" />
-              Rechazar
+            <button className="is-reject" type="button" disabled={Boolean(busyAction)} onClick={onReject}>
+              {rejecting ? (
+                <LoadingState variant="button" label="Rechazando" />
+              ) : (
+                <CloseCircle size={11} weight="Linear" aria-hidden="true" />
+              )}
+              {!rejecting ? "Rechazar" : null}
             </button>
           </div>
         ) : (
@@ -222,11 +292,41 @@ function CommunityCard({
   );
 }
 
-function CommunitiesPanel({ communities }: { communities: CommunityReview[] }) {
+function CommunitiesPanel({
+  accessToken,
+  pendingCommunities,
+  approvedCommunities,
+  status,
+  onRetry,
+  onUpdated,
+  onError
+}: {
+  accessToken: string;
+  pendingCommunities: AdminCommunity[];
+  approvedCommunities: CommunityReview[];
+  status: ResourceStatus;
+  onRetry: () => void;
+  onUpdated: (community: AdminCommunity, nextStatus: AdminPublicationStatus) => void;
+  onError: (message: string) => void;
+}) {
   const [view, setView] = useState<CommunityView>("requests");
-  const [reviewedIds, setReviewedIds] = useState<string[]>([]);
-  const pending = communities.filter((community) => !reviewedIds.includes(community.id));
-  const visible = view === "requests" ? pending : communities;
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const visible = view === "requests" ? pendingCommunities.map(mapPendingCommunity) : approvedCommunities;
+
+  async function updateStatus(community: AdminCommunity, nextStatus: AdminPublicationStatus): Promise<void> {
+    const actionId = `community:${community.id}:${nextStatus}`;
+    setBusyAction(actionId);
+    onError("");
+
+    try {
+      await updateAdminCommunityStatus(community.id, nextStatus, accessToken);
+      onUpdated(community, nextStatus);
+    } catch (error) {
+      onError(getErrorMessage(error));
+    } finally {
+      setBusyAction(null);
+    }
+  }
 
   return (
     <>
@@ -240,48 +340,97 @@ function CommunitiesPanel({ communities }: { communities: CommunityReview[] }) {
         onChange={setView}
       />
       <div className="admin-community-list">
-        {visible.map((community) => (
-          <CommunityCard
-            community={community}
-            pending={view === "requests"}
-            key={community.id}
-            onApprove={() => setReviewedIds((current) => [...current, community.id])}
-            onReject={() => setReviewedIds((current) => [...current, community.id])}
-          />
-        ))}
-        {!visible.length ? <p className="admin-empty-state">No hay solicitudes pendientes.</p> : null}
+        {visible.map((community) => {
+          const source = pendingCommunities.find((item) => item.id === community.id);
+
+          return (
+            <CommunityCard
+              community={community}
+              busyAction={busyAction}
+              key={community.id}
+              onApprove={() => source && void updateStatus(source, "Aceptado")}
+              onReject={() => source && void updateStatus(source, "Rechazado")}
+            />
+          );
+        })}
+        <AdminResourceState
+          status={view === "requests" ? status : "ready"}
+          hasItems={visible.length > 0}
+          emptyMessage={view === "requests" ? "No hay solicitudes pendientes." : "No hay comunidades aprobadas."}
+          onRetry={onRetry}
+        />
       </div>
     </>
   );
 }
 
-function EventCard({ event }: { event: EventReview }) {
+function EventCard({ event, onOpen }: { event: EventReview; onOpen: () => void }) {
   return (
-    <article className="admin-event-card">
-      <div className="admin-event-card__date" aria-label={`${event.day} ${event.month}`}>
+    <button className="admin-event-card" type="button" onClick={onOpen}>
+      <span className="admin-event-card__date" aria-label={`${event.day} ${event.month}`}>
         <strong>{event.day}</strong>
         <span>{event.month}</span>
-      </div>
-      <div className="admin-event-card__content">
+      </span>
+      <span className="admin-event-card__content">
         <h2>{event.title}</h2>
-        <p>
+        <span className="admin-event-card__place">
           <MapPoint size={10} weight="Linear" aria-hidden="true" />
           {event.place}
-        </p>
-      </div>
+        </span>
+      </span>
       <AltArrowRight className="admin-event-card__arrow" size={15} weight="Linear" aria-hidden="true" />
-    </article>
+    </button>
   );
 }
 
-function EventsPanel({ events }: { events: EventReview[] }) {
+function EventsPanel({
+  accessToken,
+  pendingEvents,
+  publishedEvents,
+  status,
+  onCreateEvent,
+  onRetry,
+  onUpdated,
+  onError
+}: {
+  accessToken: string;
+  pendingEvents: AdminEvent[];
+  publishedEvents: EventReview[];
+  status: ResourceStatus;
+  onCreateEvent: () => void;
+  onRetry: () => void;
+  onUpdated: (event: AdminEvent, nextStatus: AdminPublicationStatus) => void;
+  onError: (message: string) => void;
+}) {
   const [view, setView] = useState<EventView>("requests");
+  const [selectedEvent, setSelectedEvent] = useState<EventReview | null>(null);
+  const [busyStatus, setBusyStatus] = useState<AdminPublicationStatus | null>(null);
+  const visible = view === "requests" ? pendingEvents.map(mapPendingEvent) : publishedEvents;
+
+  async function updateStatus(nextStatus: AdminPublicationStatus): Promise<void> {
+    if (!selectedEvent) return;
+    const source = pendingEvents.find((event) => event.id === selectedEvent.id);
+    if (!source) return;
+
+    setBusyStatus(nextStatus);
+    onError("");
+
+    try {
+      await updateAdminEventStatus(source.id, nextStatus, accessToken);
+      onUpdated(source, nextStatus);
+      setSelectedEvent(null);
+    } catch (error) {
+      onError(getErrorMessage(error));
+    } finally {
+      setBusyStatus(null);
+    }
+  }
 
   return (
     <>
       <div className="admin-title-row">
         <h1>Eventos</h1>
-        <button className="admin-create-event" type="button">
+        <button className="admin-create-event" type="button" onClick={onCreateEvent}>
           <AddCircle size={14} weight="Linear" aria-hidden="true" />
           Crear evento
         </button>
@@ -296,20 +445,122 @@ function EventsPanel({ events }: { events: EventReview[] }) {
         onChange={setView}
       />
       <div className="admin-event-list">
-        {events.map((event) => (
-          <EventCard event={event} key={event.id} />
+        {visible.map((event) => (
+          <EventCard event={event} key={event.id} onOpen={() => setSelectedEvent(event)} />
         ))}
+        <AdminResourceState
+          status={view === "requests" ? status : "ready"}
+          hasItems={visible.length > 0}
+          emptyMessage={view === "requests" ? "No hay eventos pendientes." : "No hay eventos publicados."}
+          onRetry={onRetry}
+        />
       </div>
+
+      {selectedEvent ? (
+        <div className="admin-report-dialog-backdrop" role="presentation" onClick={() => setSelectedEvent(null)}>
+          <section
+            className="admin-report-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-event-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              className="admin-report-dialog__close"
+              type="button"
+              aria-label="Cerrar detalle"
+              onClick={() => setSelectedEvent(null)}
+            >
+              <CloseCircle size={24} weight="Linear" />
+            </button>
+            <span>{selectedEvent.pending ? "Evento pendiente" : "Evento publicado"}</span>
+            <h2 id="admin-event-title">{selectedEvent.title}</h2>
+            <p>{selectedEvent.description}</p>
+            <dl>
+              <div>
+                <dt>Organiza</dt>
+                <dd>{selectedEvent.creator}</dd>
+              </div>
+              <div>
+                <dt>Fecha</dt>
+                <dd>
+                  {selectedEvent.pending
+                    ? argentinaDetailDateFormatter.format(new Date(selectedEvent.startsAt))
+                    : selectedEvent.startsAt}
+                </dd>
+              </div>
+              <div>
+                <dt>Lugar</dt>
+                <dd>{selectedEvent.place}</dd>
+              </div>
+            </dl>
+            {selectedEvent.pending ? (
+              <div className="admin-dialog-actions">
+                <button
+                  className="is-secondary"
+                  type="button"
+                  disabled={Boolean(busyStatus)}
+                  onClick={() => void updateStatus("Rechazado")}
+                >
+                  {busyStatus === "Rechazado" ? <LoadingState variant="button" label="Rechazando" /> : "Rechazar"}
+                </button>
+                <button
+                  className="is-primary"
+                  type="button"
+                  disabled={Boolean(busyStatus)}
+                  onClick={() => void updateStatus("Aceptado")}
+                >
+                  {busyStatus === "Aceptado" ? <LoadingState variant="button" label="Publicando" /> : "Publicar"}
+                </button>
+              </div>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
     </>
   );
 }
 
-function UsersPanel({ users }: { users: UserReview[] }) {
+function UsersPanel({
+  accessToken,
+  users,
+  status,
+  onRetry,
+  onDeleted,
+  onError
+}: {
+  accessToken: string;
+  users: AdminUser[];
+  status: ResourceStatus;
+  onRetry: () => void;
+  onDeleted: (legajo: number) => void;
+  onError: (message: string) => void;
+}) {
   const [query, setQuery] = useState("");
+  const [deletingLegajo, setDeletingLegajo] = useState<number | null>(null);
   const normalizedQuery = query.trim().toLocaleLowerCase("es");
   const visibleUsers = users.filter((user) =>
     `${user.name} ${user.email}`.toLocaleLowerCase("es").includes(normalizedQuery)
   );
+
+  async function deleteUser(user: AdminUser): Promise<void> {
+    const confirmed = window.confirm(
+      `¿Eliminar definitivamente a ${user.name}? También se eliminará su contenido relacionado.`
+    );
+    if (!confirmed) return;
+
+    setDeletingLegajo(user.legajo);
+    onError("");
+
+    try {
+      await deleteAdminUser(user.legajo, accessToken);
+      onDeleted(user.legajo);
+    } catch (error) {
+      onError(getErrorMessage(error));
+    } finally {
+      setDeletingLegajo(null);
+    }
+  }
 
   return (
     <>
@@ -325,36 +576,79 @@ function UsersPanel({ users }: { users: UserReview[] }) {
       </label>
       <div className="admin-user-list">
         {visibleUsers.map((user) => (
-          <article className="admin-user-card" key={user.id}>
-            <div className="admin-user-card__avatar" aria-hidden="true" />
+          <article className="admin-user-card" key={user.legajo}>
+            <div className="admin-user-card__avatar" aria-hidden="true">
+              {user.avatarUrl ? <img src={user.avatarUrl} alt="" /> : null}
+            </div>
             <div className="admin-user-card__identity">
               <h2>{user.name}</h2>
               <p>{user.email}</p>
             </div>
-            <button type="button">
-              <ForbiddenCircle size={12} weight="Linear" aria-hidden="true" />
-              Suspender
+            <button type="button" disabled={deletingLegajo !== null} onClick={() => void deleteUser(user)}>
+              {deletingLegajo === user.legajo ? (
+                <LoadingState variant="button" label="Eliminando" />
+              ) : (
+                <TrashBinMinimalistic size={12} weight="Linear" aria-hidden="true" />
+              )}
+              {deletingLegajo !== user.legajo ? "Eliminar" : null}
             </button>
           </article>
         ))}
-        {!visibleUsers.length ? <p className="admin-empty-state">No encontramos usuarios.</p> : null}
+        <AdminResourceState
+          status={status}
+          hasItems={visibleUsers.length > 0}
+          emptyMessage={normalizedQuery ? "No encontramos usuarios." : "No hay usuarios disponibles."}
+          onRetry={onRetry}
+        />
       </div>
     </>
   );
 }
 
-function ReportsPanel({ reports }: { reports: ReportReview[] }) {
+function ReportsPanel({
+  accessToken,
+  reports,
+  status,
+  onRetry,
+  onUpdated,
+  onError
+}: {
+  accessToken: string;
+  reports: AdminReport[];
+  status: ResourceStatus;
+  onRetry: () => void;
+  onUpdated: (report: AdminReport) => void;
+  onError: (message: string) => void;
+}) {
   const [view, setView] = useState<ReportView>("incoming");
-  const [resolvedIds, setResolvedIds] = useState<string[]>([]);
-  const [selectedReport, setSelectedReport] = useState<ReportReview | null>(null);
+  const [selectedReport, setSelectedReport] = useState<AdminReport | null>(null);
+  const [busyStatus, setBusyStatus] = useState<AdminReportStatus | null>(null);
   const visibleReports = reports.filter((report) =>
-    view === "resolved" ? resolvedIds.includes(report.id) : !resolvedIds.includes(report.id)
+    view === "incoming" ? report.status === "Pendiente" : report.status !== "Pendiente"
   );
 
-  function resolveSelected(): void {
+  async function updateStatus(nextStatus: AdminReportStatus): Promise<void> {
     if (!selectedReport) return;
-    setResolvedIds((current) => [...current, selectedReport.id]);
-    setSelectedReport(null);
+
+    if (
+      nextStatus === "Resuelto" &&
+      !window.confirm("Resolver este reporte eliminará el post o comentario original. ¿Continuar?")
+    ) {
+      return;
+    }
+
+    setBusyStatus(nextStatus);
+    onError("");
+
+    try {
+      const updated = await updateAdminReportStatus(selectedReport.id, nextStatus, accessToken);
+      onUpdated(updated);
+      setSelectedReport(null);
+    } catch (error) {
+      onError(getErrorMessage(error));
+    } finally {
+      setBusyStatus(null);
+    }
   }
 
   return (
@@ -374,7 +668,7 @@ function ReportsPanel({ reports }: { reports: ReportReview[] }) {
             <div>
               <h2>{report.reason}</h2>
               <p>
-                {report.community} · {report.age}
+                {report.community?.name ?? "Contenido eliminado"} · {formatReportAge(report.createdAt)}
               </p>
             </div>
             <button type="button" onClick={() => setSelectedReport(report)}>
@@ -382,7 +676,12 @@ function ReportsPanel({ reports }: { reports: ReportReview[] }) {
             </button>
           </article>
         ))}
-        {!visibleReports.length ? <p className="admin-empty-state">No hay reportes en esta sección.</p> : null}
+        <AdminResourceState
+          status={status}
+          hasItems={visibleReports.length > 0}
+          emptyMessage={view === "incoming" ? "No hay reportes pendientes." : "No hay reportes resueltos."}
+          onRetry={onRetry}
+        />
       </div>
 
       {selectedReport ? (
@@ -402,23 +701,46 @@ function ReportsPanel({ reports }: { reports: ReportReview[] }) {
             >
               <CloseCircle size={24} weight="Linear" />
             </button>
-            <span>Reporte</span>
+            <span>{selectedReport.targetType}</span>
             <h2 id="admin-report-title">{selectedReport.reason}</h2>
             <p>{selectedReport.content}</p>
             <dl>
               <div>
                 <dt>Autor</dt>
-                <dd>{selectedReport.author}</dd>
+                <dd>{selectedReport.author?.name ?? "Usuario eliminado"}</dd>
               </div>
               <div>
                 <dt>Comunidad</dt>
-                <dd>{selectedReport.community}</dd>
+                <dd>{selectedReport.community?.name ?? "Sin comunidad"}</dd>
+              </div>
+              <div>
+                <dt>Reportó</dt>
+                <dd>{selectedReport.reporter?.name ?? "Usuario eliminado"}</dd>
               </div>
             </dl>
-            {view === "incoming" ? (
-              <button className="admin-report-dialog__resolve" type="button" onClick={resolveSelected}>
-                Marcar como resuelto
-              </button>
+            {selectedReport.status === "Pendiente" ? (
+              <div className="admin-dialog-actions">
+                <button
+                  className="is-secondary"
+                  type="button"
+                  disabled={Boolean(busyStatus)}
+                  onClick={() => void updateStatus("Desestimado")}
+                >
+                  {busyStatus === "Desestimado" ? <LoadingState variant="button" label="Desestimando" /> : "Desestimar"}
+                </button>
+                <button
+                  className="is-danger"
+                  type="button"
+                  disabled={Boolean(busyStatus)}
+                  onClick={() => void updateStatus("Resuelto")}
+                >
+                  {busyStatus === "Resuelto" ? (
+                    <LoadingState variant="button" label="Eliminando contenido" />
+                  ) : (
+                    "Eliminar contenido"
+                  )}
+                </button>
+              </div>
             ) : null}
           </section>
         </div>
@@ -427,12 +749,95 @@ function ReportsPanel({ reports }: { reports: ReportReview[] }) {
   );
 }
 
-export function AdminDashboard({ profileEmail, communities, events, posts, onBack }: AdminDashboardProps) {
+export function AdminDashboard({
+  accessToken,
+  profileEmail,
+  communities,
+  events,
+  refreshKey = 0,
+  onBack,
+  onCreateEvent
+}: AdminDashboardProps) {
   const [activeSection, setActiveSection] = useState<AdminSection>("communities");
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const communityReviews = useMemo(() => toCommunityReviews(communities), [communities]);
-  const eventReviews = useMemo(() => toEventReviews(events), [events]);
-  const reportReviews = useMemo(() => toReportReviews(posts), [posts]);
+  const [resourceStatus, setResourceStatus] = useState(initialResourceStatus);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [actionError, setActionError] = useState("");
+  const [pendingCommunities, setPendingCommunities] = useState<AdminCommunity[]>([]);
+  const [pendingEvents, setPendingEvents] = useState<AdminEvent[]>([]);
+  const [reports, setReports] = useState<AdminReport[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [acceptedCommunities, setAcceptedCommunities] = useState<CommunityReview[]>([]);
+  const [acceptedEvents, setAcceptedEvents] = useState<EventReview[]>([]);
+
+  const approvedCommunities = useMemo(() => {
+    const fromApp = communities
+      .filter((community) => community.status?.toLowerCase() === "aceptado")
+      .map(mapApprovedCommunity);
+    const ids = new Set(fromApp.map((community) => community.id));
+    return [...acceptedCommunities.filter((community) => !ids.has(community.id)), ...fromApp];
+  }, [acceptedCommunities, communities]);
+
+  const publishedEvents = useMemo(() => {
+    const fromApp = events.map(mapPublishedEvent);
+    const ids = new Set(fromApp.map((event) => event.id));
+    return [...acceptedEvents.filter((event) => !ids.has(event.id)), ...fromApp];
+  }, [acceptedEvents, events]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const requests = [
+      listAdminCommunities(accessToken, controller.signal),
+      listAdminEvents(accessToken, controller.signal),
+      listAdminUsers(accessToken, controller.signal),
+      listAdminReports(accessToken, controller.signal)
+    ] as const;
+
+    void Promise.allSettled(requests).then(([communityResult, eventResult, userResult, reportResult]) => {
+      if (controller.signal.aborted) return;
+
+      if (communityResult.status === "fulfilled") setPendingCommunities(communityResult.value);
+      if (eventResult.status === "fulfilled") setPendingEvents(eventResult.value);
+      if (userResult.status === "fulfilled") setUsers(userResult.value);
+      if (reportResult.status === "fulfilled") setReports(reportResult.value);
+
+      setResourceStatus({
+        communities: communityResult.status === "fulfilled" ? "ready" : "error",
+        events: eventResult.status === "fulfilled" ? "ready" : "error",
+        users: userResult.status === "fulfilled" ? "ready" : "error",
+        reports: reportResult.status === "fulfilled" ? "ready" : "error"
+      });
+    });
+
+    return () => controller.abort();
+  }, [accessToken, refreshKey, reloadKey]);
+
+  function retrySection(section: AdminSection): void {
+    setResourceStatus((current) => ({ ...current, [section]: "loading" }));
+    setReloadKey((current) => current + 1);
+  }
+
+  function updateCommunityLocally(community: AdminCommunity, nextStatus: AdminPublicationStatus): void {
+    setPendingCommunities((current) => current.filter((item) => item.id !== community.id));
+    if (nextStatus === "Aceptado") {
+      setAcceptedCommunities((current) => [
+        {
+          ...mapPendingCommunity(community),
+          pending: false,
+          members: 1
+        },
+        ...current
+      ]);
+    }
+  }
+
+  function updateEventLocally(event: AdminEvent, nextStatus: AdminPublicationStatus): void {
+    setPendingEvents((current) => current.filter((item) => item.id !== event.id));
+    if (nextStatus === "Aceptado") {
+      setAcceptedEvents((current) => [{ ...mapPendingEvent(event), pending: false }, ...current]);
+    }
+  }
 
   return (
     <div className="admin-mobile-page">
@@ -451,6 +856,7 @@ export function AdminDashboard({ profileEmail, communities, events, posts, onBac
                   onClick={() => {
                     setActiveSection(id);
                     setSettingsOpen(false);
+                    setActionError("");
                   }}
                 >
                   <Icon size={id === "events" ? 20 : 22} weight="Linear" aria-hidden="true" />
@@ -482,10 +888,56 @@ export function AdminDashboard({ profileEmail, communities, events, posts, onBac
           {activeSection !== "events" ? (
             <h1>{adminSections.find((section) => section.id === activeSection)?.label}</h1>
           ) : null}
-          {activeSection === "communities" ? <CommunitiesPanel communities={communityReviews} /> : null}
-          {activeSection === "events" ? <EventsPanel events={eventReviews} /> : null}
-          {activeSection === "users" ? <UsersPanel users={fallbackUsers} /> : null}
-          {activeSection === "reports" ? <ReportsPanel reports={reportReviews} /> : null}
+          {actionError ? (
+            <p className="admin-action-error" role="alert">
+              {actionError}
+            </p>
+          ) : null}
+          {activeSection === "communities" ? (
+            <CommunitiesPanel
+              accessToken={accessToken}
+              pendingCommunities={pendingCommunities}
+              approvedCommunities={approvedCommunities}
+              status={resourceStatus.communities}
+              onRetry={() => retrySection("communities")}
+              onUpdated={updateCommunityLocally}
+              onError={setActionError}
+            />
+          ) : null}
+          {activeSection === "events" ? (
+            <EventsPanel
+              accessToken={accessToken}
+              pendingEvents={pendingEvents}
+              publishedEvents={publishedEvents}
+              status={resourceStatus.events}
+              onCreateEvent={onCreateEvent}
+              onRetry={() => retrySection("events")}
+              onUpdated={updateEventLocally}
+              onError={setActionError}
+            />
+          ) : null}
+          {activeSection === "users" ? (
+            <UsersPanel
+              accessToken={accessToken}
+              users={users}
+              status={resourceStatus.users}
+              onRetry={() => retrySection("users")}
+              onDeleted={(legajo) => setUsers((current) => current.filter((user) => user.legajo !== legajo))}
+              onError={setActionError}
+            />
+          ) : null}
+          {activeSection === "reports" ? (
+            <ReportsPanel
+              accessToken={accessToken}
+              reports={reports}
+              status={resourceStatus.reports}
+              onRetry={() => retrySection("reports")}
+              onUpdated={(updated) =>
+                setReports((current) => current.map((report) => (report.id === updated.id ? updated : report)))
+              }
+              onError={setActionError}
+            />
+          ) : null}
         </main>
       </div>
     </div>

@@ -32,6 +32,12 @@ export type CommunityWithRelations = {
   _count: {
     user_comunidad: number;
   };
+  usuario?: {
+    legajo: number;
+    nombre: string;
+    apellido: string;
+    avatar_url: string | null;
+  };
 };
 
 export type CommunityMembership = {
@@ -138,6 +144,14 @@ export async function listPendingCommunities(): Promise<CommunityWithRelations[]
   return prisma.comunidad.findMany({
     where: { estado: PENDING_COMMUNITY_STATUS },
     include: {
+      usuario: {
+        select: {
+          legajo: true,
+          nombre: true,
+          apellido: true,
+          avatar_url: true
+        }
+      },
       comunidad_topico: {
         include: {
           topico: {

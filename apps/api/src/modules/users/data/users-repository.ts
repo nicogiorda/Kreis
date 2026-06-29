@@ -201,6 +201,19 @@ export type FacultadCatalogItem = {
   nombre: string;
 };
 
+export type AdminUserListItem = {
+  legajo: number;
+  nombre: string;
+  apellido: string;
+  rol: string;
+  verificado: boolean;
+  avatar_url: string | null;
+  created_at: Date;
+  authUser: {
+    email: string | null;
+  };
+};
+
 export async function listTopicos(): Promise<TopicoCatalogItem[]> {
   return prisma.topico.findMany({
     select: {
@@ -210,6 +223,29 @@ export async function listTopicos(): Promise<TopicoCatalogItem[]> {
     orderBy: {
       topico: "asc"
     }
+  });
+}
+
+export async function listUsersForAdministration(): Promise<AdminUserListItem[]> {
+  return prisma.usuario.findMany({
+    select: {
+      legajo: true,
+      nombre: true,
+      apellido: true,
+      rol: true,
+      verificado: true,
+      avatar_url: true,
+      created_at: true,
+      authUser: {
+        select: {
+          email: true
+        }
+      }
+    },
+    orderBy: [
+      { nombre: "asc" },
+      { apellido: "asc" }
+    ]
   });
 }
 

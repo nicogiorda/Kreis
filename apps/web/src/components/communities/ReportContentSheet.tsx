@@ -32,6 +32,7 @@ export function ReportContentSheet({
   onClose
 }: ReportContentSheetProps) {
   const [step, setStep] = useState<SheetStep>("action");
+  const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [submittingReason, setSubmittingReason] = useState<string | null>(null);
   const [duplicate, setDuplicate] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,17 +62,17 @@ export function ReportContentSheet({
 
   const targetLabel = target.type === "Post" ? "publicacion" : "comentario";
 
-  async function submitReport(reason: string): Promise<void> {
-    if (!target || submittingReason) return;
+  async function submitReport(): Promise<void> {
+    if (!target || !selectedReason || submittingReason) return;
 
-    setSubmittingReason(reason);
+    setSubmittingReason(selectedReason);
     setError(null);
 
     try {
       const result = await createReport({
         targetType: target.type,
         targetId: target.id,
-        reason
+        reason: selectedReason
       }, accessToken);
 
       setDuplicate(result === "duplicate");
@@ -97,7 +98,7 @@ export function ReportContentSheet({
       }}
     >
       <section
-        className="w-full max-w-[430px] animate-[report-sheet-in_240ms_cubic-bezier(0.22,1,0.36,1)] rounded-t-[24px] bg-kreis-surface px-5 pb-[max(18px,env(safe-area-inset-bottom))] pt-3 text-kreis-ink shadow-[0_-12px_32px_rgba(34,49,40,0.16)]"
+        className="w-full max-w-[430px] animate-[report-sheet-in_240ms_cubic-bezier(0.22,1,0.36,1)] rounded-t-[24px] bg-kreis-lace px-5 pb-[max(18px,env(safe-area-inset-bottom))] pt-3 text-kreis-ink shadow-[0_-12px_32px_rgba(34,49,40,0.16)]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="report-sheet-title"
@@ -162,16 +163,28 @@ export function ReportContentSheet({
                   type="button"
                   key={reason}
                   disabled={Boolean(submittingReason)}
-                  onClick={() => void submitReport(reason)}
+                  aria-pressed={selectedReason === reason}
+                  onClick={() => {
+                    setSelectedReason(reason);
+                    setError(null);
+                    navigator.vibrate?.(8);
+                  }}
                 >
                   <span>{reason}</span>
                   <span
                     className={cn(
-                      "size-4 flex-none rounded-full border border-kreis-muted",
-                      submittingReason === reason && "animate-pulse border-kreis-orange bg-kreis-orange"
+                      "grid size-[18px] flex-none place-items-center rounded-full border border-kreis-muted",
+                      selectedReason === reason && "border-kreis-orange"
                     )}
                     aria-hidden="true"
-                  />
+                  >
+                    <span
+                      className={cn(
+                        "size-2.5 rounded-full bg-kreis-orange transition-transform duration-150",
+                        selectedReason === reason ? "scale-100" : "scale-0"
+                      )}
+                    />
+                  </span>
                 </button>
               ))}
             </div>
@@ -181,6 +194,15 @@ export function ReportContentSheet({
                 {error}
               </p>
             ) : null}
+
+            <button
+              className="mt-4 min-h-[50px] w-full rounded-[8px] border-0 bg-kreis-orange px-4 text-[15px] font-medium text-kreis-cream shadow-none transition-[opacity,transform] duration-150 enabled:active:scale-[0.98] disabled:opacity-40"
+              type="button"
+              disabled={!selectedReason || Boolean(submittingReason)}
+              onClick={() => void submitReport()}
+            >
+              {submittingReason ? "Enviando..." : "Confirmar reporte"}
+            </button>
           </>
         ) : null}
 

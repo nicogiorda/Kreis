@@ -6,6 +6,7 @@ import type { PostComment } from "../../types";
 import { CommentSkeletonList } from "../common/LoadingSkeleton";
 import { LoadingState } from "../common/LoadingState";
 import { cn } from "../../utils/cn";
+import { ReportContentSheet, type ReportTarget } from "./ReportContentSheet";
 
 type PostCommentsProps = {
   postId: string;
@@ -27,6 +28,7 @@ type CommentNodeProps = {
   onReplyCancel: () => void;
   onReplyBodyChange: (value: string) => void;
   onReplySubmit: (event: FormEvent<HTMLFormElement>, parentId: string) => void;
+  onReport: (commentId: string) => void;
 };
 
 function formatCommentTime(createdAt: string): string {
@@ -256,7 +258,8 @@ function CommentNode({
   onReplyStart,
   onReplyCancel,
   onReplyBodyChange,
-  onReplySubmit
+  onReplySubmit,
+  onReport
 }: CommentNodeProps) {
   const [deepRepliesVisible, setDeepRepliesVisible] = useState(depth < 3);
   const isReplying = replyingTo === comment.id;
@@ -272,14 +275,27 @@ function CommentNode({
             <span className="text-[0.68rem] font-semibold text-kreis-muted">{formatCommentTime(comment.createdAt)}</span>
           </div>
           <p className="mb-0 mt-1.5 whitespace-pre-wrap text-[0.84rem] leading-[1.4] text-kreis-ink">{comment.body}</p>
-          <button
-            className="mt-1.5 inline-flex items-center gap-1 border-0 bg-transparent p-0 text-[0.72rem] font-black text-kreis-muted shadow-none"
-            type="button"
-            onClick={() => isReplying ? onReplyCancel() : onReplyStart(comment.id)}
-          >
-            <ArrowBendDownRight aria-hidden="true" size={14} weight="bold" />
-            Responder
-          </button>
+          <div className="mt-1.5 flex items-center">
+            <button
+              className="inline-flex items-center gap-1 border-0 bg-transparent p-0 text-[0.72rem] font-black text-kreis-muted shadow-none"
+              type="button"
+              onClick={() => isReplying ? onReplyCancel() : onReplyStart(comment.id)}
+            >
+              <ArrowBendDownRight aria-hidden="true" size={14} weight="bold" />
+              Responder
+            </button>
+            <button
+              className="ml-auto grid size-8 place-items-center border-0 bg-transparent p-0 text-kreis-muted shadow-none transition-transform duration-150 active:scale-95"
+              type="button"
+              aria-label={`Opciones del comentario de ${comment.author.name}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onReport(comment.id);
+              }}
+            >
+              <DotsThree aria-hidden="true" size={18} weight="bold" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -327,6 +343,7 @@ function CommentNode({
               onReplyCancel={onReplyCancel}
               onReplyBodyChange={onReplyBodyChange}
               onReplySubmit={onReplySubmit}
+              onReport={onReport}
             />
           ))}
         </div>
@@ -339,12 +356,14 @@ function DetailCommentActions({
   comment,
   isReplying,
   onReplyStart,
-  onReplyCancel
+  onReplyCancel,
+  onReport
 }: {
   comment: PostComment;
   isReplying: boolean;
   onReplyStart: (commentId: string) => void;
   onReplyCancel: () => void;
+  onReport: (commentId: string) => void;
 }) {
   const [liked, setLiked] = useState(false);
   const likeCount = getCommentLikeSeed(comment) + (liked ? 1 : 0);
@@ -375,7 +394,11 @@ function DetailCommentActions({
       <button
         className="ml-auto grid size-[27px] place-items-center border-0 bg-transparent p-0 text-inherit shadow-none"
         type="button"
-        aria-label="Mas opciones"
+        aria-label={`Opciones del comentario de ${comment.author.name}`}
+        onClick={(event) => {
+          event.stopPropagation();
+          onReport(comment.id);
+        }}
       >
         <DotsThree aria-hidden="true" size={19} weight="bold" />
       </button>
@@ -392,7 +415,8 @@ function DetailCommentNode({
   onReplyStart,
   onReplyCancel,
   onReplyBodyChange,
-  onReplySubmit
+  onReplySubmit,
+  onReport
 }: CommentNodeProps) {
   const isReplying = replyingTo === comment.id;
   const hasReplies = comment.replies.length > 0;
@@ -428,6 +452,7 @@ function DetailCommentNode({
             isReplying={isReplying}
             onReplyStart={onReplyStart}
             onReplyCancel={onReplyCancel}
+            onReport={onReport}
           />
 
           {isReplying ? (
@@ -460,6 +485,7 @@ function DetailCommentNode({
               onReplyCancel={onReplyCancel}
               onReplyBodyChange={onReplyBodyChange}
               onReplySubmit={onReplySubmit}
+              onReport={onReport}
             />
           ))}
         </div>
@@ -640,11 +666,15 @@ function usePostCommentThread({
 export function PostDetailCommentsContent({
   initialCount,
   score,
-  thread
+  thread,
+  onReportPost,
+  onReportComment
 }: {
   initialCount: number;
   score?: number;
   thread: PostCommentThread;
+  onReportPost: () => void;
+  onReportComment: (commentId: string) => void;
 }) {
   const displayedScore = typeof score === "number" ? score + (thread.liked ? 1 : 0) : undefined;
 
@@ -673,7 +703,8 @@ export function PostDetailCommentsContent({
         <button
           className="ml-auto grid size-[27px] place-items-center border-0 bg-transparent p-0 text-inherit shadow-none"
           type="button"
-          aria-label="Mas opciones"
+          aria-label="Opciones de la publicacion"
+          onClick={onReportPost}
         >
           <DotsThree aria-hidden="true" size={19} weight="bold" />
         </button>
@@ -713,6 +744,7 @@ export function PostDetailCommentsContent({
                 onReplyStart={thread.startReply}
                 onReplyCancel={thread.cancelReply}
                 onReplyBodyChange={thread.setReplyBody}
+                onReport={onReportComment}
                 onReplySubmit={(event, parentId) => {
                   event.preventDefault();
                   void thread.submitComment(thread.replyBody, parentId);
@@ -766,6 +798,7 @@ export function PostDetailCommentsLayout({
   onCountChange: (postId: string, total: number) => void;
   children: (parts: { comments: ReactNode; composer: ReactNode }) => ReactNode;
 }) {
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const thread = usePostCommentThread({
     postId,
     accessToken,
@@ -781,6 +814,8 @@ export function PostDetailCommentsLayout({
             initialCount={initialCount}
             score={score}
             thread={thread}
+            onReportPost={() => setReportTarget({ type: "Post", id: postId })}
+            onReportComment={(commentId) => setReportTarget({ type: "Comentario", id: commentId })}
           />
         ),
         composer: (
@@ -790,6 +825,12 @@ export function PostDetailCommentsLayout({
           />
         )
       })}
+      <ReportContentSheet
+        accessToken={accessToken}
+        key={reportTarget ? `${reportTarget.type}-${reportTarget.id}` : "closed"}
+        target={reportTarget}
+        onClose={() => setReportTarget(null)}
+      />
     </>
   );
 }
@@ -804,6 +845,7 @@ export function PostComments({
   onCountChange
 }: PostCommentsProps) {
   const [internalOpen, setInternalOpen] = useState(false);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const open = expanded ?? internalOpen;
   const thread = usePostCommentThread({
     postId,
@@ -864,7 +906,11 @@ export function PostComments({
           <button
             className="ml-auto grid size-[27px] place-items-center border-0 bg-transparent p-0 text-inherit shadow-none"
             type="button"
-            aria-label="Mas opciones"
+            aria-label="Opciones de la publicacion"
+            onClick={(event) => {
+              event.stopPropagation();
+              setReportTarget({ type: "Post", id: postId });
+            }}
           >
             <DotsThree aria-hidden="true" size={19} weight="bold" />
           </button>
@@ -908,6 +954,7 @@ export function PostComments({
                       onReplyStart={thread.startReply}
                       onReplyCancel={thread.cancelReply}
                       onReplyBodyChange={thread.setReplyBody}
+                      onReport={(commentId) => setReportTarget({ type: "Comentario", id: commentId })}
                       onReplySubmit={(event, parentId) => {
                         event.preventDefault();
                         void thread.submitComment(thread.replyBody, parentId);
@@ -963,6 +1010,7 @@ export function PostComments({
                     onReplyStart={thread.startReply}
                     onReplyCancel={thread.cancelReply}
                     onReplyBodyChange={thread.setReplyBody}
+                    onReport={(commentId) => setReportTarget({ type: "Comentario", id: commentId })}
                     onReplySubmit={(event, parentId) => {
                       event.preventDefault();
                       void thread.submitComment(thread.replyBody, parentId);
@@ -985,6 +1033,12 @@ export function PostComments({
           </div>
         )
       ) : null}
+      <ReportContentSheet
+        accessToken={accessToken}
+        key={reportTarget ? `${reportTarget.type}-${reportTarget.id}` : "closed"}
+        target={reportTarget}
+        onClose={() => setReportTarget(null)}
+      />
     </section>
   );
 }

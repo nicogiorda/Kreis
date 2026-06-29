@@ -68,6 +68,7 @@ type EventReview = {
   month: string;
   place: string;
   description: string;
+  imageUrl: string | null;
   creator: string;
   startsAt: string;
   pending: boolean;
@@ -160,6 +161,7 @@ function mapPendingEvent(event: AdminEvent): EventReview {
     month,
     place: event.place,
     description: event.description,
+    imageUrl: event.imageUrl,
     creator: event.creator.name,
     startsAt: event.startsAt,
     pending: true
@@ -174,6 +176,7 @@ function mapPublishedEvent(event: KreisEvent): EventReview {
     month: event.month,
     place: event.place,
     description: event.description,
+    imageUrl: event.imageUrl ?? null,
     creator: event.organizer ?? "Kreis",
     startsAt: `${event.date} ${event.time ?? ""}`.trim(),
     pending: false
@@ -473,6 +476,11 @@ function EventsPanel({
             >
               <CloseCircle size={24} weight="Linear" />
             </button>
+            {selectedEvent.imageUrl ? (
+              <div className="admin-event-dialog-cover">
+                <img src={selectedEvent.imageUrl} alt="" loading="lazy" decoding="async" />
+              </div>
+            ) : null}
             <span>{selectedEvent.pending ? "Evento pendiente" : "Evento publicado"}</span>
             <h2 id="admin-event-title">{selectedEvent.title}</h2>
             <p>{selectedEvent.description}</p>

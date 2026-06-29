@@ -1,5 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import { registerAuthTokenRefresher } from "../api/client";
 import { supabaseBrowser } from "../lib/supabase-browser";
 import { markStartup, measureStartup, updateStartupDebug } from "../startup/startup-debug";
 import type { AuthStatus } from "./auth.types";
@@ -128,6 +129,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         measureStartup("auth-init", "auth-init-start", "auth-init-end");
       }
     }
+  }, []);
+
+  useEffect(() => {
+    return registerAuthTokenRefresher(async () => {
+      const { data, error } = await supabaseBrowser.auth.refreshSession();
+      if (error || !data.session) return null;
+
+      return data.session.access_token;
+    });
   }, []);
 
   useEffect(() => {

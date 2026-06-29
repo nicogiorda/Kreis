@@ -14,10 +14,9 @@
 // La autenticación opcional permite que usuarios no logueados puedan ver comunidades
 // pero sin el campo "joined" personalizado (siempre false).
 
-import { createClient } from "@supabase/supabase-js";
 import { type Request, Router } from "express";
 import { z } from "zod";
-import { config } from "../../../core/config";
+import { verifyAccessToken } from "../../auth/infrastructure/access-token-verifier";
 import {
   createCommunity,
   findUserByAuthId,
@@ -27,15 +26,6 @@ import {
   updateCommunityStatus
 } from "../data/communities-repository";
 import { serializeCommunity, serializeCommunityModeration } from "./serialize-community";
-
-// Cliente de Supabase usado exclusivamente para verificar tokens JWT entrantes.
-// autoRefreshToken y persistSession en false porque este cliente es stateless (no guarda sesión).
-const supabaseAuth = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
 
 // Extrae el token del header Authorization: Bearer <token>.
 // Devuelve null si el header no existe, está mal formado o el scheme no es "bearer".
@@ -73,21 +63,11 @@ async function authenticateUser(request: Request): Promise<AuthenticatedUser> {
     };
   }
 
-  const { data: authData, error: authError } = await supabaseAuth.auth.getUser(accessToken);
-
-  if (authError || !authData.user) {
-    return {
-      ok: false,
-      status: 401,
-      error: {
-        code: "invalid_token",
-        message: authError?.message ?? "Invalid access token"
-      }
-    };
-  }
+  const verification = await verifyAccessToken(accessToken);
+  if (!verification.ok) return verification;
 
   // Resolvemos el legajo a partir del auth_id — el cliente nunca manda el legajo directamente
-  const user = await findUserByAuthId(authData.user.id);
+  const user = await findUserByAuthId(verification.authId);
 
   if (!user) {
     return {

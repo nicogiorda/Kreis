@@ -1,7 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import { type Request, Router } from "express";
 import { z } from "zod";
-import { config } from "../../../core/config";
+import { verifyAccessToken } from "../../auth/infrastructure/access-token-verifier";
 import {
   createPendingEvent,
   findAcceptedEventById,
@@ -18,13 +17,6 @@ import { serializeEventSummary } from "./serialize-event-summary";
 const ARGENTINA_TIMEZONE_OFFSET = "-03:00";
 const DATE_HAS_TIMEZONE = /(Z|[+-]\d{2}:\d{2})$/i;
 const LOCAL_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?$/;
-
-const supabaseAuth = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-});
 
 function parseArgentinaDateTime(value: string): Date | null {
   const trimmedValue = value.trim();
@@ -69,20 +61,10 @@ async function authenticateEventUser(request: Request): Promise<AuthenticatedEve
     };
   }
 
-  const { data: authData, error: authError } = await supabaseAuth.auth.getUser(accessToken);
+  const verification = await verifyAccessToken(accessToken);
+  if (!verification.ok) return verification;
 
-  if (authError || !authData.user) {
-    return {
-      ok: false,
-      status: 401,
-      error: {
-        code: "invalid_token",
-        message: authError?.message ?? "Invalid access token"
-      }
-    };
-  }
-
-  const user = await findUserByAuthId(authData.user.id);
+  const user = await findUserByAuthId(verification.authId);
 
   if (!user) {
     return {

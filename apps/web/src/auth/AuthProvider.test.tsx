@@ -6,6 +6,7 @@ import { useAuth } from "./useAuth";
 const supabaseAuthMock = vi.hoisted(() => ({
   getSession: vi.fn(),
   onAuthStateChange: vi.fn(),
+  refreshSession: vi.fn(),
   signInWithPassword: vi.fn(),
   signOut: vi.fn()
 }));

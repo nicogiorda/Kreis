@@ -23,14 +23,9 @@ import sharp from "sharp";
 import { type NextFunction, type Request, type Response, Router } from "express";
 import { createClient } from "@supabase/supabase-js";
 import { config } from "../../../core/config";
+import { verifyAccessToken } from "../../auth/infrastructure/access-token-verifier";
 import { findUserAuthIdByLegajo, findUserProfileByAuthId, listFacultades, listTopicos, listUsersForAdministration, updateUserAvatarUrl, updateUserRol } from "../data/users-repository";
 import { serializeUserProfile } from "./serialize-user-profile";
-
-// Cliente Supabase con la anon key, usado unicamente para verificar el JWT
-// del usuario. getUser(token) valida la firma y la expiracion del token.
-const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY, {
-  auth: { autoRefreshToken: false, persistSession: false }
-});
 
 const supabaseAdmin = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false }
@@ -111,20 +106,10 @@ async function authenticateAdminUser(request: Request): Promise<AuthenticatedUse
     };
   }
 
-  const { data, error } = await supabase.auth.getUser(accessToken);
+  const verification = await verifyAccessToken(accessToken);
+  if (!verification.ok) return verification;
 
-  if (error || !data.user) {
-    return {
-      ok: false,
-      status: 401,
-      error: {
-        code: "invalid_token",
-        message: error?.message ?? "Invalid access token"
-      }
-    };
-  }
-
-  const user = await findUserProfileByAuthId(data.user.id);
+  const user = await findUserProfileByAuthId(verification.authId);
 
   if (!user) {
     return {
@@ -204,21 +189,16 @@ export function createUsersRouter(): Router {
 
       // Verificamos el token contra Supabase. Si es invalido o expiro, devuelve error.
       // El auth_id resultante es el UUID del usuario en el sistema de auth.
-      const { data, error } = await supabase.auth.getUser(token);
+      const verification = await verifyAccessToken(token);
 
-      if (error || !data.user) {
-        response.status(401).json({
-          error: {
-            code: "invalid_token",
-            message: "Token invalido o expirado"
-          }
-        });
+      if (!verification.ok) {
+        response.status(verification.status).json({ error: verification.error });
         return;
       }
 
       // Buscamos el perfil usando el auth_id del JWT, no un param de la URL.
       // Asi un usuario solo puede ver su propio perfil.
-      const user = await findUserProfileByAuthId(data.user.id);
+      const user = await findUserProfileByAuthId(verification.authId);
 
       if (!user) {
         response.status(404).json({
@@ -257,15 +237,10 @@ export function createUsersRouter(): Router {
         return;
       }
 
-      const { data, error } = await supabase.auth.getUser(token);
+      const verification = await verifyAccessToken(token);
 
-      if (error || !data.user) {
-        response.status(401).json({
-          error: {
-            code: "invalid_token",
-            message: "Token invalido o expirado"
-          }
-        });
+      if (!verification.ok) {
+        response.status(verification.status).json({ error: verification.error });
         return;
       }
 
@@ -279,7 +254,7 @@ export function createUsersRouter(): Router {
         return;
       }
 
-      const user = await findUserProfileByAuthId(data.user.id);
+      const user = await findUserProfileByAuthId(verification.authId);
 
       if (!user) {
         response.status(404).json({

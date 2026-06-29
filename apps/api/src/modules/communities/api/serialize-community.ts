@@ -56,6 +56,14 @@ export function serializeCommunityModeration(community: CommunityWithRelations) 
       id_topico: topico.id_topico.toString(),
       topico: topico.topico
     })),
+    creador: community.usuario
+      ? {
+          legajo: community.usuario.legajo,
+          nombre: community.usuario.nombre,
+          apellido: community.usuario.apellido,
+          avatar_url: community.usuario.avatar_url
+        }
+      : null,
     created_at: community.created_at.toISOString()
   };
 }

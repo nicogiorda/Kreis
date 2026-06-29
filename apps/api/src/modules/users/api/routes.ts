@@ -23,7 +23,7 @@ import sharp from "sharp";
 import { type NextFunction, type Request, type Response, Router } from "express";
 import { createClient } from "@supabase/supabase-js";
 import { config } from "../../../core/config";
-import { findUserAuthIdByLegajo, findUserProfileByAuthId, listFacultades, listTopicos, updateUserAvatarUrl, updateUserRol } from "../data/users-repository";
+import { findUserAuthIdByLegajo, findUserProfileByAuthId, listFacultades, listTopicos, listUsersForAdministration, updateUserAvatarUrl, updateUserRol } from "../data/users-repository";
 import { serializeUserProfile } from "./serialize-user-profile";
 
 // Cliente Supabase con la anon key, usado unicamente para verificar el JWT
@@ -325,6 +325,34 @@ export function createUsersRouter(): Router {
       next(error);
     }
   });
+  router.get("/admin", async (request, response, next) => {
+    try {
+      const authResult = await authenticateAdminUser(request);
+
+      if (!authResult.ok) {
+        response.status(authResult.status).json({ error: authResult.error });
+        return;
+      }
+
+      const users = await listUsersForAdministration();
+
+      response.json({
+        users: users.map((user) => ({
+          legajo: user.legajo,
+          nombre: user.nombre,
+          apellido: user.apellido,
+          email: user.authUser.email,
+          rol: user.rol,
+          verificado: user.verificado,
+          avatar_url: user.avatar_url,
+          created_at: user.created_at.toISOString()
+        }))
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.delete("/admin/:legajo", async (request, response, next) => {
     try {
       const authResult = await authenticateAdminUser(request);

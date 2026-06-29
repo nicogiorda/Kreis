@@ -200,6 +200,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const [upcomingEvents, setUpcomingEvents] = useState<KreisEvent[]>([]);
   const [eventLoadStatus, setEventLoadStatus] = useState<EventLoadStatus>("loading");
   const [eventReloadKey, setEventReloadKey] = useState(0);
+  const [adminRefreshKey, setAdminRefreshKey] = useState(0);
   const [eventTopics, setEventTopics] = useState<KreisTopic[]>([]);
   const [eventTopicsStatus, setEventTopicsStatus] = useState<"loading" | "ready" | "error">("loading");
   const [eventTopicsReloadKey, setEventTopicsReloadKey] = useState(0);
@@ -552,6 +553,12 @@ function AuthenticatedApp({ session }: { session: Session }) {
       await createPendingEvent({ title, date, place, topicIds, description, imageUrl }, accessToken);
     })()
       .then(() => {
+        if (isAdminRoute) {
+          setComposerOpen(false);
+          setAdminRefreshKey((current) => current + 1);
+          return;
+        }
+
         setHomeTab("events");
         setComposerOpen(false);
         setEventLoadStatus("loading");
@@ -584,13 +591,31 @@ function AuthenticatedApp({ session }: { session: Session }) {
 
   if (isAdminRoute) {
     return isAdminUser ? (
-      <AdminDashboard
-        communities={communities}
-        events={events}
-        posts={activity}
-        profileEmail={profileEmail}
-        onBack={logoutUser}
-      />
+      <>
+        <AdminDashboard
+          accessToken={accessToken}
+          communities={communities}
+          events={events}
+          profileEmail={profileEmail}
+          refreshKey={adminRefreshKey}
+          onBack={logoutUser}
+          onCreateEvent={() => openComposer("event")}
+        />
+        <ComposerModal
+          open={composerOpen}
+          mode={composerMode}
+          communities={communities}
+          eventTopics={eventTopics}
+          eventTopicsStatus={eventTopicsStatus}
+          submitting={composerSubmitting}
+          error={composerError}
+          onClose={closeComposer}
+          onRetryEventTopics={retryEventTopics}
+          onCreateCommunity={createCommunity}
+          onCreateEvent={createEvent}
+          onCreatePost={createPost}
+        />
+      </>
     ) : (
       <AdminAccessDenied onBack={() => routerNavigate(screenRoutes.home)} />
     );

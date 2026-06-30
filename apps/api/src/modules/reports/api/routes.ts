@@ -318,13 +318,13 @@ export function createReportsRouter(): Router {
         return;
       }
 
-      const reporte = await actualizarEstadoReporte(
+      const reportes = await actualizarEstadoReporte(
         parsedParams.data.id_reporte,
         estado,
         authenticatedUser.user.legajo
       );
 
-      if (!reporte) {
+      if (!reportes) {
         response.status(404).json({
           error: {
             code: "not_found",
@@ -334,8 +334,23 @@ export function createReportsRouter(): Router {
         return;
       }
 
+      const reporte = reportes.find(
+        (item) => item.id_reporte === parsedParams.data.id_reporte
+      );
+
+      if (!reporte) {
+        response.status(409).json({
+          error: {
+            code: "report_update_conflict",
+            message: "No pudimos confirmar la actualizacion del caso"
+          }
+        });
+        return;
+      }
+
       response.json({
-        reporte: serializeReporte(reporte)
+        reporte: serializeReporte(reporte),
+        reportes: reportes.map(serializeReporte)
       });
     } catch (error) {
       next(error);

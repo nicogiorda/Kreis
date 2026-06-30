@@ -270,8 +270,8 @@ export async function updateAdminReportStatus(
   reportId: string,
   status: AdminReportStatus,
   accessToken: string
-): Promise<AdminReport> {
-  const response = await requestJson<{ reporte: RawReport }>(
+): Promise<AdminReport[]> {
+  const response = await requestJson<{ reporte: RawReport; reportes?: RawReport[] }>(
     `/api/v1/reports/admin/${encodeURIComponent(reportId)}/status`,
     {
       method: "PATCH",
@@ -280,7 +280,7 @@ export async function updateAdminReportStatus(
     }
   );
 
-  return mapReport(response.reporte);
+  return (response.reportes ?? [response.reporte]).map(mapReport);
 }
 
 export async function listAdminUsers(accessToken: string, signal?: AbortSignal): Promise<AdminUser[]> {

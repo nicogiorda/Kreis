@@ -34,6 +34,7 @@ import {
 import type { Community, KreisEvent } from "../../types";
 import { cn } from "../../utils/cn";
 import { LoadingState } from "../common/LoadingState";
+import { groupAdminReports, type AdminReportCase } from "./report-cases";
 
 type AdminSection = "communities" | "events" | "users" | "reports";
 type CommunityView = "requests" | "approved";
@@ -625,22 +626,29 @@ function ReportsPanel({
   reports: AdminReport[];
   status: ResourceStatus;
   onRetry: () => void;
-  onUpdated: (report: AdminReport) => void;
+  onUpdated: (reports: AdminReport[]) => void;
   onError: (message: string) => void;
 }) {
   const [view, setView] = useState<ReportView>("incoming");
-  const [selectedReport, setSelectedReport] = useState<AdminReport | null>(null);
+  const [selectedCase, setSelectedCase] = useState<AdminReportCase | null>(null);
   const [busyStatus, setBusyStatus] = useState<AdminReportStatus | null>(null);
-  const visibleReports = reports.filter((report) =>
-    view === "incoming" ? report.status === "Pendiente" : report.status !== "Pendiente"
+  const reportCases = useMemo(() => groupAdminReports(reports), [reports]);
+  const visibleCases = reportCases.filter((reportCase) =>
+    view === "incoming"
+      ? reportCase.representative.status === "Pendiente"
+      : reportCase.representative.status !== "Pendiente"
   );
 
   async function updateStatus(nextStatus: AdminReportStatus): Promise<void> {
-    if (!selectedReport) return;
+    if (!selectedCase) return;
 
     if (
       nextStatus === "Resuelto" &&
-      !window.confirm("Resolver este reporte eliminará el post o comentario original. ¿Continuar?")
+      !window.confirm(
+        `Resolver este caso eliminará el contenido original y cerrará ${selectedCase.reportCount} ${
+          selectedCase.reportCount === 1 ? "reporte" : "reportes"
+        }. ¿Continuar?`
+      )
     ) {
       return;
     }
@@ -649,9 +657,13 @@ function ReportsPanel({
     onError("");
 
     try {
-      const updated = await updateAdminReportStatus(selectedReport.id, nextStatus, accessToken);
+      const updated = await updateAdminReportStatus(
+        selectedCase.representative.id,
+        nextStatus,
+        accessToken
+      );
       onUpdated(updated);
-      setSelectedReport(null);
+      setSelectedCase(null);
     } catch (error) {
       onError(getErrorMessage(error));
     } finally {
@@ -671,29 +683,42 @@ function ReportsPanel({
         onChange={setView}
       />
       <div className="admin-report-list">
-        {visibleReports.map((report) => (
-          <article className="admin-report-card" key={report.id}>
-            <div>
-              <h2>{report.reason}</h2>
-              <p>
-                {report.community?.name ?? "Contenido eliminado"} · {formatReportAge(report.createdAt)}
-              </p>
-            </div>
-            <button type="button" onClick={() => setSelectedReport(report)}>
-              Ver detalle
-            </button>
-          </article>
-        ))}
+        {visibleCases.map((reportCase) => {
+          const report = reportCase.representative;
+          const targetLabel = report.targetType === "Post" ? "Post" : "Comentario";
+
+          return (
+            <article className="admin-report-card" key={reportCase.id}>
+              <div>
+                <div className="admin-report-card__title">
+                  <h2>{reportCase.reportCount > 1 ? `${targetLabel} reportado` : report.reason}</h2>
+                  {reportCase.reportCount > 1 ? <span>{reportCase.reportCount}</span> : null}
+                </div>
+                <p>
+                  {reportCase.reportCount > 1
+                    ? `${reportCase.reasons.length} ${
+                        reportCase.reasons.length === 1 ? "motivo" : "motivos"
+                      } · `
+                    : ""}
+                  {report.community?.name ?? "Contenido eliminado"} · {formatReportAge(report.createdAt)}
+                </p>
+              </div>
+              <button type="button" onClick={() => setSelectedCase(reportCase)}>
+                Ver detalle
+              </button>
+            </article>
+          );
+        })}
         <AdminResourceState
           status={status}
-          hasItems={visibleReports.length > 0}
+          hasItems={visibleCases.length > 0}
           emptyMessage={view === "incoming" ? "No hay reportes pendientes." : "No hay reportes resueltos."}
           onRetry={onRetry}
         />
       </div>
 
-      {selectedReport ? (
-        <div className="admin-report-dialog-backdrop" role="presentation" onClick={() => setSelectedReport(null)}>
+      {selectedCase ? (
+        <div className="admin-report-dialog-backdrop" role="presentation" onClick={() => setSelectedCase(null)}>
           <section
             className="admin-report-dialog"
             role="dialog"
@@ -705,28 +730,56 @@ function ReportsPanel({
               className="admin-report-dialog__close"
               type="button"
               aria-label="Cerrar detalle"
-              onClick={() => setSelectedReport(null)}
+              onClick={() => setSelectedCase(null)}
             >
               <CloseCircle size={24} weight="Linear" />
             </button>
-            <span>{selectedReport.targetType}</span>
-            <h2 id="admin-report-title">{selectedReport.reason}</h2>
-            <p>{selectedReport.content}</p>
+            <span>
+              {selectedCase.representative.targetType} · {selectedCase.reportCount}{" "}
+              {selectedCase.reportCount === 1 ? "reporte" : "reportes"}
+            </span>
+            <h2 id="admin-report-title">
+              {selectedCase.reportCount === 1
+                ? selectedCase.representative.reason
+                : `Reportes sobre este ${
+                    selectedCase.representative.targetType === "Post" ? "post" : "comentario"
+                  }`}
+            </h2>
+            <p>{selectedCase.representative.content}</p>
+
+            {selectedCase.reportCount > 1 ? (
+              <section className="admin-report-dialog__reasons" aria-labelledby="admin-report-reasons-title">
+                <h3 id="admin-report-reasons-title">Motivos recibidos</h3>
+                <ul>
+                  {selectedCase.reasons.map((reason) => (
+                    <li key={reason.reason}>
+                      <span>{reason.reason}</span>
+                      <strong>{reason.count}</strong>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
             <dl>
               <div>
                 <dt>Autor</dt>
-                <dd>{selectedReport.author?.name ?? "Usuario eliminado"}</dd>
+                <dd>{selectedCase.representative.author?.name ?? "Usuario eliminado"}</dd>
               </div>
               <div>
                 <dt>Comunidad</dt>
-                <dd>{selectedReport.community?.name ?? "Sin comunidad"}</dd>
+                <dd>{selectedCase.representative.community?.name ?? "Sin comunidad"}</dd>
               </div>
               <div>
-                <dt>Reportó</dt>
-                <dd>{selectedReport.reporter?.name ?? "Usuario eliminado"}</dd>
+                <dt>{selectedCase.reporters.length === 1 ? "Reportó" : "Reportaron"}</dt>
+                <dd>
+                  {selectedCase.reporters.length
+                    ? selectedCase.reporters.map((reporter) => reporter.name).join(", ")
+                    : "Usuarios eliminados"}
+                </dd>
               </div>
             </dl>
-            {selectedReport.status === "Pendiente" ? (
+            {selectedCase.representative.status === "Pendiente" ? (
               <div className="admin-dialog-actions">
                 <button
                   className="is-secondary"
@@ -940,9 +993,13 @@ export function AdminDashboard({
               reports={reports}
               status={resourceStatus.reports}
               onRetry={() => retrySection("reports")}
-              onUpdated={(updated) =>
-                setReports((current) => current.map((report) => (report.id === updated.id ? updated : report)))
-              }
+              onUpdated={(updated) => {
+                setReports((current) => {
+                  const updatedById = new Map(updated.map((report) => [report.id, report]));
+                  return current.map((report) => updatedById.get(report.id) ?? report);
+                });
+                setReloadKey((current) => current + 1);
+              }}
               onError={setActionError}
             />
           ) : null}

@@ -1,6 +1,6 @@
 import type { CommunityPost } from "../data/posts-repository";
 
-export function serializePost(post: CommunityPost) {
+export function serializePost(post: CommunityPost, viewerLegajo: number) {
   return {
     id: post.id_post.toString(),
     cuerpo: post.cuerpo,
@@ -15,6 +15,7 @@ export function serializePost(post: CommunityPost) {
       id: post.comunidad.id_comunidad.toString(),
       nombre: post.comunidad.nombre
     },
+    es_autor: post.usuario.legajo === viewerLegajo,
     comentarios: post._count.comentario
   };
 }

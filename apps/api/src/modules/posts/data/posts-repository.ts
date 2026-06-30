@@ -50,6 +50,10 @@ export type CreateCommunityPostResult =
   | { status: "community_not_found" }
   | { status: "not_community_member" };
 
+export type DeleteCommunityPostResult =
+  | { status: "deleted" }
+  | { status: "not_found_or_not_owner" };
+
 export type PostComment = {
   id_comentario: bigint;
   legajo: number;
@@ -239,6 +243,22 @@ export async function createCommunityPost(
     status: "created",
     post
   };
+}
+
+export async function deleteCommunityPost(
+  legajo: number,
+  id_post: bigint
+): Promise<DeleteCommunityPostResult> {
+  const deleted = await prisma.post.deleteMany({
+    where: {
+      id_post,
+      legajo
+    }
+  });
+
+  return deleted.count > 0
+    ? { status: "deleted" }
+    : { status: "not_found_or_not_owner" };
 }
 
 export async function listPostComments(

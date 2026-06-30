@@ -1,7 +1,8 @@
-import { Flag } from "@solar-icons/react";
+import { Flag, TrashBinTrash } from "@solar-icons/react";
 import { CheckCircle, X } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { deletePost } from "../../api/posts";
 import { createReport, type ReportTargetType } from "../../api/reports";
 import { cn } from "../../utils/cn";
 
@@ -13,10 +14,12 @@ export type ReportTarget = {
 type ReportContentSheetProps = {
   accessToken: string;
   target: ReportTarget | null;
+  canDeletePost?: boolean;
+  onPostDeleted?: (postId: string) => void | Promise<void>;
   onClose: () => void;
 };
 
-type SheetStep = "action" | "reasons" | "success";
+type SheetStep = "action" | "reasons" | "delete-confirm" | "success";
 
 const reportReasons = [
   "Lenguaje agresivo o acoso",
@@ -29,11 +32,14 @@ const reportReasons = [
 export function ReportContentSheet({
   accessToken,
   target,
+  canDeletePost = false,
+  onPostDeleted,
   onClose
 }: ReportContentSheetProps) {
   const [step, setStep] = useState<SheetStep>("action");
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [submittingReason, setSubmittingReason] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [duplicate, setDuplicate] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,7 +52,7 @@ export function ReportContentSheet({
     document.documentElement.style.overflow = "hidden";
 
     function closeOnEscape(event: KeyboardEvent): void {
-      if (event.key === "Escape" && !submittingReason) onClose();
+      if (event.key === "Escape" && !submittingReason && !deleting) onClose();
     }
 
     window.addEventListener("keydown", closeOnEscape);
@@ -56,7 +62,7 @@ export function ReportContentSheet({
       document.documentElement.style.overflow = previousRootOverflow;
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [onClose, submittingReason, target]);
+  }, [deleting, onClose, submittingReason, target]);
 
   if (!target) return null;
 
@@ -89,12 +95,34 @@ export function ReportContentSheet({
     }
   }
 
+  async function deleteCurrentPost(): Promise<void> {
+    if (!target || target.type !== "Post" || !canDeletePost || deleting) return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      await deletePost(target.id, accessToken);
+      await onPostDeleted?.(target.id);
+      navigator.vibrate?.(16);
+      onClose();
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "No pudimos eliminar la publicacion. Intenta nuevamente."
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-end justify-center bg-black/35"
       role="presentation"
       onClick={(event) => {
-        if (event.target === event.currentTarget && !submittingReason) onClose();
+        if (event.target === event.currentTarget && !submittingReason && !deleting) onClose();
       }}
     >
       <section
@@ -120,14 +148,74 @@ export function ReportContentSheet({
                 <X aria-hidden="true" size={21} weight="bold" />
               </button>
             </div>
-            <button
-              className="mt-2 flex min-h-[54px] w-full items-center gap-3 rounded-[8px] border-0 bg-kreis-event-surface px-4 text-left text-[15px] font-medium text-kreis-orange shadow-none transition-transform duration-150 active:scale-[0.98]"
-              type="button"
-              onClick={() => setStep("reasons")}
-            >
-              <Flag aria-hidden="true" size={22} weight="LineDuotone" />
-              Reportar {targetLabel}
-            </button>
+            {canDeletePost && target.type === "Post" ? (
+              <button
+                className="mt-2 flex min-h-[54px] w-full items-center gap-3 rounded-[8px] border-0 bg-kreis-event-surface px-4 text-left text-[15px] font-medium text-kreis-orange shadow-none transition-transform duration-150 active:scale-[0.98]"
+                type="button"
+                onClick={() => setStep("delete-confirm")}
+              >
+                <TrashBinTrash aria-hidden="true" size={22} weight="LineDuotone" />
+                Eliminar publicacion
+              </button>
+            ) : (
+              <button
+                className="mt-2 flex min-h-[54px] w-full items-center gap-3 rounded-[8px] border-0 bg-kreis-event-surface px-4 text-left text-[15px] font-medium text-kreis-orange shadow-none transition-transform duration-150 active:scale-[0.98]"
+                type="button"
+                onClick={() => setStep("reasons")}
+              >
+                <Flag aria-hidden="true" size={22} weight="LineDuotone" />
+                Reportar {targetLabel}
+              </button>
+            )}
+          </>
+        ) : null}
+
+        {step === "delete-confirm" ? (
+          <>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 id="report-sheet-title" className="m-0 text-[18px] font-medium">
+                  Eliminar publicacion
+                </h2>
+                <p className="mb-0 mt-1 text-[13px] leading-[1.4] text-kreis-muted">
+                  Tambien se eliminaran sus comentarios. Esta accion no se puede deshacer.
+                </p>
+              </div>
+              <button
+                className="grid size-11 flex-none place-items-center rounded-full border-0 bg-transparent p-0 text-kreis-muted shadow-none transition-transform duration-150 active:scale-95"
+                type="button"
+                aria-label="Cerrar"
+                disabled={deleting}
+                onClick={onClose}
+              >
+                <X aria-hidden="true" size={21} weight="bold" />
+              </button>
+            </div>
+
+            {error ? (
+              <p className="mb-0 mt-4 text-[13px] font-medium leading-[1.35] text-kreis-orange" role="alert">
+                {error}
+              </p>
+            ) : null}
+
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                className="min-h-[50px] rounded-[8px] border-0 bg-kreis-event-surface px-4 text-[15px] font-medium text-kreis-ink shadow-none transition-transform duration-150 active:scale-[0.98]"
+                type="button"
+                disabled={deleting}
+                onClick={() => setStep("action")}
+              >
+                Cancelar
+              </button>
+              <button
+                className="min-h-[50px] rounded-[8px] border-0 bg-kreis-orange px-4 text-[15px] font-medium text-kreis-cream shadow-none transition-[opacity,transform] duration-150 enabled:active:scale-[0.98] disabled:opacity-60"
+                type="button"
+                disabled={deleting}
+                onClick={() => void deleteCurrentPost()}
+              >
+                {deleting ? "Eliminando..." : "Eliminar"}
+              </button>
+            </div>
           </>
         ) : null}
 

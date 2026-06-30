@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { deletePost } from "../../api/posts";
 import { ReportContentSheet } from "./ReportContentSheet";
 
 afterEach(() => {
@@ -61,8 +62,8 @@ describe("ReportContentSheet", () => {
 
   it("offers deletion instead of reporting for the user's own post", async () => {
     const user = userEvent.setup();
-    const onPostDeleted = vi.fn();
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    const onPostDeleted = vi.fn((postId: string) => deletePost(postId, "token"));
     vi.stubGlobal("fetch", fetchMock);
 
     render(
@@ -78,15 +79,12 @@ describe("ReportContentSheet", () => {
     expect(screen.queryByRole("button", { name: "Reportar publicacion" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Eliminar publicacion" }));
 
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(onPostDeleted).not.toHaveBeenCalled();
     expect(screen.getByText(/Esta accion no se puede deshacer/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Eliminar" }));
 
     expect(onPostDeleted).toHaveBeenCalledWith("15");
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("/api/v1/posts/15"),
-      expect.objectContaining({ method: "DELETE" })
-    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

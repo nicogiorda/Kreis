@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { deletePost } from "../../api/posts";
+import { deletePost, deletePostComment } from "../../api/posts";
 import { ReportContentSheet } from "./ReportContentSheet";
 
 afterEach(() => {
@@ -85,6 +85,33 @@ describe("ReportContentSheet", () => {
     await user.click(screen.getByRole("button", { name: "Eliminar" }));
 
     expect(onPostDeleted).toHaveBeenCalledWith("15");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers deletion instead of reporting for the user's own comment", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    const onCommentDeleted = vi.fn((commentId: string) => deletePostComment("15", commentId, "token"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ReportContentSheet
+        accessToken="token"
+        target={{ type: "Comentario", id: "31", isOwn: true }}
+        onCommentDeleted={onCommentDeleted}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "Reportar comentario" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Eliminar comentario" }));
+
+    expect(onCommentDeleted).not.toHaveBeenCalled();
+    expect(screen.getByText(/Si tiene respuestas, tambien se eliminaran/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Eliminar" }));
+
+    expect(onCommentDeleted).toHaveBeenCalledWith("31");
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

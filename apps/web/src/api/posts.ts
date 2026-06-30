@@ -5,6 +5,7 @@ type PostResponse = {
   id: string;
   cuerpo: string;
   created_at: string;
+  es_autor: boolean;
   autor: {
     legajo: number;
     nombre: string;
@@ -15,7 +16,6 @@ type PostResponse = {
     id: string;
     nombre: string;
   };
-  es_autor: boolean;
   comentarios: number;
 };
 
@@ -25,6 +25,7 @@ type CommentResponse = {
   id_padre: string | null;
   cuerpo: string;
   created_at: string;
+  es_autor: boolean;
   autor: {
     legajo: number;
     nombre: string;
@@ -91,6 +92,7 @@ function adaptComment(comment: CommentResponse): PostComment {
     parentId: comment.id_padre,
     body: comment.cuerpo,
     createdAt: comment.created_at,
+    isOwn: comment.es_autor,
     author: {
       legajo: comment.autor.legajo,
       name: `${comment.autor.nombre} ${comment.autor.apellido}`.trim(),
@@ -174,4 +176,18 @@ export async function createPostComment(
     comment: adaptComment(response.comentario),
     total: response.total_comentarios
   };
+}
+
+export async function deletePostComment(
+  postId: string,
+  commentId: string,
+  accessToken: string
+): Promise<void> {
+  await requestJson(
+    `/api/v1/posts/${encodeURIComponent(postId)}/comentarios/${encodeURIComponent(commentId)}`,
+    {
+      method: "DELETE",
+      headers: bearerTokenHeaders(accessToken)
+    }
+  );
 }

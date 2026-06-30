@@ -92,6 +92,10 @@ export type CreatePostCommentResult =
   | { status: "not_community_member" }
   | { status: "invalid_parent" };
 
+export type DeletePostCommentResult =
+  | { status: "deleted" }
+  | { status: "not_found_or_not_owner" };
+
 const commentInclude = {
   usuario: {
     select: {
@@ -344,4 +348,22 @@ export async function createPostComment(
     },
     total_comentarios: totalComments
   };
+}
+
+export async function deletePostComment(
+  legajo: number,
+  id_post: bigint,
+  id_comentario: bigint
+): Promise<DeletePostCommentResult> {
+  const deleted = await prisma.comentario.deleteMany({
+    where: {
+      id_comentario,
+      id_post,
+      legajo
+    }
+  });
+
+  return deleted.count > 0
+    ? { status: "deleted" }
+    : { status: "not_found_or_not_owner" };
 }

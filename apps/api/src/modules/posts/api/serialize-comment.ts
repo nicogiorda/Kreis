@@ -1,6 +1,6 @@
 import type { PostCommentTree } from "../data/posts-repository";
 
-export function serializeComment(comment: PostCommentTree): {
+export function serializeComment(comment: PostCommentTree, viewerLegajo: number): {
   id: string;
   id_post: string;
   id_padre: string | null;
@@ -12,6 +12,7 @@ export function serializeComment(comment: PostCommentTree): {
     apellido: string;
     avatar_url: string | null;
   };
+  es_autor: boolean;
   respuestas: ReturnType<typeof serializeComment>[];
 } {
   return {
@@ -26,6 +27,7 @@ export function serializeComment(comment: PostCommentTree): {
       apellido: comment.usuario.apellido,
       avatar_url: comment.usuario.avatar_url
     },
-    respuestas: comment.respuestas.map(serializeComment)
+    es_autor: comment.usuario.legajo === viewerLegajo,
+    respuestas: comment.respuestas.map((reply) => serializeComment(reply, viewerLegajo))
   };
 }

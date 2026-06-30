@@ -1,7 +1,7 @@
 import { ChatRound, Heart } from "@solar-icons/react";
 import { ArrowBendDownRight, CaretDown, DotsThree, PaperPlaneTilt } from "@phosphor-icons/react";
 import { type FormEvent, type ReactNode, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
-import { createPostComment, listPostComments } from "../../api/posts";
+import { createPostComment, deletePostComment, listPostComments } from "../../api/posts";
 import type { PostComment } from "../../types";
 import { CommentSkeletonList } from "../common/LoadingSkeleton";
 import { LoadingState } from "../common/LoadingState";
@@ -30,7 +30,7 @@ type CommentNodeProps = {
   onReplyCancel: () => void;
   onReplyBodyChange: (value: string) => void;
   onReplySubmit: (event: FormEvent<HTMLFormElement>, parentId: string) => void;
-  onReport: (commentId: string) => void;
+  onReport: (commentId: string, isOwn: boolean) => void;
 };
 
 function formatCommentTime(createdAt: string): string {
@@ -292,7 +292,7 @@ function CommentNode({
               aria-label={`Opciones del comentario de ${comment.author.name}`}
               onClick={(event) => {
                 event.stopPropagation();
-                onReport(comment.id);
+                onReport(comment.id, comment.isOwn);
               }}
             >
               <DotsThree aria-hidden="true" size={18} weight="bold" />
@@ -365,7 +365,7 @@ function DetailCommentActions({
   isReplying: boolean;
   onReplyStart: (commentId: string) => void;
   onReplyCancel: () => void;
-  onReport: (commentId: string) => void;
+  onReport: (commentId: string, isOwn: boolean) => void;
 }) {
   const [liked, setLiked] = useState(false);
   const likeCount = getCommentLikeSeed(comment) + (liked ? 1 : 0);
@@ -399,7 +399,7 @@ function DetailCommentActions({
         aria-label={`Opciones del comentario de ${comment.author.name}`}
         onClick={(event) => {
           event.stopPropagation();
-          onReport(comment.id);
+          onReport(comment.id, comment.isOwn);
         }}
       >
         <DotsThree aria-hidden="true" size={19} weight="bold" />
@@ -676,7 +676,7 @@ export function PostDetailCommentsContent({
   score?: number;
   thread: PostCommentThread;
   onReportPost: () => void;
-  onReportComment: (commentId: string) => void;
+  onReportComment: (commentId: string, isOwn: boolean) => void;
 }) {
   const displayedScore = typeof score === "number" ? score + (thread.liked ? 1 : 0) : undefined;
 
@@ -812,6 +812,11 @@ export function PostDetailCommentsLayout({
     onCountChange
   });
 
+  async function handleCommentDeleted(commentId: string): Promise<void> {
+    await deletePostComment(postId, commentId, accessToken);
+    await thread.loadComments();
+  }
+
   return (
     <>
       {children({
@@ -821,7 +826,11 @@ export function PostDetailCommentsLayout({
             score={score}
             thread={thread}
             onReportPost={() => setReportTarget({ type: "Post", id: postId })}
-            onReportComment={(commentId) => setReportTarget({ type: "Comentario", id: commentId })}
+            onReportComment={(commentId, isOwn) => setReportTarget({
+              type: "Comentario",
+              id: commentId,
+              isOwn
+            })}
           />
         ),
         composer: (
@@ -836,6 +845,7 @@ export function PostDetailCommentsLayout({
         canDeletePost={isOwnPost && reportTarget?.type === "Post"}
         key={reportTarget ? `${reportTarget.type}-${reportTarget.id}` : "closed"}
         target={reportTarget}
+        onCommentDeleted={handleCommentDeleted}
         onPostDeleted={onPostDeleted}
         onClose={() => setReportTarget(null)}
       />
@@ -863,6 +873,11 @@ export function PostComments({
     active: open,
     onCountChange
   });
+
+  async function handleCommentDeleted(commentId: string): Promise<void> {
+    await deletePostComment(postId, commentId, accessToken);
+    await thread.loadComments();
+  }
   const displayedScore = typeof score === "number" ? score + (thread.liked ? 1 : 0) : undefined;
 
   function openThread(): void {
@@ -964,7 +979,11 @@ export function PostComments({
                       onReplyStart={thread.startReply}
                       onReplyCancel={thread.cancelReply}
                       onReplyBodyChange={thread.setReplyBody}
-                      onReport={(commentId) => setReportTarget({ type: "Comentario", id: commentId })}
+                      onReport={(commentId, isOwn) => setReportTarget({
+                        type: "Comentario",
+                        id: commentId,
+                        isOwn
+                      })}
                       onReplySubmit={(event, parentId) => {
                         event.preventDefault();
                         void thread.submitComment(thread.replyBody, parentId);
@@ -1020,7 +1039,11 @@ export function PostComments({
                     onReplyStart={thread.startReply}
                     onReplyCancel={thread.cancelReply}
                     onReplyBodyChange={thread.setReplyBody}
-                    onReport={(commentId) => setReportTarget({ type: "Comentario", id: commentId })}
+                    onReport={(commentId, isOwn) => setReportTarget({
+                      type: "Comentario",
+                      id: commentId,
+                      isOwn
+                    })}
                     onReplySubmit={(event, parentId) => {
                       event.preventDefault();
                       void thread.submitComment(thread.replyBody, parentId);
@@ -1048,6 +1071,7 @@ export function PostComments({
         canDeletePost={isOwnPost && reportTarget?.type === "Post"}
         key={reportTarget ? `${reportTarget.type}-${reportTarget.id}` : "closed"}
         target={reportTarget}
+        onCommentDeleted={handleCommentDeleted}
         onPostDeleted={onPostDeleted}
         onClose={() => setReportTarget(null)}
       />

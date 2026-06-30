@@ -10,6 +10,11 @@ const reporteUsuarioSelect = {
   avatar_url: true
 } as const;
 
+const reporteComunidadSelect = {
+  id_comunidad: true,
+  nombre: true
+} as const;
+
 const reporteInclude = {
   reportante: {
     select: reporteUsuarioSelect
@@ -26,10 +31,7 @@ const reporteInclude = {
         select: reporteUsuarioSelect
       },
       comunidad: {
-        select: {
-          id_comunidad: true,
-          nombre: true
-        }
+        select: reporteComunidadSelect
       }
     }
   },
@@ -47,10 +49,7 @@ const reporteInclude = {
         select: {
           id_post: true,
           comunidad: {
-            select: {
-              id_comunidad: true,
-              nombre: true
-            }
+            select: reporteComunidadSelect
           }
         }
       }
@@ -58,7 +57,14 @@ const reporteInclude = {
   }
 } as const;
 
-export type ReporteConRelaciones = Awaited<ReturnType<typeof listarReportes>>[number];
+type ReporteSinSnapshots = Awaited<ReturnType<typeof listarReportesSinSnapshots>>[number];
+type ReporteUsuarioSnapshot = Awaited<ReturnType<typeof buscarUsuariosSnapshot>>[number];
+type ReporteComunidadSnapshot = Awaited<ReturnType<typeof buscarComunidadesSnapshot>>[number];
+
+export type ReporteConRelaciones = ReporteSinSnapshots & {
+  autorSnapshot: ReporteUsuarioSnapshot | null;
+  comunidadSnapshot: ReporteComunidadSnapshot | null;
+};
 
 export type CrearReporteResult =
   | { estado: "creado"; reporte: ReporteConRelaciones }
@@ -72,18 +78,90 @@ export async function findUserByAuthId(authId: string): Promise<{ legajo: number
   });
 }
 
+function uniqueNonNull<T>(values: Array<T | null | undefined>): T[] {
+  return Array.from(new Set(values.filter((value): value is T => value !== null && value !== undefined)));
+}
+
+async function buscarUsuariosSnapshot(legajos: number[]) {
+  if (legajos.length === 0) return [];
+
+  return prisma.usuario.findMany({
+    where: {
+      legajo: {
+        in: legajos
+      }
+    },
+    select: reporteUsuarioSelect
+  });
+}
+
+async function buscarComunidadesSnapshot(ids: bigint[]) {
+  if (ids.length === 0) return [];
+
+  return prisma.comunidad.findMany({
+    where: {
+      id_comunidad: {
+        in: ids
+      }
+    },
+    select: reporteComunidadSelect
+  });
+}
+
+async function enriquecerReportes(reportes: ReporteSinSnapshots[]): Promise<ReporteConRelaciones[]> {
+  const legajos = uniqueNonNull(reportes.map((reporte) => reporte.autor_legajo));
+  const idsComunidad = uniqueNonNull(reportes.map((reporte) => reporte.id_comunidad));
+  const [usuarios, comunidades] = await Promise.all([
+    buscarUsuariosSnapshot(legajos),
+    buscarComunidadesSnapshot(idsComunidad)
+  ]);
+  const usuariosPorLegajo = new Map(usuarios.map((usuario) => [usuario.legajo, usuario]));
+  const comunidadesPorId = new Map(comunidades.map((comunidad) => [comunidad.id_comunidad.toString(), comunidad]));
+
+  return reportes.map((reporte) => ({
+    ...reporte,
+    autorSnapshot: reporte.autor_legajo !== null ? usuariosPorLegajo.get(reporte.autor_legajo) ?? null : null,
+    comunidadSnapshot: reporte.id_comunidad !== null ? comunidadesPorId.get(reporte.id_comunidad.toString()) ?? null : null
+  }));
+}
+
+async function enriquecerReporte(reporte: ReporteSinSnapshots | null): Promise<ReporteConRelaciones | null> {
+  if (!reporte) return null;
+
+  const [enriquecido] = await enriquecerReportes([reporte]);
+  return enriquecido ?? null;
+}
+
+async function listarReportesSinSnapshots(filters: {
+  estado?: EstadoReporte;
+  tipoReporte?: TipoReporte;
+} = {}) {
+  return prisma.reporte.findMany({
+    where: {
+      estado: filters.estado,
+      tipo_reporte: filters.tipoReporte
+    },
+    include: reporteInclude,
+    orderBy: {
+      created_at: "desc"
+    }
+  });
+}
+
 async function buscarReporteExistente(
   legajoReportante: number,
   tipoReporte: TipoReporte,
   idObjetivo: bigint
 ): Promise<ReporteConRelaciones | null> {
-  return prisma.reporte.findFirst({
+  const reporte = await prisma.reporte.findFirst({
     where:
       tipoReporte === "Post"
         ? { tipo_reporte: "Post", id_post: idObjetivo, legajo_reportante: legajoReportante }
         : { tipo_reporte: "Comentario", id_comentario: idObjetivo, legajo_reportante: legajoReportante },
     include: reporteInclude
   });
+
+  return enriquecerReporte(reporte);
 }
 
 async function buscarSnapshotObjetivo(
@@ -161,8 +239,13 @@ export async function crearReporte(
       },
       include: reporteInclude
     });
+    const reporteEnriquecido = await enriquecerReporte(reporte);
 
-    return { estado: "creado", reporte };
+    if (!reporteEnriquecido) {
+      throw new Error("No se pudo enriquecer el reporte creado");
+    }
+
+    return { estado: "creado", reporte: reporteEnriquecido };
   } catch (error) {
     if (
       error instanceof Error &&
@@ -184,16 +267,8 @@ export async function listarReportes(filters: {
   estado?: EstadoReporte;
   tipoReporte?: TipoReporte;
 } = {}) {
-  return prisma.reporte.findMany({
-    where: {
-      estado: filters.estado,
-      tipo_reporte: filters.tipoReporte
-    },
-    include: reporteInclude,
-    orderBy: {
-      created_at: "desc"
-    }
-  });
+  const reportes = await listarReportesSinSnapshots(filters);
+  return enriquecerReportes(reportes);
 }
 
 function isRecordNotFound(error: unknown): boolean {
@@ -205,7 +280,7 @@ export async function actualizarEstadoReporte(
   estado: EstadoReporte,
   resueltoPor: number
 ): Promise<ReporteConRelaciones[] | null> {
-  return prisma.$transaction(async (tx) => {
+  const reportes = await prisma.$transaction(async (tx) => {
     const existente = await tx.reporte.findUnique({
       where: { id_reporte },
       include: reporteInclude
@@ -280,4 +355,6 @@ export async function actualizarEstadoReporte(
       include: reporteInclude
     });
   });
+
+  return reportes ? enriquecerReportes(reportes) : null;
 }

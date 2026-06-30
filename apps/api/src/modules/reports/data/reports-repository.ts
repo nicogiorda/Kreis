@@ -204,7 +204,7 @@ export async function actualizarEstadoReporte(
   id_reporte: bigint,
   estado: EstadoReporte,
   resueltoPor: number
-): Promise<ReporteConRelaciones | null> {
+): Promise<ReporteConRelaciones[] | null> {
   return prisma.$transaction(async (tx) => {
     const existente = await tx.reporte.findUnique({
       where: { id_reporte },
@@ -212,12 +212,47 @@ export async function actualizarEstadoReporte(
     });
 
     if (!existente) return null;
+    if (existente.estado !== "Pendiente" && estado !== "Pendiente") {
+      return [existente];
+    }
 
-    await tx.reporte.update({
-      where: { id_reporte },
+    const sameTargetFilter = existente.tipo_reporte === "Post" && existente.id_post
+      ? {
+          tipo_reporte: "Post" as const,
+          id_post: existente.id_post
+        }
+      : existente.tipo_reporte === "Comentario" && existente.id_comentario
+        ? {
+            tipo_reporte: "Comentario" as const,
+            id_comentario: existente.id_comentario
+          }
+        : null;
+    const shouldCloseCase = existente.estado === "Pendiente"
+      && estado !== "Pendiente"
+      && sameTargetFilter !== null;
+    const reportsToUpdate = shouldCloseCase
+      ? await tx.reporte.findMany({
+          where: {
+            ...sameTargetFilter,
+            estado: "Pendiente"
+          },
+          select: {
+            id_reporte: true
+          }
+        })
+      : [{ id_reporte }];
+    const reportIds = reportsToUpdate.map((report) => report.id_reporte);
+    const resolvedAt = estado === "Pendiente" ? null : new Date();
+
+    await tx.reporte.updateMany({
+      where: {
+        id_reporte: {
+          in: reportIds
+        }
+      },
       data: {
         estado,
-        resuelto_at: estado === "Pendiente" ? null : new Date(),
+        resuelto_at: resolvedAt,
         resuelto_por: estado === "Pendiente" ? null : resueltoPor
       }
     });
@@ -236,8 +271,12 @@ export async function actualizarEstadoReporte(
       }
     }
 
-    return tx.reporte.findUnique({
-      where: { id_reporte },
+    return tx.reporte.findMany({
+      where: {
+        id_reporte: {
+          in: reportIds
+        }
+      },
       include: reporteInclude
     });
   });

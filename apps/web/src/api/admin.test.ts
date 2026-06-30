@@ -113,7 +113,39 @@ describe("admin api", () => {
               reportante: null,
               moderador: null,
               objetivo: null
-            }
+            },
+            reportes: [
+              {
+                id_reporte: "4",
+                tipo_reporte: "Post",
+                id_objetivo: null,
+                motivo: "Spam",
+                estado: "Resuelto",
+                contenido_reportado: "Snapshot",
+                autor_legajo: null,
+                id_comunidad: null,
+                created_at: "2026-06-27T12:00:00.000Z",
+                resuelto_at: "2026-06-27T13:00:00.000Z",
+                reportante: null,
+                moderador: null,
+                objetivo: null
+              },
+              {
+                id_reporte: "5",
+                tipo_reporte: "Post",
+                id_objetivo: null,
+                motivo: "Contenido inapropiado",
+                estado: "Resuelto",
+                contenido_reportado: "Snapshot",
+                autor_legajo: null,
+                id_comunidad: null,
+                created_at: "2026-06-27T12:05:00.000Z",
+                resuelto_at: "2026-06-27T13:00:00.000Z",
+                reportante: null,
+                moderador: null,
+                objetivo: null
+              }
+            ]
           }),
           { status: 200 }
         )
@@ -121,8 +153,10 @@ describe("admin api", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ user: { legajo: 25, deleted: true } }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await updateAdminReportStatus("4", "Resuelto", "token");
+    const updatedReports = await updateAdminReportStatus("4", "Resuelto", "token");
     await deleteAdminUser(25, "token");
+
+    expect(updatedReports).toHaveLength(2);
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,

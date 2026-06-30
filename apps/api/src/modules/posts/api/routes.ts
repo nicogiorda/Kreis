@@ -4,6 +4,7 @@ import { verifyAccessToken } from "../../auth/infrastructure/access-token-verifi
 import {
   createPostComment,
   createCommunityPost,
+  deleteCommunityPost,
   findUserByAuthId,
   listCommunityFeed,
   listPostComments
@@ -97,7 +98,7 @@ export function createPostsRouter(): Router {
       const posts = await listCommunityFeed(authenticatedUser.user.legajo);
 
       response.json({
-        posts: posts.map(serializePost)
+        posts: posts.map((post) => serializePost(post, authenticatedUser.user.legajo))
       });
     } catch (error) {
       next(error);
@@ -156,8 +157,53 @@ export function createPostsRouter(): Router {
       }
 
       response.status(201).json({
-        post: serializePost(result.post)
+        post: serializePost(result.post, authenticatedUser.user.legajo)
       });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.delete("/:id", async (request, response, next) => {
+    try {
+      const parsedParams = postIdParamsSchema.safeParse(request.params);
+
+      if (!parsedParams.success) {
+        response.status(400).json({
+          error: {
+            code: "validation_error",
+            message: "Invalid post id",
+            details: parsedParams.error.flatten().fieldErrors
+          }
+        });
+        return;
+      }
+
+      const authenticatedUser = await authenticatePostUser(request);
+
+      if (!authenticatedUser.ok) {
+        response.status(authenticatedUser.status).json({
+          error: authenticatedUser.error
+        });
+        return;
+      }
+
+      const result = await deleteCommunityPost(
+        authenticatedUser.user.legajo,
+        parsedParams.data.id
+      );
+
+      if (result.status === "not_found_or_not_owner") {
+        response.status(404).json({
+          error: {
+            code: "post_not_found",
+            message: "Post no encontrado"
+          }
+        });
+        return;
+      }
+
+      response.status(204).send();
     } catch (error) {
       next(error);
     }

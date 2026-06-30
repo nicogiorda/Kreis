@@ -6,6 +6,7 @@ type PostResponse = {
   cuerpo: string;
   created_at: string;
   autor: {
+    legajo: number;
     nombre: string;
     apellido: string;
     avatar_url?: string | null;
@@ -14,6 +15,7 @@ type PostResponse = {
     id: string;
     nombre: string;
   };
+  es_autor: boolean;
   comentarios: number;
 };
 
@@ -72,6 +74,7 @@ function adaptPost(post: PostResponse): ActivityPost {
     communityName: post.comunidad.nombre,
     icon: getCommunityIcon(post.comunidad.nombre),
     author: `${post.autor.nombre} ${post.autor.apellido}`.trim(),
+    isOwn: post.es_autor,
     authorAvatarUrl: post.autor.avatar_url ?? null,
     time: formatPostTime(post.created_at),
     title: "Nuevo post",
@@ -121,6 +124,13 @@ export async function createPost(
   });
 
   return adaptPost(response.post);
+}
+
+export async function deletePost(postId: string, accessToken: string): Promise<void> {
+  await requestJson(`/api/v1/posts/${encodeURIComponent(postId)}`, {
+    method: "DELETE",
+    headers: bearerTokenHeaders(accessToken)
+  });
 }
 
 export async function listPostComments(

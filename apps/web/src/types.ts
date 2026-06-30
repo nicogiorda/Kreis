@@ -60,6 +60,7 @@ export type ActivityPost = {
   communityName: string;
   icon: string;
   author: string;
+  isOwn: boolean;
   authorAvatarUrl?: string | null;
   time: string;
   title: string;

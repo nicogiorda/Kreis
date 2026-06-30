@@ -58,4 +58,35 @@ describe("ReportContentSheet", () => {
     expect(screen.getByRole("dialog")).toHaveClass("bg-kreis-lace");
     expect(screen.getByRole("dialog")).not.toHaveClass("bg-kreis-surface");
   });
+
+  it("offers deletion instead of reporting for the user's own post", async () => {
+    const user = userEvent.setup();
+    const onPostDeleted = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ReportContentSheet
+        accessToken="token"
+        canDeletePost
+        target={{ type: "Post", id: "15" }}
+        onPostDeleted={onPostDeleted}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "Reportar publicacion" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Eliminar publicacion" }));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.getByText(/Esta accion no se puede deshacer/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Eliminar" }));
+
+    expect(onPostDeleted).toHaveBeenCalledWith("15");
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/posts/15"),
+      expect.objectContaining({ method: "DELETE" })
+    );
+  });
 });

@@ -14,7 +14,9 @@ type PostCommentsProps = {
   score?: number;
   accessToken: string;
   expanded?: boolean;
+  isOwnPost?: boolean;
   onExpand?: () => void;
+  onPostDeleted?: (postId: string) => void | Promise<void>;
   onCountChange: (postId: string, total: number) => void;
 };
 
@@ -786,7 +788,9 @@ export function PostDetailCommentsLayout({
   accessToken,
   active,
   keyboardOpen,
+  isOwnPost = false,
   onCountChange,
+  onPostDeleted,
   children
 }: {
   postId: string;
@@ -795,7 +799,9 @@ export function PostDetailCommentsLayout({
   accessToken: string;
   active: boolean;
   keyboardOpen: boolean;
+  isOwnPost?: boolean;
   onCountChange: (postId: string, total: number) => void;
+  onPostDeleted?: (postId: string) => void | Promise<void>;
   children: (parts: { comments: ReactNode; composer: ReactNode }) => ReactNode;
 }) {
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
@@ -827,8 +833,10 @@ export function PostDetailCommentsLayout({
       })}
       <ReportContentSheet
         accessToken={accessToken}
+        canDeletePost={isOwnPost && reportTarget?.type === "Post"}
         key={reportTarget ? `${reportTarget.type}-${reportTarget.id}` : "closed"}
         target={reportTarget}
+        onPostDeleted={onPostDeleted}
         onClose={() => setReportTarget(null)}
       />
     </>
@@ -841,7 +849,9 @@ export function PostComments({
   score,
   accessToken,
   expanded,
+  isOwnPost = false,
   onExpand,
+  onPostDeleted,
   onCountChange
 }: PostCommentsProps) {
   const [internalOpen, setInternalOpen] = useState(false);
@@ -1035,8 +1045,10 @@ export function PostComments({
       ) : null}
       <ReportContentSheet
         accessToken={accessToken}
+        canDeletePost={isOwnPost && reportTarget?.type === "Post"}
         key={reportTarget ? `${reportTarget.type}-${reportTarget.id}` : "closed"}
         target={reportTarget}
+        onPostDeleted={onPostDeleted}
         onClose={() => setReportTarget(null)}
       />
     </section>

@@ -16,6 +16,7 @@ type CommunityPostProps = {
   expanded?: boolean;
   renderComments?: boolean;
   onOpen?: (postId: string) => void;
+  onPostDeleted: (postId: string) => void | Promise<void>;
   onCommentCountChange: (postId: string, total: number) => void;
 };
 
@@ -48,7 +49,7 @@ function getDetailTime(time: string): string {
   return normalized;
 }
 
-function CommunityPost({ post, accessToken, expanded = false, renderComments = true, onOpen, onCommentCountChange }: CommunityPostProps) {
+function CommunityPost({ post, accessToken, expanded = false, renderComments = true, onOpen, onPostDeleted, onCommentCountChange }: CommunityPostProps) {
   function openPost(): void {
     if (expanded) return;
     onOpen?.(post.id);
@@ -133,7 +134,9 @@ function CommunityPost({ post, accessToken, expanded = false, renderComments = t
             accessToken={accessToken}
             expanded={expanded}
             initialCount={post.comments}
+            isOwnPost={post.isOwn}
             onExpand={() => onOpen?.(post.id)}
+            onPostDeleted={onPostDeleted}
             postId={post.id}
             score={post.score}
             onCountChange={onCommentCountChange}
@@ -195,6 +198,7 @@ type CommunitiesScreenProps = {
   themeMode: ThemeMode;
   onCreateCommunity: () => void;
   onCreatePost: () => void;
+  onDeletePost: (postId: string) => Promise<void>;
   onCommentCountChange: (postId: string, total: number) => void;
   onPostDetailChange?: (open: boolean) => void;
   onToggleTheme: () => void;
@@ -207,6 +211,7 @@ export function CommunitiesScreen({
   themeMode,
   onCreateCommunity,
   onCreatePost,
+  onDeletePost,
   onCommentCountChange,
   onPostDetailChange,
   onToggleTheme
@@ -234,6 +239,11 @@ export function CommunitiesScreen({
   const keyboardDebug = getKeyboardDebugEnabled();
   const [keyboardDebugMetrics, setKeyboardDebugMetrics] = useState("");
   const nextThemeLabel = themeMode === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
+
+  async function handlePostDeleted(postId: string): Promise<void> {
+    await onDeletePost(postId);
+    setExpandedPostId((current) => current === postId ? null : current);
+  }
 
   useEffect(() => {
     if (!expandedPostId || expandedPost) return;
@@ -324,6 +334,8 @@ export function CommunitiesScreen({
           postId={expandedPost.id}
           onCountChange={onCommentCountChange}
           initialCount={expandedPost.comments}
+          isOwnPost={expandedPost.isOwn}
+          onPostDeleted={handlePostDeleted}
           score={expandedPost.score}
         >
           {({ comments, composer }) => (
@@ -335,6 +347,7 @@ export function CommunitiesScreen({
                     expanded
                     renderComments={false}
                     post={expandedPost}
+                    onPostDeleted={handlePostDeleted}
                     onCommentCountChange={onCommentCountChange}
                   />
                   {comments}
@@ -390,6 +403,7 @@ export function CommunitiesScreen({
             accessToken={accessToken}
             key={post.id}
             onOpen={setExpandedPostId}
+            onPostDeleted={handlePostDeleted}
             post={post}
             onCommentCountChange={onCommentCountChange}
           />

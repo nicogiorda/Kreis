@@ -5,6 +5,7 @@ import {
   createPostComment,
   createCommunityPost,
   deleteCommunityPost,
+  deletePostComment,
   findUserByAuthId,
   listCommunityFeed,
   listPostComments
@@ -69,6 +70,14 @@ const postIdParamsSchema = z.object({
     .string()
     .trim()
     .regex(/^\d+$/, "El id del post debe ser numerico")
+    .transform((id) => BigInt(id))
+});
+
+const commentIdParamsSchema = postIdParamsSchema.extend({
+  commentId: z
+    .string()
+    .trim()
+    .regex(/^\d+$/, "El id del comentario debe ser numerico")
     .transform((id) => BigInt(id))
 });
 
@@ -259,7 +268,7 @@ export function createPostsRouter(): Router {
       }
 
       response.json({
-        comentarios: result.comentarios.map(serializeComment),
+        comentarios: result.comentarios.map((comment) => serializeComment(comment, authenticatedUser.user.legajo)),
         total_comentarios: result.total_comentarios
       });
     } catch (error) {
@@ -342,9 +351,55 @@ export function createPostsRouter(): Router {
       }
 
       response.status(201).json({
-        comentario: serializeComment(result.comentario),
+        comentario: serializeComment(result.comentario, authenticatedUser.user.legajo),
         total_comentarios: result.total_comentarios
       });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.delete("/:id/comentarios/:commentId", async (request, response, next) => {
+    try {
+      const parsedParams = commentIdParamsSchema.safeParse(request.params);
+
+      if (!parsedParams.success) {
+        response.status(400).json({
+          error: {
+            code: "validation_error",
+            message: "Invalid post or comment id",
+            details: parsedParams.error.flatten().fieldErrors
+          }
+        });
+        return;
+      }
+
+      const authenticatedUser = await authenticatePostUser(request);
+
+      if (!authenticatedUser.ok) {
+        response.status(authenticatedUser.status).json({
+          error: authenticatedUser.error
+        });
+        return;
+      }
+
+      const result = await deletePostComment(
+        authenticatedUser.user.legajo,
+        parsedParams.data.id,
+        parsedParams.data.commentId
+      );
+
+      if (result.status === "not_found_or_not_owner") {
+        response.status(404).json({
+          error: {
+            code: "comment_not_found",
+            message: "Comentario no encontrado"
+          }
+        });
+        return;
+      }
+
+      response.status(204).send();
     } catch (error) {
       next(error);
     }

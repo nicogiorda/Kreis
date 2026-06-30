@@ -8,6 +8,7 @@ import { cn } from "../../utils/cn";
 export type ReportTarget = {
   type: ReportTargetType;
   id: string;
+  isOwn?: boolean;
 };
 
 type ReportContentSheetProps = {
@@ -15,6 +16,7 @@ type ReportContentSheetProps = {
   target: ReportTarget | null;
   canDeletePost?: boolean;
   onPostDeleted?: (postId: string) => void | Promise<void>;
+  onCommentDeleted?: (commentId: string) => void | Promise<void>;
   onClose: () => void;
 };
 
@@ -33,6 +35,7 @@ export function ReportContentSheet({
   target,
   canDeletePost = false,
   onPostDeleted,
+  onCommentDeleted,
   onClose
 }: ReportContentSheetProps) {
   const [step, setStep] = useState<SheetStep>("action");
@@ -66,6 +69,9 @@ export function ReportContentSheet({
   if (!target) return null;
 
   const targetLabel = target.type === "Post" ? "publicacion" : "comentario";
+  const canDeleteTarget = target.type === "Post"
+    ? canDeletePost && Boolean(onPostDeleted)
+    : Boolean(target.isOwn && onCommentDeleted);
 
   async function submitReport(): Promise<void> {
     if (!target || !selectedReason || submittingReason) return;
@@ -94,21 +100,25 @@ export function ReportContentSheet({
     }
   }
 
-  async function deleteCurrentPost(): Promise<void> {
-    if (!target || target.type !== "Post" || !canDeletePost || !onPostDeleted || deleting) return;
+  async function deleteCurrentContent(): Promise<void> {
+    if (!target || !canDeleteTarget || deleting) return;
 
     setDeleting(true);
     setError(null);
 
     try {
-      await onPostDeleted(target.id);
+      if (target.type === "Post") {
+        await onPostDeleted?.(target.id);
+      } else {
+        await onCommentDeleted?.(target.id);
+      }
       navigator.vibrate?.(16);
       onClose();
     } catch (deleteError) {
       setError(
         deleteError instanceof Error
           ? deleteError.message
-          : "No pudimos eliminar la publicacion. Intenta nuevamente."
+          : `No pudimos eliminar el ${targetLabel}. Intenta nuevamente.`
       );
     } finally {
       setDeleting(false);
@@ -146,14 +156,14 @@ export function ReportContentSheet({
                 <X aria-hidden="true" size={21} weight="bold" />
               </button>
             </div>
-            {canDeletePost && target.type === "Post" ? (
+            {canDeleteTarget ? (
               <button
                 className="mt-2 flex min-h-[54px] w-full items-center gap-3 rounded-[8px] border-0 bg-kreis-event-surface px-4 text-left text-[15px] font-medium text-kreis-orange shadow-none transition-transform duration-150 active:scale-[0.98]"
                 type="button"
                 onClick={() => setStep("delete-confirm")}
               >
                 <TrashBinTrash aria-hidden="true" size={22} weight="LineDuotone" />
-                Eliminar publicacion
+                Eliminar {targetLabel}
               </button>
             ) : (
               <button
@@ -173,10 +183,12 @@ export function ReportContentSheet({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 id="report-sheet-title" className="m-0 text-[18px] font-medium">
-                  Eliminar publicacion
+                  Eliminar {targetLabel}
                 </h2>
                 <p className="mb-0 mt-1 text-[13px] leading-[1.4] text-kreis-muted">
-                  Tambien se eliminaran sus comentarios. Esta accion no se puede deshacer.
+                  {target.type === "Post"
+                    ? "Tambien se eliminaran sus comentarios. Esta accion no se puede deshacer."
+                    : "Si tiene respuestas, tambien se eliminaran. Esta accion no se puede deshacer."}
                 </p>
               </div>
               <button
@@ -209,7 +221,7 @@ export function ReportContentSheet({
                 className="min-h-[50px] rounded-[8px] border-0 bg-kreis-orange px-4 text-[15px] font-medium text-kreis-cream shadow-none transition-[opacity,transform] duration-150 enabled:active:scale-[0.98] disabled:opacity-60"
                 type="button"
                 disabled={deleting}
-                onClick={() => void deleteCurrentPost()}
+                onClick={() => void deleteCurrentContent()}
               >
                 {deleting ? "Eliminando..." : "Eliminar"}
               </button>

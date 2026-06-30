@@ -75,6 +75,7 @@ export type PostComment = {
   parentId: string | null;
   body: string;
   createdAt: string;
+  isOwn: boolean;
   author: {
     legajo: number;
     name: string;

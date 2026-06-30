@@ -2,7 +2,6 @@ import { Flag, TrashBinTrash } from "@solar-icons/react";
 import { CheckCircle, X } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { deletePost } from "../../api/posts";
 import { createReport, type ReportTargetType } from "../../api/reports";
 import { cn } from "../../utils/cn";
 
@@ -96,14 +95,13 @@ export function ReportContentSheet({
   }
 
   async function deleteCurrentPost(): Promise<void> {
-    if (!target || target.type !== "Post" || !canDeletePost || deleting) return;
+    if (!target || target.type !== "Post" || !canDeletePost || !onPostDeleted || deleting) return;
 
     setDeleting(true);
     setError(null);
 
     try {
-      await deletePost(target.id, accessToken);
-      await onPostDeleted?.(target.id);
+      await onPostDeleted(target.id);
       navigator.vibrate?.(16);
       onClose();
     } catch (deleteError) {

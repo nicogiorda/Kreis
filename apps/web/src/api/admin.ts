@@ -105,6 +105,8 @@ type RawReport = {
   resuelto_at: string | null;
   reportante: RawPerson | null;
   moderador: RawPerson | null;
+  autor: RawPerson | null;
+  comunidad: { id_comunidad: string; nombre: string } | null;
   objetivo:
     | {
         tipo: "Post";
@@ -179,18 +181,42 @@ function mapEvent(event: RawEvent): AdminEvent {
 
 function mapReport(report: RawReport): AdminReport {
   const target = report.objetivo;
-  const author =
+  const authorFromTarget =
     target?.tipo === "Post"
       ? mapPerson(target.post.autor)
       : target?.tipo === "Comentario"
         ? mapPerson(target.comentario.autor)
         : null;
-  const community =
+  const communityFromTarget =
     target?.tipo === "Post"
       ? target.post.comunidad
       : target?.tipo === "Comentario"
         ? target.comentario.post.comunidad
         : null;
+  const authorFromReport = mapPerson(report.autor);
+  const communityFromReport = report.comunidad;
+  const author =
+    authorFromTarget ??
+    authorFromReport ??
+    (report.autor_legajo !== null
+      ? {
+          legajo: report.autor_legajo,
+          name: `Legajo ${report.autor_legajo}`,
+          avatarUrl: null
+        }
+      : null);
+  const communitySource = communityFromTarget ?? communityFromReport;
+  const community = communitySource
+    ? {
+        id: communitySource.id_comunidad,
+        name: communitySource.nombre
+      }
+    : report.id_comunidad !== null
+      ? {
+          id: report.id_comunidad,
+          name: `Comunidad ${report.id_comunidad}`
+        }
+      : null;
 
   return {
     id: report.id_reporte,
@@ -206,15 +232,9 @@ function mapReport(report: RawReport): AdminReport {
     reporter: mapPerson(report.reportante),
     moderator: mapPerson(report.moderador),
     author,
-    community: community
-      ? {
-          id: community.id_comunidad,
-          name: community.nombre
-        }
-      : null
+    community
   };
 }
-
 export async function listAdminCommunities(accessToken: string, signal?: AbortSignal): Promise<AdminCommunity[]> {
   const response = await requestJson<{ comunidades: RawCommunity[] }>("/api/v1/communities/admin", {
     headers: bearerTokenHeaders(accessToken),

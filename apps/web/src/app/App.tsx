@@ -20,6 +20,7 @@ import { ComposerModal } from "../components/composer/ComposerModal";
 import { CommunitiesScreen } from "../components/communities/CommunitiesScreen";
 import { EventDetailScreen } from "../components/events/EventDetailScreen";
 import { EventsScreen } from "../components/events/EventsScreen";
+import { LoadingState } from "../components/common/LoadingState";
 import { SplashScreen, type SplashPhase } from "../components/common/SplashScreen";
 import { ServiceWorkerUpdateBanner } from "../components/common/ServiceWorkerUpdateBanner";
 import { StartupDebugPanel } from "../components/common/StartupDebugPanel";
@@ -237,9 +238,9 @@ function AuthenticatedApp({ session }: { session: Session }) {
   const routerNavigate = useNavigate();
   const activeRoute = normalizeRoute(location.pathname);
   const isAdminRoute = activeRoute === adminRoute;
-  const isAdminEmail = profileEmail?.toLowerCase() === "kreis1app@gmail.com";
   const isAdminRole = userProfile?.role?.toLowerCase() === "administrador";
-  const isAdminUser = isAdminRole || (profileLoadStatus !== "ready" && isAdminEmail);
+  const isAdminUser = isAdminRole;
+  const isAdminProfileLoading = profileLoadStatus === "loading";
   const eventDetailId = getEventDetailId(activeRoute);
   const activeEvent = eventDetailId ? events.find((event) => event.id === eventDetailId) : undefined;
   const isEventDetail = Boolean(eventDetailId);
@@ -628,6 +629,18 @@ function AuthenticatedApp({ session }: { session: Session }) {
   }
 
   if (isAdminRoute) {
+    if (isAdminProfileLoading) {
+      return (
+        <div className="admin-mobile-page">
+          <div className="admin-mobile-shell">
+            <main className="admin-mobile-content">
+              <LoadingState className="admin-resource-loading" label="Cargando perfil" />
+            </main>
+          </div>
+        </div>
+      );
+    }
+
     return isAdminUser ? (
       <>
         <AdminDashboard

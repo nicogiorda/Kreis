@@ -16,10 +16,28 @@ function serializeUsuarioReporte(user: {
   };
 }
 
+function serializeComunidadReporte(community: {
+  id_comunidad: bigint;
+  nombre: string;
+} | null) {
+  if (!community) return null;
+
+  return {
+    id_comunidad: community.id_comunidad.toString(),
+    nombre: community.nombre
+  };
+}
+
 export function serializeReporte(reporte: ReporteConRelaciones) {
   const idObjetivo = reporte.tipo_reporte === "Post"
     ? reporte.id_post?.toString() ?? null
     : reporte.id_comentario?.toString() ?? null;
+  const autorReporte = reporte.tipo_reporte === "Post"
+    ? reporte.post?.usuario ?? reporte.autorSnapshot
+    : reporte.comentario?.usuario ?? reporte.autorSnapshot;
+  const comunidadReporte = reporte.tipo_reporte === "Post"
+    ? reporte.post?.comunidad ?? reporte.comunidadSnapshot
+    : reporte.comentario?.post.comunidad ?? reporte.comunidadSnapshot;
 
   return {
     id_reporte: reporte.id_reporte.toString(),
@@ -36,6 +54,8 @@ export function serializeReporte(reporte: ReporteConRelaciones) {
     resuelto_at: reporte.resuelto_at?.toISOString() ?? null,
     reportante: serializeUsuarioReporte(reporte.reportante),
     moderador: serializeUsuarioReporte(reporte.moderador),
+    autor: serializeUsuarioReporte(autorReporte),
+    comunidad: serializeComunidadReporte(comunidadReporte),
     objetivo: reporte.tipo_reporte === "Post"
       ? reporte.post && {
           tipo: "Post" as const,
@@ -44,10 +64,7 @@ export function serializeReporte(reporte: ReporteConRelaciones) {
             cuerpo: reporte.post.cuerpo,
             created_at: reporte.post.created_at.toISOString(),
             autor: serializeUsuarioReporte(reporte.post.usuario),
-            comunidad: {
-              id_comunidad: reporte.post.comunidad.id_comunidad.toString(),
-              nombre: reporte.post.comunidad.nombre
-            }
+            comunidad: serializeComunidadReporte(reporte.post.comunidad)
           }
         }
       : reporte.comentario && {
@@ -61,10 +78,7 @@ export function serializeReporte(reporte: ReporteConRelaciones) {
             autor: serializeUsuarioReporte(reporte.comentario.usuario),
             post: {
               id_post: reporte.comentario.post.id_post.toString(),
-              comunidad: {
-                id_comunidad: reporte.comentario.post.comunidad.id_comunidad.toString(),
-                nombre: reporte.comentario.post.comunidad.nombre
-              }
+              comunidad: serializeComunidadReporte(reporte.comentario.post.comunidad)
             }
           }
         }

@@ -1,5 +1,5 @@
-import { ArrowLeft, Plus, X } from "@phosphor-icons/react";
-import { type ChangeEvent, type ReactNode, useEffect, useLayoutEffect, useState } from "react";
+import { ArrowLeft, CheckCircle, Eye, EyeSlash, Plus, X } from "@phosphor-icons/react";
+import { type ChangeEvent, type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiRequestError, classifyCertificate, listFaculties, listTopics, register } from "../../api/auth";
 import type { CertificateClassificationResult, FacultyCatalogItem, TopicCatalogItem } from "../../api/auth";
 import onboardingEventsUrl from "../../assets/auth/onboarding-events.webp";
@@ -16,7 +16,18 @@ import { cn } from "../../utils/cn";
 import { useAuth } from "../../auth/useAuth";
 import { AuthDecorLayer, AuthScreenFrame, AuthShell } from "./AuthLayout";
 
-type AuthStep = "welcome" | "events" | "communities" | "university" | "interests" | "profile" | "password" | "certificate" | "login";
+type AuthStep =
+  | "welcome"
+  | "events"
+  | "communities"
+  | "university"
+  | "interests"
+  | "profile"
+  | "password"
+  | "certificate"
+  | "login"
+  | "forgot-email"
+  | "forgot-code";
 type CatalogStatus = "loading" | "ready" | "error";
 
 type SignupDraft = {
@@ -38,7 +49,9 @@ const authSafeAreaBackgrounds: Record<AuthStep, string> = {
   profile: "#2e4b3c",
   password: "#ffa74f",
   certificate: "#2e4b3c",
-  login: "#2e4b3c"
+  login: "#2e4b3c",
+  "forgot-email": "#2e4b3c",
+  "forgot-code": "#2e4b3c"
 };
 
 const emptySignupDraft: SignupDraft = {
@@ -131,6 +144,47 @@ function TextField({
   );
 }
 
+function PasswordField({
+  className,
+  label,
+  value,
+  autoComplete,
+  visible,
+  onChange,
+  onToggleVisibility
+}: {
+  className: string;
+  label: string;
+  value: string;
+  autoComplete: "current-password" | "new-password";
+  visible: boolean;
+  onChange: (value: string) => void;
+  onToggleVisibility: () => void;
+}) {
+  return (
+    <label className={cn("auth-redesign-field auth-redesign-password-field", className)}>
+      <span className="sr-only">{label}</span>
+      <input
+        className="auth-redesign-input auth-redesign-input--password-toggle"
+        type={visible ? "text" : "password"}
+        value={value}
+        autoComplete={autoComplete}
+        placeholder={label}
+        aria-label={label}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <button
+        className="auth-redesign-password-toggle"
+        type="button"
+        aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
+        onClick={onToggleVisibility}
+      >
+        {visible ? <EyeSlash aria-hidden="true" weight="regular" /> : <Eye aria-hidden="true" weight="regular" />}
+      </button>
+    </label>
+  );
+}
+
 function SelectField({
   className,
   label,
@@ -154,6 +208,10 @@ function SelectField({
 }
 
 function getAuthErrorMessage(error: unknown): string {
+  const authError = error as { code?: string; status?: number };
+
+  if (authError.code === "invalid_credentials") return "El mail o la contraseña no coinciden.";
+
   if (error instanceof ApiRequestError) {
     if (error.code === "invalid_credentials") return "El mail o la contraseña no coinciden.";
     if (error.code === "register_failed") return "No pudimos crear la cuenta. Revisá si el mail o el legajo ya están registrados.";
@@ -164,6 +222,39 @@ function getAuthErrorMessage(error: unknown): string {
   }
 
   return "No pudimos conectar con el servidor. Intentá nuevamente.";
+}
+
+function getRecoveryRequestErrorMessage(error: unknown): string {
+  const authError = error as { code?: string; status?: number };
+
+  if (authError.status === 429 || authError.code === "over_email_send_rate_limit") {
+    return "Esperá un momento antes de solicitar otro código.";
+  }
+
+  return "No pudimos enviar el código. Revisá tu conexión e intentá nuevamente.";
+}
+
+function getRecoveryCodeErrorMessage(error: unknown): string {
+  const authError = error as { code?: string; status?: number; message?: string };
+  const errorText = `${authError.code ?? ""} ${authError.message ?? ""}`.toLowerCase();
+
+  if (errorText.includes("expired")) return "El código venció. Solicitá uno nuevo.";
+  if (errorText.includes("used")) return "Ese código ya fue utilizado. Solicitá uno nuevo.";
+  if (authError.status === 429) return "Hubo demasiados intentos. Esperá un momento.";
+
+  return "El código no es válido. Revisalo e intentá nuevamente.";
+}
+
+function getPasswordUpdateErrorMessage(error: unknown): string {
+  const authError = error as { code?: string; message?: string };
+  const errorText = `${authError.code ?? ""} ${authError.message ?? ""}`.toLowerCase();
+
+  if (errorText.includes("same_password")) return "La nueva contraseña debe ser diferente.";
+  if (errorText.includes("weak") || errorText.includes("password")) {
+    return "La contraseña no cumple los requisitos de seguridad.";
+  }
+
+  return "No pudimos actualizar la contraseña. Intentá nuevamente.";
 }
 
 function getDraftProfile(draft: SignupDraft): { nombre: string; apellido: string } {
@@ -479,7 +570,7 @@ function CertificateScreen({
   );
 }
 
-function LoginScreen({ onBack }: { onBack: () => void }) {
+function LoginScreen({ onBack, onForgotPassword }: { onBack: () => void; onForgotPassword: () => void }) {
   const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -507,17 +598,359 @@ function LoginScreen({ onBack }: { onBack: () => void }) {
       <h1 className="auth-redesign-title auth-redesign-title--login">INICIA SESIÓN</h1>
       <TextField className="auth-redesign-field--login-email" label="Ingresa tu mail" type="email" value={email} autoComplete="email" inputMode="email" onChange={setEmail} />
       <TextField className="auth-redesign-field--login-password" label="Ingresa tu contraseña" type="password" value={password} autoComplete="current-password" onChange={setPassword} />
+      <button className="auth-redesign-forgot-link" type="button" onClick={onForgotPassword}>¿Olvidaste tu contraseña?</button>
       <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--login auth-redesign-button--green-text" disabled={submitting || !email.trim() || password.length < 8} onClick={() => void handleLogin()}>
         {submitting ? <LoadingState label="Ingresando" variant="button" /> : "Continuar"}
       </PrimaryButton>
-      {error ? <p className="auth-redesign-error auth-redesign-error--login">{error}</p> : null}
+      {error ? <p className="auth-redesign-error auth-redesign-error--login" role="alert">{error}</p> : null}
     </AuthScreenFrame>
   );
 }
 
-export function AuthFlow() {
+function ForgotEmailScreen({
+  initialEmail,
+  onBack,
+  onCodeSent
+}: {
+  initialEmail: string;
+  onBack: () => void;
+  onCodeSent: (email: string) => void;
+}) {
+  const { requestPasswordReset } = useAuth();
+  const [email, setEmail] = useState(initialEmail);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+  const normalizedEmail = email.trim().toLowerCase();
+  const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
+
+  useEffect(() => {
+    titleRef.current?.focus();
+  }, []);
+
+  async function handleRequest(): Promise<void> {
+    if (!emailIsValid) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      await requestPasswordReset(normalizedEmail);
+      onCodeSent(normalizedEmail);
+    } catch (requestError) {
+      setError(getRecoveryRequestErrorMessage(requestError));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <AuthScreenFrame tone="green">
+      <CharacterBackdrop src={signUpThreeUrl} top={430} />
+      <BackButton variant="login" onClick={onBack} />
+      <BrandLogo variant="right-low" />
+      <h1 className="auth-redesign-title auth-redesign-title--recovery" ref={titleRef} tabIndex={-1}>
+        RECUPERÁ TU CUENTA
+      </h1>
+      <p className="auth-redesign-recovery-copy auth-redesign-recovery-copy--email">
+        Ingresá el correo asociado a tu cuenta y te enviaremos un código.
+      </p>
+      <TextField
+        className="auth-redesign-field--recovery-email"
+        label="Correo electrónico"
+        type="email"
+        value={email}
+        autoComplete="email"
+        inputMode="email"
+        onChange={setEmail}
+      />
+      <PrimaryButton
+        className="auth-redesign-form-button auth-redesign-form-button--recovery-email auth-redesign-button--green-text"
+        disabled={submitting || !emailIsValid}
+        onClick={() => void handleRequest()}
+      >
+        {submitting ? <LoadingState label="Enviando código" variant="button" /> : "Enviar código"}
+      </PrimaryButton>
+      {error ? <p className="auth-redesign-error auth-redesign-error--recovery" role="alert">{error}</p> : null}
+    </AuthScreenFrame>
+  );
+}
+
+function ForgotCodeScreen({
+  email,
+  onBack
+}: {
+  email: string;
+  onBack: () => void;
+}) {
+  const { requestPasswordReset, verifyRecoveryCode } = useAuth();
+  const [code, setCode] = useState("");
+  const [secondsUntilResend, setSecondsUntilResend] = useState(60);
+  const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+
+  useEffect(() => {
+    titleRef.current?.focus();
+    inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (secondsUntilResend <= 0) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setSecondsUntilResend((current) => Math.max(0, current - 1));
+    }, 1_000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [secondsUntilResend]);
+
+  async function handleVerify(): Promise<void> {
+    if (code.length !== 6) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      await verifyRecoveryCode(email, code);
+    } catch (verificationError) {
+      setError(getRecoveryCodeErrorMessage(verificationError));
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResend(): Promise<void> {
+    if (secondsUntilResend > 0 || resending) return;
+
+    setResending(true);
+    setError(null);
+
+    try {
+      await requestPasswordReset(email);
+      setSecondsUntilResend(60);
+      setCode("");
+      inputRef.current?.focus();
+    } catch (requestError) {
+      setError(getRecoveryRequestErrorMessage(requestError));
+    } finally {
+      setResending(false);
+    }
+  }
+
+  return (
+    <AuthScreenFrame tone="green">
+      <CharacterBackdrop src={signUpThreeUrl} top={470} />
+      <BackButton variant="login" onClick={onBack} />
+      <BrandLogo variant="right-low" />
+      <h1 className="auth-redesign-title auth-redesign-title--recovery-code" ref={titleRef} tabIndex={-1}>
+        INGRESÁ EL CÓDIGO
+      </h1>
+      <p className="auth-redesign-recovery-copy auth-redesign-recovery-copy--code">
+        Si existe una cuenta asociada, te enviamos un código.
+      </p>
+      <label className="auth-redesign-otp-field">
+        <span className="sr-only">Código de recuperación</span>
+        <input
+          ref={inputRef}
+          className="auth-redesign-otp-input"
+          type="text"
+          value={code}
+          autoComplete="one-time-code"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          aria-label="Código de recuperación"
+          onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+        />
+        <span className="auth-redesign-otp-cells" aria-hidden="true">
+          {Array.from({ length: 6 }, (_, index) => (
+            <span className={cn(code[index] && "is-filled")} key={index}>{code[index] ?? ""}</span>
+          ))}
+        </span>
+      </label>
+      <button
+        className="auth-redesign-resend"
+        type="button"
+        disabled={secondsUntilResend > 0 || resending}
+        onClick={() => void handleResend()}
+      >
+        {secondsUntilResend > 0
+          ? `Reenviar en 00:${String(secondsUntilResend).padStart(2, "0")}`
+          : resending
+            ? "Reenviando..."
+            : "¿No te llegó? Reenviar código"}
+      </button>
+      <PrimaryButton
+        className="auth-redesign-form-button auth-redesign-form-button--recovery-code auth-redesign-button--green-text"
+        disabled={submitting || code.length !== 6}
+        onClick={() => void handleVerify()}
+      >
+        {submitting ? <LoadingState label="Validando código" variant="button" /> : "Validar código"}
+      </PrimaryButton>
+      {error ? <p className="auth-redesign-error auth-redesign-error--recovery-code" role="alert">{error}</p> : null}
+    </AuthScreenFrame>
+  );
+}
+
+export function RecoveredPasswordFlow({ onCancelToLogin }: { onCancelToLogin: () => void }) {
+  const {
+    cancelPasswordRecovery,
+    completePasswordRecovery,
+    signOutOtherDevices,
+    updateRecoveredPassword
+  } = useAuth();
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [step, setStep] = useState<"new-password" | "success">("new-password");
+  const [submitting, setSubmitting] = useState(false);
+  const [otherSessionsClosed, setOtherSessionsClosed] = useState(true);
+  const [retryingSessions, setRetryingSessions] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+  const hasNoEdgeSpaces = newPassword === newPassword.trim();
+  const passwordIsValid =
+    newPassword.length >= 8 &&
+    hasNoEdgeSpaces &&
+    newPassword === confirmation;
+
+  useEffect(() => {
+    titleRef.current?.focus();
+  }, [step]);
+
+  async function handleUpdatePassword(): Promise<void> {
+    if (!passwordIsValid) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      await updateRecoveredPassword(newPassword);
+
+      try {
+        await signOutOtherDevices();
+        setOtherSessionsClosed(true);
+      } catch {
+        setOtherSessionsClosed(false);
+      }
+
+      setNewPassword("");
+      setConfirmation("");
+      setStep("success");
+    } catch (updateError) {
+      setError(getPasswordUpdateErrorMessage(updateError));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleCancel(): Promise<void> {
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      await cancelPasswordRecovery();
+      setNewPassword("");
+      setConfirmation("");
+      onCancelToLogin();
+    } catch {
+      setError("No pudimos cancelar la recuperación. Intentá nuevamente.");
+      setSubmitting(false);
+    }
+  }
+
+  async function handleRetryOtherSessions(): Promise<void> {
+    setRetryingSessions(true);
+
+    try {
+      await signOutOtherDevices();
+      setOtherSessionsClosed(true);
+    } catch {
+      setOtherSessionsClosed(false);
+    } finally {
+      setRetryingSessions(false);
+    }
+  }
+
+  if (step === "success") {
+    return (
+      <AuthShell>
+        <AuthScreenFrame tone="green">
+          <CharacterBackdrop src={signUpThreeUrl} top={470} />
+          <BrandLogo variant="right-low" />
+          <div className="auth-redesign-recovery-success">
+            <CheckCircle aria-hidden="true" weight="regular" />
+            <h1 ref={titleRef} tabIndex={-1}>Contraseña actualizada</h1>
+            <p>
+              {otherSessionsClosed
+                ? "Tu cuenta está protegida y las demás sesiones fueron cerradas."
+                : "La contraseña cambió, pero no pudimos cerrar las demás sesiones."}
+            </p>
+            {!otherSessionsClosed ? (
+              <button type="button" disabled={retryingSessions} onClick={() => void handleRetryOtherSessions()}>
+                {retryingSessions ? "Reintentando..." : "Reintentar cierre de sesiones"}
+              </button>
+            ) : null}
+            <button className="is-primary" type="button" onClick={() => void completePasswordRecovery()}>
+              Entrar a Kreis
+            </button>
+          </div>
+        </AuthScreenFrame>
+      </AuthShell>
+    );
+  }
+
+  return (
+    <AuthShell>
+      <AuthScreenFrame tone="pumpkin">
+        <CharacterBackdrop src={signUpFourUrl} top={430} />
+        <BackButton variant="login" onClick={() => void handleCancel()} />
+        <BrandLogo variant="right-low" />
+        <h1 className="auth-redesign-title auth-redesign-title--recovered-password" ref={titleRef} tabIndex={-1}>
+          CREÁ UNA NUEVA CONTRASEÑA
+        </h1>
+        <PasswordField
+          className="auth-redesign-field--recovered-password"
+          label="Nueva contraseña"
+          value={newPassword}
+          autoComplete="new-password"
+          visible={showNewPassword}
+          onChange={setNewPassword}
+          onToggleVisibility={() => setShowNewPassword((current) => !current)}
+        />
+        <PasswordField
+          className="auth-redesign-field--recovered-password-repeat"
+          label="Repetir nueva contraseña"
+          value={confirmation}
+          autoComplete="new-password"
+          visible={showConfirmation}
+          onChange={setConfirmation}
+          onToggleVisibility={() => setShowConfirmation((current) => !current)}
+        />
+        <ul className="auth-redesign-password-rules" aria-label="Requisitos de contraseña">
+          <li className={cn(newPassword.length >= 8 && "is-valid")}>Mínimo 8 caracteres</li>
+          <li className={cn(hasNoEdgeSpaces && newPassword.length > 0 && "is-valid")}>Sin espacios al inicio o al final</li>
+          <li className={cn(confirmation.length > 0 && newPassword === confirmation && "is-valid")}>Ambas contraseñas coinciden</li>
+        </ul>
+        <PrimaryButton
+          className="auth-redesign-form-button auth-redesign-form-button--recovered-password auth-redesign-button--pumpkin-text"
+          disabled={submitting || !passwordIsValid}
+          onClick={() => void handleUpdatePassword()}
+        >
+          {submitting ? <LoadingState label="Actualizando contraseña" variant="button" /> : "Actualizar contraseña"}
+        </PrimaryButton>
+        {error ? <p className="auth-redesign-error auth-redesign-error--recovered-password" role="alert">{error}</p> : null}
+      </AuthScreenFrame>
+    </AuthShell>
+  );
+}
+
+export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" | "login" }) {
   const { signIn } = useAuth();
-  const [step, setStep] = useState<AuthStep>("welcome");
+  const [step, setStep] = useState<AuthStep>(initialStep);
+  const [recoveryEmail, setRecoveryEmail] = useState("");
   const [draft, setDraft] = useState<SignupDraft>(emptySignupDraft);
   const [topics, setTopics] = useState<TopicCatalogItem[]>([]);
   const [faculties, setFaculties] = useState<FacultyCatalogItem[]>([]);
@@ -648,7 +1081,31 @@ export function AuthFlow() {
           }}
         />
       )}
-      {step === "login" && <LoginScreen onBack={() => setStep("welcome")} />}
+      {step === "login" && (
+        <LoginScreen
+          onBack={() => setStep("welcome")}
+          onForgotPassword={() => setStep("forgot-email")}
+        />
+      )}
+      {step === "forgot-email" && (
+        <ForgotEmailScreen
+          initialEmail={recoveryEmail}
+          onBack={() => {
+            setRecoveryEmail("");
+            setStep("login");
+          }}
+          onCodeSent={(email) => {
+            setRecoveryEmail(email);
+            setStep("forgot-code");
+          }}
+        />
+      )}
+      {step === "forgot-code" && (
+        <ForgotCodeScreen
+          email={recoveryEmail}
+          onBack={() => setStep("forgot-email")}
+        />
+      )}
     </AuthShell>
   );
 }

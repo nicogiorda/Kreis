@@ -14,7 +14,7 @@ import { createPost as persistPost, deletePost as persistDeletePost, listPosts }
 import { getMyProfile, uploadMyAvatar } from "../api/users";
 import type { KreisUserProfile } from "../api/users";
 import { AdminAccessDenied, AdminDashboard } from "../components/admin/AdminDashboard";
-import { AuthFlow } from "../components/auth/AuthFlow";
+import { AuthFlow, RecoveredPasswordFlow } from "../components/auth/AuthFlow";
 import { AuthViewport } from "../components/auth/AuthLayout";
 import { ComposerModal } from "../components/composer/ComposerModal";
 import { CommunitiesScreen } from "../components/communities/CommunitiesScreen";
@@ -163,16 +163,25 @@ function AuthRecoveryScreen() {
   );
 }
 
-function UnauthenticatedApp() {
+function UnauthenticatedApp({ initialStep }: { initialStep: "welcome" | "login" }) {
   return (
     <AuthViewport>
-      <AuthFlow />
+      <AuthFlow initialStep={initialStep} />
+    </AuthViewport>
+  );
+}
+
+function PasswordRecoveryApp({ onCancelToLogin }: { onCancelToLogin: () => void }) {
+  return (
+    <AuthViewport>
+      <RecoveredPasswordFlow onCancelToLogin={onCancelToLogin} />
     </AuthViewport>
   );
 }
 
 export default function App() {
   const { status, session } = useAuth();
+  const [anonymousInitialStep, setAnonymousInitialStep] = useState<"welcome" | "login">("welcome");
   const splash = useStartupSplash(status);
 
   return (
@@ -180,12 +189,14 @@ export default function App() {
       <ViewportDebugPanel />
       <StartupDebugPanel />
       <ServiceWorkerUpdateBanner />
-      {status === "authenticated" && session ? (
+      {status === "password-recovery" && session ? (
+        <PasswordRecoveryApp onCancelToLogin={() => setAnonymousInitialStep("login")} />
+      ) : status === "authenticated" && session ? (
         <AuthenticatedApp session={session} />
       ) : status === "recovery-error" ? (
         <AuthRecoveryScreen />
       ) : (
-        <UnauthenticatedApp />
+        <UnauthenticatedApp initialStep={anonymousInitialStep} />
       )}
       {splash.visible ? <SplashScreen phase={splash.phase} onExitComplete={splash.handleExitComplete} /> : null}
     </>
@@ -193,7 +204,12 @@ export default function App() {
 }
 
 function AuthenticatedApp({ session }: { session: Session }) {
-  const { signOut } = useAuth();
+  const {
+    changePassword,
+    signOut,
+    signOutEverywhere,
+    signOutOtherDevices
+  } = useAuth();
   const accessToken = session.access_token;
   const profileEmail = session.user.email;
   const [events, setEvents] = useState<KreisEvent[]>([]);
@@ -725,6 +741,9 @@ function AuthenticatedApp({ session }: { session: Session }) {
                   onOpenEventDetails={openEventDetails}
                   onToggleTheme={toggleTheme}
                   onUploadAvatar={uploadProfileAvatar}
+                  onChangePassword={changePassword}
+                  onSignOutOtherDevices={signOutOtherDevices}
+                  onSignOutEverywhere={signOutEverywhere}
                   onLogout={logoutUser}
                 />
               )}

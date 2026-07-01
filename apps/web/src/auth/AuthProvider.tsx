@@ -1,5 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Session, User } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
 import { registerAuthTokenRefresher } from "../api/client";
 import { supabaseBrowser } from "../lib/supabase-browser";
 import { markStartup, measureStartup, updateStartupDebug } from "../startup/startup-debug";
@@ -7,7 +7,9 @@ import type { AuthStatus } from "./auth.types";
 import { AuthContext } from "./useAuth";
 
 const legacyAuthStorageKey = "kreis-auth-session-v1";
+const passwordRecoveryStorageKey = "kreis-password-recovery-active-v1";
 const authInitializationTimeoutMs = 5_000;
+export const passwordRecoveryTtlMs = 30 * 60 * 1_000;
 
 type AuthState = {
   status: AuthStatus;
@@ -30,11 +32,57 @@ const initialState: AuthState = {
   error: null
 };
 
+type RecoveryMarker = {
+  active: true;
+  expiresAt: number;
+};
+
 function removeLegacyAuthSession(): void {
   try {
     window.localStorage.removeItem(legacyAuthStorageKey);
   } catch {
     // Storage may be unavailable in private contexts.
+  }
+}
+
+function removePasswordRecoveryMarker(): void {
+  try {
+    window.localStorage.removeItem(passwordRecoveryStorageKey);
+  } catch {
+    // In-memory recovery intent still protects the current render.
+  }
+}
+
+function persistPasswordRecoveryMarker(expiresAt = Date.now() + passwordRecoveryTtlMs): number {
+  const marker: RecoveryMarker = {
+    active: true,
+    expiresAt
+  };
+
+  try {
+    window.localStorage.setItem(passwordRecoveryStorageKey, JSON.stringify(marker));
+  } catch {
+    // Recovery remains protected in memory while this PWA instance is open.
+  }
+
+  return expiresAt;
+}
+
+function readPasswordRecoveryMarker(): { marker: RecoveryMarker | null; expired: boolean } {
+  try {
+    const storedMarker = window.localStorage.getItem(passwordRecoveryStorageKey);
+    if (!storedMarker) return { marker: null, expired: false };
+
+    const marker = JSON.parse(storedMarker) as Partial<RecoveryMarker>;
+    if (marker.active !== true || typeof marker.expiresAt !== "number" || marker.expiresAt <= Date.now()) {
+      removePasswordRecoveryMarker();
+      return { marker: null, expired: true };
+    }
+
+    return { marker: marker as RecoveryMarker, expired: false };
+  } catch {
+    removePasswordRecoveryMarker();
+    return { marker: null, expired: true };
   }
 }
 
@@ -68,6 +116,15 @@ function stateFromSession(session: Session | null): AuthState {
       };
 }
 
+function passwordRecoveryState(session: Session): AuthState {
+  return {
+    status: "password-recovery",
+    session,
+    user: session.user,
+    error: null
+  };
+}
+
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timeoutId = 0;
 
@@ -88,6 +145,29 @@ function getAuthRecoveryMessage(error: unknown): string {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>(initialState);
   const initializationRun = useRef(0);
+  const recoveryIntentRef = useRef(false);
+  const recoveryExpiresAtRef = useRef<number | null>(null);
+  const recoveryExpirationDetectedRef = useRef(false);
+  const stateRef = useRef<AuthState>(initialState);
+
+  const commitState = useCallback((nextState: AuthState): void => {
+    stateRef.current = nextState;
+    setState(nextState);
+    updateStartupDebug({ authStatus: nextState.status });
+  }, []);
+
+  const activatePasswordRecovery = useCallback((session: Session, expiresAt?: number): void => {
+    recoveryIntentRef.current = true;
+    recoveryExpiresAtRef.current = persistPasswordRecoveryMarker(expiresAt);
+    commitState(passwordRecoveryState(session));
+  }, [commitState]);
+
+  const clearPasswordRecovery = useCallback((): void => {
+    recoveryIntentRef.current = false;
+    recoveryExpiresAtRef.current = null;
+    recoveryExpirationDetectedRef.current = false;
+    removePasswordRecoveryMarker();
+  }, []);
 
   const initializeSession = useCallback(async (): Promise<void> => {
     const runId = initializationRun.current + 1;
@@ -96,12 +176,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     removeLegacyAuthSession();
     markStartup("auth-init-start");
     updateStartupDebug({ authStatus: "initializing" });
-    setState((current) => ({
+    const initializingState: AuthState = {
       status: "initializing",
-      session: current.session,
-      user: current.user,
+      session: stateRef.current.session,
+      user: stateRef.current.user,
       error: null
-    }));
+    };
+    commitState(initializingState);
 
     try {
       const { data, error } = await withTimeout(supabaseBrowser.auth.getSession(), authInitializationTimeoutMs);
@@ -109,27 +190,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       if (initializationRun.current !== runId) return;
 
+      const recoveryMarkerState = readPasswordRecoveryMarker();
+      if (data.session && recoveryMarkerState.marker) {
+        activatePasswordRecovery(data.session, recoveryMarkerState.marker.expiresAt);
+        return;
+      }
+
+      if (data.session && (recoveryMarkerState.expired || recoveryExpirationDetectedRef.current)) {
+        clearPasswordRecovery();
+        const { error: signOutError } = await supabaseBrowser.auth.signOut({ scope: "local" });
+        if (signOutError) clearKnownSupabaseAuthStorage();
+        commitState(stateFromSession(null));
+        return;
+      }
+
+      if (!data.session) {
+        clearPasswordRecovery();
+      }
+
       const nextState = stateFromSession(data.session);
-      setState(nextState);
-      updateStartupDebug({ authStatus: nextState.status });
+      commitState(nextState);
     } catch (error) {
       if (initializationRun.current !== runId) return;
 
       const message = getAuthRecoveryMessage(error);
-      setState({
+      commitState({
         status: "recovery-error",
         session: null,
         user: null,
         error: message
       });
-      updateStartupDebug({ authStatus: "recovery-error" });
     } finally {
       if (initializationRun.current === runId) {
         markStartup("auth-init-end");
         measureStartup("auth-init", "auth-init-start", "auth-init-end");
       }
     }
-  }, []);
+  }, [activatePasswordRecovery, clearPasswordRecovery, commitState]);
 
   useEffect(() => {
     return registerAuthTokenRefresher(async () => {
@@ -143,18 +240,90 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void Promise.resolve().then(initializeSession);
 
-    const { data } = supabaseBrowser.auth.onAuthStateChange((_event, session) => {
-      const nextState = stateFromSession(session);
-      setState(nextState);
-      updateStartupDebug({ authStatus: nextState.status });
+    const { data } = supabaseBrowser.auth.onAuthStateChange((event: AuthChangeEvent, session) => {
+      if (event === "SIGNED_OUT") {
+        clearPasswordRecovery();
+        commitState(stateFromSession(null));
+        return;
+      }
+
+      if (!session) {
+        if (event === "INITIAL_SESSION") {
+          clearPasswordRecovery();
+          commitState(stateFromSession(null));
+        }
+        return;
+      }
+
+      const persistedMarkerState = readPasswordRecoveryMarker();
+      if (persistedMarkerState.expired) {
+        recoveryIntentRef.current = false;
+        recoveryExpiresAtRef.current = null;
+        recoveryExpirationDetectedRef.current = true;
+        removePasswordRecoveryMarker();
+        commitState(stateFromSession(null));
+
+        window.setTimeout(() => {
+          void supabaseBrowser.auth.signOut({ scope: "local" }).then(({ error }) => {
+            if (error) clearKnownSupabaseAuthStorage();
+            recoveryExpirationDetectedRef.current = false;
+          });
+        }, 0);
+        return;
+      }
+
+      const persistedMarker = persistedMarkerState.marker;
+      const recoveryIsActive =
+        event === "PASSWORD_RECOVERY" ||
+        recoveryIntentRef.current ||
+        Boolean(persistedMarker) ||
+        stateRef.current.status === "password-recovery";
+
+      if (recoveryIsActive) {
+        activatePasswordRecovery(session, persistedMarker?.expiresAt ?? recoveryExpiresAtRef.current ?? undefined);
+        return;
+      }
+
+      if (
+        event === "INITIAL_SESSION" ||
+        event === "SIGNED_IN" ||
+        event === "TOKEN_REFRESHED" ||
+        event === "USER_UPDATED"
+      ) {
+        commitState(stateFromSession(session));
+      }
     });
 
     return () => {
       data.subscription.unsubscribe();
     };
-  }, [initializeSession]);
+  }, [activatePasswordRecovery, clearPasswordRecovery, commitState, initializeSession]);
+
+  const signOut = useCallback(async (): Promise<void> => {
+    clearPasswordRecovery();
+    const { error } = await supabaseBrowser.auth.signOut({ scope: "local" });
+
+    if (error) throw error;
+
+    commitState(stateFromSession(null));
+  }, [clearPasswordRecovery, commitState]);
+
+  const signOutOtherDevices = useCallback(async (): Promise<void> => {
+    const { error } = await supabaseBrowser.auth.signOut({ scope: "others" });
+    if (error) throw error;
+  }, []);
+
+  const signOutEverywhere = useCallback(async (): Promise<void> => {
+    clearPasswordRecovery();
+    const { error } = await supabaseBrowser.auth.signOut({ scope: "global" });
+
+    if (error) throw error;
+
+    commitState(stateFromSession(null));
+  }, [clearPasswordRecovery, commitState]);
 
   const signIn = useCallback(async (email: string, password: string): Promise<void> => {
+    clearPasswordRecovery();
     const { data, error } = await supabaseBrowser.auth.signInWithPassword({ email, password });
 
     if (error || !data.session) {
@@ -162,35 +331,139 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const nextState = stateFromSession(data.session);
-    setState(nextState);
-    updateStartupDebug({ authStatus: nextState.status });
+    commitState(nextState);
+  }, [clearPasswordRecovery, commitState]);
+
+  const requestPasswordReset = useCallback(async (email: string): Promise<void> => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const { error } = await supabaseBrowser.auth.resetPasswordForEmail(normalizedEmail);
+    if (error) throw error;
   }, []);
 
-  const signOut = useCallback(async (): Promise<void> => {
-    const { error } = await supabaseBrowser.auth.signOut();
+  const verifyRecoveryCode = useCallback(async (email: string, code: string): Promise<void> => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedCode = code.replace(/\D/g, "").slice(0, 6);
+
+    recoveryIntentRef.current = true;
+    recoveryExpiresAtRef.current = persistPasswordRecoveryMarker();
+
+    const { data, error } = await supabaseBrowser.auth.verifyOtp({
+      email: normalizedEmail,
+      token: normalizedCode,
+      type: "recovery"
+    });
+
+    if (error || !data.session || !data.user) {
+      clearPasswordRecovery();
+      throw error ?? new Error("No pudimos validar el codigo.");
+    }
+
+    activatePasswordRecovery(data.session, recoveryExpiresAtRef.current ?? undefined);
+  }, [activatePasswordRecovery, clearPasswordRecovery]);
+
+  const updateRecoveredPassword = useCallback(async (newPassword: string): Promise<void> => {
+    if (stateRef.current.status !== "password-recovery" || !stateRef.current.session) {
+      throw new Error("La sesion de recuperacion ya no esta disponible.");
+    }
+
+    const { error } = await supabaseBrowser.auth.updateUser({
+      password: newPassword
+    });
 
     if (error) throw error;
+  }, []);
 
-    setState(stateFromSession(null));
-    updateStartupDebug({ authStatus: "anonymous" });
+  const completePasswordRecovery = useCallback(async (): Promise<void> => {
+    const currentState = stateRef.current;
+    if (currentState.status !== "password-recovery" || !currentState.session) {
+      throw new Error("La sesion de recuperacion ya no esta disponible.");
+    }
+
+    clearPasswordRecovery();
+    commitState(stateFromSession(currentState.session));
+  }, [clearPasswordRecovery, commitState]);
+
+  const cancelPasswordRecovery = useCallback(async (): Promise<void> => {
+    clearPasswordRecovery();
+    const { error } = await supabaseBrowser.auth.signOut({ scope: "local" });
+
+    if (error) clearKnownSupabaseAuthStorage();
+
+    commitState(stateFromSession(null));
+  }, [clearPasswordRecovery, commitState]);
+
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string): Promise<void> => {
+    const { error } = await supabaseBrowser.auth.updateUser({
+      current_password: currentPassword,
+      password: newPassword
+    });
+
+    if (error) throw error;
   }, []);
 
   const continueWithoutSession = useCallback(async (): Promise<void> => {
-    await supabaseBrowser.auth.signOut().catch(() => undefined);
+    clearPasswordRecovery();
+    await supabaseBrowser.auth.signOut({ scope: "local" }).catch(() => undefined);
     clearKnownSupabaseAuthStorage();
-    setState(stateFromSession(null));
-    updateStartupDebug({ authStatus: "anonymous" });
-  }, []);
+    commitState(stateFromSession(null));
+  }, [clearPasswordRecovery, commitState]);
+
+  useEffect(() => {
+    if (state.status !== "password-recovery") return;
+
+    const expiresAt = recoveryExpiresAtRef.current;
+    if (!expiresAt) return;
+
+    const remainingMs = expiresAt - Date.now();
+    if (remainingMs <= 0) {
+      void cancelPasswordRecovery().catch(() => {
+        clearPasswordRecovery();
+        commitState(stateFromSession(null));
+      });
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      void cancelPasswordRecovery().catch(() => {
+        clearPasswordRecovery();
+        commitState(stateFromSession(null));
+      });
+    }, remainingMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [cancelPasswordRecovery, clearPasswordRecovery, commitState, state.status]);
 
   const value = useMemo(
     () => ({
       ...state,
       signIn,
       signOut,
+      signOutOtherDevices,
+      signOutEverywhere,
+      requestPasswordReset,
+      verifyRecoveryCode,
+      updateRecoveredPassword,
+      completePasswordRecovery,
+      cancelPasswordRecovery,
+      changePassword,
       retryInitialization: initializeSession,
       continueWithoutSession
     }),
-    [continueWithoutSession, initializeSession, signIn, signOut, state]
+    [
+      cancelPasswordRecovery,
+      changePassword,
+      completePasswordRecovery,
+      continueWithoutSession,
+      initializeSession,
+      requestPasswordReset,
+      signIn,
+      signOut,
+      signOutEverywhere,
+      signOutOtherDevices,
+      state,
+      updateRecoveredPassword,
+      verifyRecoveryCode
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

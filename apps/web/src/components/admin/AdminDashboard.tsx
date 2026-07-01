@@ -1,3 +1,4 @@
+import { User } from "@phosphor-icons/react";
 import {
   AddCircle,
   AltArrowRight,
@@ -587,7 +588,7 @@ function UsersPanel({
         {visibleUsers.map((user) => (
           <article className="admin-user-card" key={user.legajo}>
             <div className="admin-user-card__avatar" aria-hidden="true">
-              {user.avatarUrl ? <img src={user.avatarUrl} alt="" /> : null}
+              {user.avatarUrl ? <img src={user.avatarUrl} alt="" /> : <User size={27} weight="fill" aria-hidden="true" />}
             </div>
             <div className="admin-user-card__identity">
               <h2>{user.name}</h2>

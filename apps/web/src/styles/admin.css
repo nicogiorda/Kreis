@@ -469,10 +469,17 @@
   }
 
   .admin-user-card__avatar {
+    display: grid;
     overflow: hidden;
     width: 3.3125rem;
     height: 3.3125rem;
+    place-items: center;
     border-radius: 50%;
+    background: rgba(240, 83, 28, 0.16);
+    color: #f0531c;
+  }
+
+  .admin-user-card__avatar:has(img) {
     background: rgba(46, 75, 60, 0.4);
   }
 

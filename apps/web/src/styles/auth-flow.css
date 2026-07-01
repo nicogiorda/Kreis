@@ -421,6 +421,30 @@
     padding-right: 122px;
   }
 
+  .auth-redesign-input--password-toggle {
+    padding-right: 48px;
+  }
+
+  .auth-redesign-password-toggle {
+    position: absolute;
+    top: 0;
+    right: 2px;
+    z-index: 2;
+    display: grid;
+    width: 38px;
+    height: 34px;
+    place-items: center;
+    border: 0;
+    background: transparent;
+    color: rgba(247, 237, 218, 0.72);
+    padding: 0;
+  }
+
+  .auth-redesign-password-toggle svg {
+    width: 18px;
+    height: 18px;
+  }
+
   .auth-redesign-input-suffix {
     position: absolute;
     top: 0;
@@ -516,11 +540,280 @@
   }
 
   .auth-redesign-form-button--login {
-    top: 36.97%;
+    top: 40.26%;
   }
 
   .auth-redesign-form-button--certificate {
     top: 61.5%;
+  }
+
+  .auth-redesign-forgot-link {
+    position: absolute;
+    top: 35.56%;
+    left: 6.62%;
+    z-index: 6;
+    width: 86.77%;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: rgba(247, 237, 218, 0.72);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 18px;
+    text-align: right;
+  }
+
+  .auth-redesign-title--recovery,
+  .auth-redesign-title--recovery-code,
+  .auth-redesign-title--recovered-password {
+    top: 16.55%;
+    left: 7%;
+    width: 86%;
+    font-size: 38px;
+    line-height: 43px;
+  }
+
+  .auth-redesign-title--recovery-code {
+    font-size: 36px;
+  }
+
+  .auth-redesign-title--recovered-password {
+    top: 15.2%;
+    left: 5%;
+    width: 90%;
+    font-size: 36px;
+    line-height: 41px;
+  }
+
+  .auth-redesign-recovery-copy {
+    position: absolute;
+    left: 9%;
+    z-index: 5;
+    width: 82%;
+    margin: 0;
+    color: rgba(247, 237, 218, 0.76);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 19px;
+    text-align: center;
+  }
+
+  .auth-redesign-recovery-copy--email {
+    top: 27.5%;
+  }
+
+  .auth-redesign-recovery-copy--code {
+    top: 25.2%;
+  }
+
+  .auth-redesign-field--recovery-email {
+    top: 34%;
+  }
+
+  .auth-redesign-form-button--recovery-email {
+    top: 40%;
+  }
+
+  .auth-redesign-error--recovery {
+    top: 45%;
+  }
+
+  .auth-redesign-otp-field {
+    position: absolute;
+    top: 33.1%;
+    left: 8.4%;
+    z-index: 6;
+    display: block;
+    width: 83.2%;
+    height: 48px;
+  }
+
+  .auth-redesign-otp-input {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: transparent;
+    caret-color: transparent;
+    font-size: 16px;
+    opacity: 0.02;
+    outline: 0;
+  }
+
+  .auth-redesign-otp-cells {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 7px;
+    pointer-events: none;
+  }
+
+  .auth-redesign-otp-cells > span {
+    display: grid;
+    min-width: 0;
+    place-items: center;
+    border: 1px solid rgba(247, 237, 218, 0.16);
+    border-radius: 13px;
+    background: rgba(247, 237, 218, 0.2);
+    color: #f7edda;
+    font-size: 20px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    transition:
+      border-color 150ms ease-out,
+      background-color 150ms ease-out,
+      transform 150ms ease-out;
+  }
+
+  .auth-redesign-otp-field:focus-within .auth-redesign-otp-cells > span {
+    border-color: rgba(247, 237, 218, 0.42);
+  }
+
+  .auth-redesign-otp-cells > span.is-filled {
+    background: rgba(247, 237, 218, 0.3);
+    transform: translateY(-1px);
+  }
+
+  .auth-redesign-resend {
+    position: absolute;
+    top: 40.6%;
+    left: 6.62%;
+    z-index: 6;
+    width: 86.77%;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: #f7edda;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 18px;
+    text-align: center;
+  }
+
+  .auth-redesign-resend:disabled {
+    color: rgba(247, 237, 218, 0.48);
+  }
+
+  .auth-redesign-form-button--recovery-code {
+    top: 46.4%;
+  }
+
+  .auth-redesign-error--recovery-code {
+    top: 51.3%;
+  }
+
+  .auth-redesign-field--recovered-password {
+    top: 29.8%;
+  }
+
+  .auth-redesign-field--recovered-password-repeat {
+    top: 35.1%;
+  }
+
+  .auth-redesign-password-rules {
+    position: absolute;
+    top: 40.2%;
+    left: 10.2%;
+    z-index: 6;
+    display: grid;
+    width: 79.6%;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    color: rgba(247, 237, 218, 0.58);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 15px;
+    list-style: none;
+  }
+
+  .auth-redesign-password-rules li {
+    position: relative;
+    padding-left: 15px;
+  }
+
+  .auth-redesign-password-rules li::before {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .auth-redesign-password-rules li.is-valid {
+    color: #f7edda;
+  }
+
+  .auth-redesign-form-button--recovered-password {
+    top: 49.7%;
+  }
+
+  .auth-redesign-error--recovered-password {
+    top: 54.5%;
+  }
+
+  .auth-redesign-recovery-success {
+    position: absolute;
+    top: 18.5%;
+    left: 8%;
+    z-index: 6;
+    display: grid;
+    width: 84%;
+    justify-items: center;
+    color: #f7edda;
+    text-align: center;
+  }
+
+  .auth-redesign-recovery-success > svg {
+    width: 58px;
+    height: 58px;
+  }
+
+  .auth-redesign-recovery-success h1 {
+    max-width: 10ch;
+    margin: 18px 0 0;
+    font-family: "Amsi Pro Ultra", Arial, sans-serif;
+    font-size: 38px;
+    font-weight: 400;
+    line-height: 42px;
+    letter-spacing: 0;
+    text-transform: uppercase;
+  }
+
+  .auth-redesign-recovery-success p {
+    max-width: 290px;
+    margin: 14px 0 0;
+    color: rgba(247, 237, 218, 0.76);
+    font-size: 14px;
+    line-height: 19px;
+  }
+
+  .auth-redesign-recovery-success button {
+    display: grid;
+    width: 100%;
+    height: 38px;
+    margin-top: 12px;
+    place-items: center;
+    border: 0;
+    border-radius: 15px;
+    background: rgba(247, 237, 218, 0.18);
+    color: #f7edda;
+    font-size: 15px;
+    font-weight: 500;
+  }
+
+  .auth-redesign-recovery-success button.is-primary {
+    margin-top: 16px;
+    background: #f7edda;
+    color: #2e4b3c;
   }
 
   .auth-redesign-welcome-character {
@@ -968,7 +1261,7 @@
   }
 
   .auth-redesign-error--login {
-    top: 42.25%;
+    top: 45.6%;
   }
 
   @media (max-width: 360px), (max-height: 760px) {

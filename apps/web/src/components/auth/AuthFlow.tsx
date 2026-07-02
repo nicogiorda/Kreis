@@ -221,6 +221,7 @@ function getAuthErrorMessage(error: unknown): string {
     if (error.code === "invalid_credentials") return "El mail o la contraseña no coinciden.";
     if (error.code === "register_failed") return "No pudimos crear la cuenta. Revisá si el mail o el legajo ya están registrados.";
     if (error.code === "validation_error") return "Revisá los datos ingresados antes de continuar.";
+    if (error.code === "invalid_email_domain") return "Usá el correo universitario de una institución habilitada.";
     if (error.code === "certificate_too_large") return "El certificado no puede superar los 5 MB.";
     if (error.code === "invalid_certificate_file") return "El certificado debe ser un PDF.";
     if (error.code === "document_ai_config_error" || error.code === "document_ai_request_failed") return "No pudimos validar el certificado en este momento.";

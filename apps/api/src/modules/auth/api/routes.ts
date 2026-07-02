@@ -11,9 +11,14 @@ import {
   AuthProviderError,
   CertificateVerificationError,
   ProfileCreationError,
+  RegistrationEmailDomainError,
   RegistrationFinalizationError,
   RegistrationRollbackError
 } from "../domain/auth-errors";
+import {
+  isAllowedRegistrationEmail,
+  parseAllowedEmailDomains
+} from "../domain/registration-email";
 import {
   CertificateClassifierConfigError,
   CertificateClassifierRequestError,
@@ -25,6 +30,20 @@ import { SupabaseAuthProvider } from "../infrastructure/supabase-auth-provider";
 
 const certificateFieldName = "certificate";
 const maxCertificateSizeBytes = 5 * 1024 * 1024;
+const emailDomainErrorMessage = "El correo debe pertenecer a una universidad habilitada.";
+const allowedRegistrationEmailDomains = parseAllowedEmailDomains(
+  config.ALLOWED_EMAIL_DOMAINS
+);
+
+const registrationEmailSchema = z
+  .string()
+  .trim()
+  .email()
+  .transform((email) => email.toLowerCase())
+  .refine(
+    (email) => isAllowedRegistrationEmail(email, allowedRegistrationEmailDomains),
+    emailDomainErrorMessage
+  );
 
 const certificateRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -65,7 +84,7 @@ const refreshRequestSchema = z.object({
 });
 
 const registerRequestSchema = z.object({
-  email: z.string().email(),
+  email: registrationEmailSchema,
   password: z.string().min(8),
   legajo: z.coerce.number().int().positive(),
   nombre: z.string().min(1),
@@ -76,7 +95,7 @@ const registerRequestSchema = z.object({
 });
 
 const certificateValidationRequestSchema = z.object({
-  email: z.string().trim().email(),
+  email: registrationEmailSchema,
   legajo: z.coerce.number().int().positive(),
   nombre: z.string().trim().min(1),
   apellido: z.string().trim().min(1)
@@ -87,12 +106,14 @@ const userRepository = new PrismaUserRepository();
 const certificateVerificationRepository = new PrismaCertificateVerificationRepository();
 const issueCertificateVerificationUseCase = new IssueCertificateVerificationUseCase(
   certificateVerificationRepository,
-  config.CERTIFICATE_VERIFICATION_TTL_MINUTES
+  config.CERTIFICATE_VERIFICATION_TTL_MINUTES,
+  { allowedEmailDomains: allowedRegistrationEmailDomains }
 );
 const registerUseCase = new RegisterUseCase(
   authProvider,
   userRepository,
-  certificateVerificationRepository
+  certificateVerificationRepository,
+  { allowedEmailDomains: allowedRegistrationEmailDomains }
 );
 const loginUseCase = new LoginUseCase(authProvider);
 const refreshSessionUseCase = new RefreshSessionUseCase(authProvider);
@@ -141,10 +162,16 @@ export function createAuthRouter(): Router {
       const parsedBody = certificateValidationRequestSchema.safeParse(request.body);
 
       if (!parsedBody.success) {
+        const invalidEmailDomain = parsedBody.error.issues.some(
+          (issue) => issue.path[0] === "email" && issue.message === emailDomainErrorMessage
+        );
+
         response.status(400).json({
           error: {
-            code: "validation_error",
-            message: "Invalid certificate validation payload",
+            code: invalidEmailDomain ? "invalid_email_domain" : "validation_error",
+            message: invalidEmailDomain
+              ? emailDomainErrorMessage
+              : "Invalid certificate validation payload",
             details: parsedBody.error.flatten().fieldErrors
           }
         });
@@ -162,6 +189,13 @@ export function createAuthRouter(): Router {
         ...(verification ? { verification } : {})
       });
     } catch (error) {
+      if (error instanceof RegistrationEmailDomainError) {
+        response.status(400).json({
+          error: { code: error.code, message: error.message }
+        });
+        return;
+      }
+
       if (error instanceof CertificateClassifierConfigError) {
         response.status(500).json({
           error: {
@@ -204,10 +238,16 @@ export function createAuthRouter(): Router {
       const parsedBody = registerRequestSchema.safeParse(request.body);
 
       if (!parsedBody.success) {
+        const invalidEmailDomain = parsedBody.error.issues.some(
+          (issue) => issue.path[0] === "email" && issue.message === emailDomainErrorMessage
+        );
+
         response.status(400).json({
           error: {
-            code: "validation_error",
-            message: "Invalid register payload",
+            code: invalidEmailDomain ? "invalid_email_domain" : "validation_error",
+            message: invalidEmailDomain
+              ? emailDomainErrorMessage
+              : "Invalid register payload",
             details: parsedBody.error.flatten().fieldErrors
           }
         });
@@ -227,6 +267,13 @@ export function createAuthRouter(): Router {
               : 400;
 
         response.status(status).json({
+          error: { code: error.code, message: error.message }
+        });
+        return;
+      }
+
+      if (error instanceof RegistrationEmailDomainError) {
+        response.status(400).json({
           error: { code: error.code, message: error.message }
         });
         return;

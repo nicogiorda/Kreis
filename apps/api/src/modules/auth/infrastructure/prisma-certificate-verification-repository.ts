@@ -15,6 +15,7 @@ implements ICertificateVerificationRepository {
         token_hash: input.tokenHash,
         email: input.email,
         legajo: input.legajo,
+        id_facultad: BigInt(input.idFacultad),
         nombre_normalizado: input.nombreNormalizado,
         apellido_normalizado: input.apellidoNormalizado,
         expires_at: input.expiresAt
@@ -42,7 +43,18 @@ implements ICertificateVerificationRepository {
     });
 
     if (result.count === 1) {
-      return { status: "claimed", claimedAt: input.claimedAt };
+      const claimed = await prisma.certificate_verification.findUnique({
+        where: { token_hash: input.tokenHash },
+        select: { id_facultad: true }
+      });
+
+      if (!claimed?.id_facultad) return { status: "invalid" };
+
+      return {
+        status: "claimed",
+        claimedAt: input.claimedAt,
+        idFacultad: Number(claimed.id_facultad)
+      };
     }
 
     const verification = await prisma.certificate_verification.findUnique({
@@ -54,13 +66,15 @@ implements ICertificateVerificationRepository {
         apellido_normalizado: true,
         expires_at: true,
         claimed_at: true,
-        consumed_at: true
+        consumed_at: true,
+        id_facultad: true
       }
     });
 
     if (!verification) return { status: "invalid" };
     if (verification.consumed_at || verification.claimed_at) return { status: "used" };
     if (verification.expires_at <= input.claimedAt) return { status: "expired" };
+    if (!verification.id_facultad) return { status: "invalid" };
 
     const matchesIdentity =
       verification.email === input.email &&

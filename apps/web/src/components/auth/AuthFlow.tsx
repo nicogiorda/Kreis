@@ -8,11 +8,10 @@ import {
   useRef,
   useState
 } from "react";
-import { ApiRequestError, classifyCertificate, listFaculties, listTopics, register } from "../../api/auth";
+import { ApiRequestError, classifyCertificate, listTopics, register } from "../../api/auth";
 import type {
   CertificateClassificationResult,
   CertificateVerification,
-  FacultyCatalogItem,
   TopicCatalogItem
 } from "../../api/auth";
 import onboardingEventsUrl from "../../assets/auth/onboarding-events.webp";
@@ -1180,7 +1179,6 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
   const [pendingSignupEmail, setPendingSignupEmail] = useState("");
   const [draft, setDraft] = useState<SignupDraft>(emptySignupDraft);
   const [topics, setTopics] = useState<TopicCatalogItem[]>([]);
-  const [faculties, setFaculties] = useState<FacultyCatalogItem[]>([]);
   const [topicsStatus, setTopicsStatus] = useState<CatalogStatus>("loading");
   const [catalogReloadKey, setCatalogReloadKey] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -1221,15 +1219,11 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
       setTopicsStatus("loading");
 
       try {
-        const [nextTopics, nextFaculties] = await Promise.all([
-          listTopics(controller.signal),
-          listFaculties(controller.signal).catch(() => [])
-        ]);
+        const nextTopics = await listTopics(controller.signal);
 
         if (controller.signal.aborted) return;
 
         setTopics(nextTopics);
-        setFaculties(nextFaculties);
         setTopicsStatus("ready");
       } catch {
         if (!controller.signal.aborted) setTopicsStatus("error");
@@ -1297,7 +1291,6 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
         return;
       }
 
-      const facultyId = Number(faculties[0]?.id_facultad ?? 1);
 
       const registration = await register({
         email,
@@ -1305,7 +1298,6 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
         legajo: Number(draft.legajo),
         nombre: profile.nombre,
         apellido: profile.apellido,
-        id_facultad: facultyId,
         topicos: draft.topicIds.map(Number),
         certificate_verification_token: verification.token
       });

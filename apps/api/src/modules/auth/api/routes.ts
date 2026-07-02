@@ -25,6 +25,7 @@ import {
   CertificateClassifierRequestError,
   processCertificatePdf
 } from "../infrastructure/document-ai-certificate-classifier";
+import { resolveCertificateFaculty } from "../infrastructure/certificate-faculty-resolver";
 import { PrismaCertificateVerificationRepository } from "../infrastructure/prisma-certificate-verification-repository";
 import { PrismaUserRepository } from "../infrastructure/prisma-user-repository";
 import { SupabaseAuthProvider } from "../infrastructure/supabase-auth-provider";
@@ -91,7 +92,6 @@ const registerRequestSchema = z.object({
   legajo: z.coerce.number().int().positive(),
   nombre: z.string().min(1),
   apellido: z.string().min(1),
-  id_facultad: z.coerce.number().int().positive(),
   topicos: z.array(z.coerce.number().int().positive()).default([]),
   certificate_verification_token: z.string().min(1)
 });
@@ -181,13 +181,32 @@ export function createAuthRouter(): Router {
       }
 
       const certificate = await processCertificatePdf(request.file.buffer, parsedBody.data);
+      const resolvedFaculty = certificate.valid
+        ? await resolveCertificateFaculty(certificate.validation?.facultyName ?? certificate.extraction?.facultyName)
+        : null;
+      const certificateResponse = certificate.valid && !resolvedFaculty && certificate.validation
+        ? {
+            ...certificate,
+            valid: false,
+            validation: {
+              ...certificate.validation,
+              valid: false,
+              errors: [
+                ...certificate.validation.errors,
+                "No pudimos asociar la facultad del certificado con una facultad valida."
+              ]
+            }
+          }
+        : certificate;
       const verification = await issueCertificateVerificationUseCase.execute(
-        certificate.valid,
-        parsedBody.data
+        certificateResponse.valid,
+        parsedBody.data,
+        resolvedFaculty ? { idFacultad: resolvedFaculty.id_facultad } : null
       );
 
       response.json({
-        certificate,
+        certificate: certificateResponse,
+        ...(resolvedFaculty ? { faculty: resolvedFaculty } : {}),
         ...(verification ? { verification } : {})
       });
     } catch (error) {

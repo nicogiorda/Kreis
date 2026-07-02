@@ -11,15 +11,13 @@ export type RegisterInput = {
   legajo: number;
   nombre: string;
   apellido: string;
-  id_facultad: number;
   topicos: number[];
   certificate_verification_token: string;
 };
 
-export type RegisterProfileInput = Pick<
-  RegisterInput,
-  "legajo" | "nombre" | "apellido" | "id_facultad" | "topicos"
->;
+export type RegisterProfileInput = Pick<RegisterInput, "legajo" | "nombre" | "apellido" | "topicos"> & {
+  id_facultad: number;
+};
 
 export type ExistingRegisterProfile = Pick<
   RegisterProfileInput,

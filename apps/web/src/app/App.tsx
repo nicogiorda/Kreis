@@ -11,7 +11,7 @@ import {
 import { createPendingEvent, getEventDetail, listAllEvents, listUpcomingEvents, toggleEventInterest as persistEventInterest } from "../api/events";
 import { uploadEventImage } from "../api/event-images";
 import { createPost as persistPost, deletePost as persistDeletePost, listPosts } from "../api/posts";
-import { getMyProfile, uploadMyAvatar } from "../api/users";
+import { deleteMyAccount, getMyProfile, uploadMyAvatar } from "../api/users";
 import type { KreisUserProfile } from "../api/users";
 import { AdminAccessDenied, AdminDashboard } from "../components/admin/AdminDashboard";
 import { AuthFlow, RecoveredPasswordFlow } from "../components/auth/AuthFlow";
@@ -219,6 +219,7 @@ export default function App() {
 function AuthenticatedApp({ session }: { session: Session }) {
   const {
     changePassword,
+    continueWithoutSession,
     signOut,
     signOutEverywhere,
     signOutOtherDevices
@@ -473,6 +474,11 @@ function AuthenticatedApp({ session }: { session: Session }) {
   async function uploadProfileAvatar(file: File): Promise<void> {
     const nextProfile = await uploadMyAvatar(accessToken, file);
     setUserProfile(nextProfile);
+  }
+
+  async function deleteCurrentAccount(password: string): Promise<void> {
+    await deleteMyAccount(accessToken, password);
+    await continueWithoutSession();
   }
 
   function reloadEventTopics(): void {
@@ -767,6 +773,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
                   onToggleTheme={toggleTheme}
                   onUploadAvatar={uploadProfileAvatar}
                   onChangePassword={changePassword}
+                  onDeleteAccount={deleteCurrentAccount}
                   onSignOutOtherDevices={signOutOtherDevices}
                   onSignOutEverywhere={signOutEverywhere}
                   onLogout={logoutUser}

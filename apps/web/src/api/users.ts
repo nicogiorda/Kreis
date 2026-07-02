@@ -83,3 +83,17 @@ export async function uploadMyAvatar(accessToken: string, avatar: File): Promise
 
   return mapUserProfile(response.user);
 }
+
+export async function deleteMyAccount(
+  accessToken: string,
+  password: string
+): Promise<void> {
+  await requestJson("/api/v1/users/me", {
+    method: "DELETE",
+    headers: bearerTokenHeaders(accessToken),
+    body: JSON.stringify({
+      password,
+      confirmation: "ELIMINAR"
+    })
+  });
+}

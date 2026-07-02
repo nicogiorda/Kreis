@@ -139,16 +139,26 @@ function useStartupSplash(authStatus: string): {
   };
 }
 
-function AuthRecoveryScreen() {
+function AuthRecoveryScreen({
+  registrationIncomplete = false
+}: {
+  registrationIncomplete?: boolean;
+}) {
   const { error, retryInitialization, continueWithoutSession } = useAuth();
 
   return (
     <AuthViewport>
       <section className="grid h-full min-h-dvh place-items-center bg-kreis-forest px-6 text-center text-kreis-cream">
         <div className="w-full max-w-[330px]">
-          <h1 className="m-0 font-sans text-[26px] font-medium leading-tight">No pudimos recuperar tu sesion.</h1>
+          <h1 className="m-0 font-sans text-[26px] font-medium leading-tight">
+            {registrationIncomplete
+              ? "No pudimos completar el acceso."
+              : "No pudimos recuperar tu sesion."}
+          </h1>
           <p className="mt-3 mb-0 text-[15px] leading-snug text-[rgba(247,237,218,0.68)]">
-            {error ?? "Reintentá o entrá sin sesion para volver al inicio."}
+            {error ?? (registrationIncomplete
+              ? "Volvé al inicio e intentá completar el registro nuevamente."
+              : "Reintentá o entrá sin sesion para volver al inicio.")}
           </p>
           <div className="mt-6 grid gap-3">
             <button className="h-[42px] rounded-[16px] border-0 bg-kreis-cream text-[16px] font-medium text-kreis-forest" type="button" onClick={() => void retryInitialization()}>
@@ -196,6 +206,8 @@ export default function App() {
         <AuthenticatedApp session={session} />
       ) : status === "recovery-error" ? (
         <AuthRecoveryScreen />
+      ) : status === "registration-incomplete" ? (
+        <AuthRecoveryScreen registrationIncomplete />
       ) : (
         <UnauthenticatedApp initialStep={anonymousInitialStep} />
       )}

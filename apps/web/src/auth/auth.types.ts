@@ -5,6 +5,7 @@ export type AuthStatus =
   | "authenticated"
   | "anonymous"
   | "password-recovery"
+  | "registration-incomplete"
   | "recovery-error";
 
 export type AuthContextValue = {
@@ -18,6 +19,8 @@ export type AuthContextValue = {
   signOutEverywhere: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
   verifyRecoveryCode: (email: string, code: string) => Promise<void>;
+  verifySignupCode: (email: string, code: string) => Promise<void>;
+  resendSignupCode: (email: string) => Promise<void>;
   updateRecoveredPassword: (newPassword: string) => Promise<void>;
   completePasswordRecovery: () => Promise<void>;
   cancelPasswordRecovery: () => Promise<void>;

@@ -69,3 +69,12 @@ export class RegistrationEmailDomainError extends Error {
     this.name = "RegistrationEmailDomainError";
   }
 }
+
+export class EmailConfirmationNotEnabledError extends Error {
+  readonly code = "email_confirmation_not_enabled";
+
+  constructor() {
+    super("La confirmacion de correo no esta habilitada.");
+    this.name = "EmailConfirmationNotEnabledError";
+  }
+}

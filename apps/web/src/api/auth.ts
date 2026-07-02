@@ -98,6 +98,11 @@ export type RegisterInput = {
   certificate_verification_token: string;
 };
 
+export type RegisterResponse = {
+  status: "pending_email_verification";
+  email: string;
+};
+
 export async function listTopics(signal?: AbortSignal): Promise<TopicCatalogItem[]> {
   const response = await requestJson<{ topicos: TopicCatalogItem[] }>("/api/v1/users/topicos", { signal });
   return response.topicos;
@@ -125,8 +130,8 @@ export async function classifyCertificate(
   );
 }
 
-export async function register(input: RegisterInput): Promise<void> {
-  await requestJson("/api/v1/auth/register", {
+export async function register(input: RegisterInput): Promise<RegisterResponse> {
+  return requestJson<RegisterResponse>("/api/v1/auth/register", {
     method: "POST",
     body: JSON.stringify(input)
   });

@@ -10,6 +10,7 @@ import { RegisterUseCase } from "../application/register";
 import {
   AuthProviderError,
   CertificateVerificationError,
+  EmailConfirmationNotEnabledError,
   ProfileCreationError,
   RegistrationEmailDomainError,
   RegistrationFinalizationError,
@@ -27,6 +28,7 @@ import {
 import { PrismaCertificateVerificationRepository } from "../infrastructure/prisma-certificate-verification-repository";
 import { PrismaUserRepository } from "../infrastructure/prisma-user-repository";
 import { SupabaseAuthProvider } from "../infrastructure/supabase-auth-provider";
+import { createPendingEmailVerificationResponse } from "./register-response";
 
 const certificateFieldName = "certificate";
 const maxCertificateSizeBytes = 5 * 1024 * 1024;
@@ -256,7 +258,9 @@ export function createAuthRouter(): Router {
 
       const user = await registerUseCase.execute(parsedBody.data);
 
-      response.status(201).json({ user });
+      response.status(201).json(
+        createPendingEmailVerificationResponse(user.email)
+      );
     } catch (error) {
       if (error instanceof CertificateVerificationError) {
         const status =
@@ -274,6 +278,13 @@ export function createAuthRouter(): Router {
 
       if (error instanceof RegistrationEmailDomainError) {
         response.status(400).json({
+          error: { code: error.code, message: error.message }
+        });
+        return;
+      }
+
+      if (error instanceof EmailConfirmationNotEnabledError) {
+        response.status(503).json({
           error: { code: error.code, message: error.message }
         });
         return;

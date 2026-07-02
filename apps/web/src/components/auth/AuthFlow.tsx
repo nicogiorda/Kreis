@@ -1,5 +1,13 @@
 import { ArrowLeft, CheckCircle, Eye, EyeSlash, Plus, X } from "@phosphor-icons/react";
-import { type ChangeEvent, type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  type ChangeEvent,
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState
+} from "react";
 import { ApiRequestError, classifyCertificate, listFaculties, listTopics, register } from "../../api/auth";
 import type {
   CertificateClassificationResult,
@@ -19,6 +27,10 @@ import greetingCharacterUrl from "../../assets/characters/kreisito_saludando.web
 import { LoadingState } from "../common/LoadingState";
 import { cn } from "../../utils/cn";
 import { useAuth } from "../../auth/useAuth";
+import {
+  normalizeEmailOtp,
+  SUPABASE_EMAIL_OTP_LENGTH
+} from "../../auth/email-otp";
 import { AuthDecorLayer, AuthScreenFrame, AuthShell } from "./AuthLayout";
 
 type AuthStep =
@@ -31,9 +43,11 @@ type AuthStep =
   | "password"
   | "certificate"
   | "login"
+  | "signup-code"
   | "forgot-email"
   | "forgot-code";
 type CatalogStatus = "loading" | "ready" | "error";
+const otpResendCooldownSeconds = 60;
 
 type SignupDraft = {
   university: string;
@@ -55,6 +69,7 @@ const authSafeAreaBackgrounds: Record<AuthStep, string> = {
   password: "#ffa74f",
   certificate: "#2e4b3c",
   login: "#2e4b3c",
+  "signup-code": "#2e4b3c",
   "forgot-email": "#2e4b3c",
   "forgot-code": "#2e4b3c"
 };
@@ -222,6 +237,7 @@ function getAuthErrorMessage(error: unknown): string {
     if (error.code === "register_failed") return "No pudimos crear la cuenta. Revisá si el mail o el legajo ya están registrados.";
     if (error.code === "validation_error") return "Revisá los datos ingresados antes de continuar.";
     if (error.code === "invalid_email_domain") return "Usá el correo universitario de una institución habilitada.";
+    if (error.code === "email_confirmation_not_enabled") return "La verificación de correo no está disponible. Intentá más tarde.";
     if (error.code === "certificate_too_large") return "El certificado no puede superar los 5 MB.";
     if (error.code === "invalid_certificate_file") return "El certificado debe ser un PDF.";
     if (error.code === "document_ai_config_error" || error.code === "document_ai_request_failed") return "No pudimos validar el certificado en este momento.";
@@ -265,6 +281,35 @@ function getRecoveryCodeErrorMessage(error: unknown): string {
   if (authError.status === 429) return "Hubo demasiados intentos. Esperá un momento.";
 
   return "El código no es válido. Revisalo e intentá nuevamente.";
+}
+
+function isEmailNotConfirmedError(error: unknown): boolean {
+  const authError = error as { code?: string; message?: string };
+  const errorText = `${authError.code ?? ""} ${authError.message ?? ""}`.toLowerCase();
+
+  return authError.code === "email_not_confirmed" || errorText.includes("email not confirmed");
+}
+
+function getSignupCodeErrorMessage(error: unknown): string {
+  const authError = error as { code?: string; status?: number; message?: string };
+  const errorText = `${authError.code ?? ""} ${authError.message ?? ""}`.toLowerCase();
+
+  if (errorText.includes("expired")) return "El código venció. Solicitá uno nuevo.";
+  if (errorText.includes("used")) return "Ese código ya fue utilizado. Solicitá uno nuevo.";
+  if (authError.status === 429 || errorText.includes("rate")) {
+    return "Hubo demasiados intentos. Esperá un momento.";
+  }
+
+  return "El código no es válido. Revisalo e intentá nuevamente.";
+}
+
+function getSignupResendErrorMessage(error: unknown): string {
+  const authError = error as { status?: number; code?: string };
+  if (authError.status === 429 || authError.code === "over_email_send_rate_limit") {
+    return "Esperá un momento antes de solicitar otro código.";
+  }
+
+  return "No pudimos reenviar el código. Intentá nuevamente.";
 }
 
 function getPasswordUpdateErrorMessage(error: unknown): string {
@@ -592,7 +637,15 @@ function CertificateScreen({
   );
 }
 
-function LoginScreen({ onBack, onForgotPassword }: { onBack: () => void; onForgotPassword: () => void }) {
+function LoginScreen({
+  onBack,
+  onForgotPassword,
+  onEmailConfirmationRequired
+}: {
+  onBack: () => void;
+  onForgotPassword: () => void;
+  onEmailConfirmationRequired: (email: string) => void;
+}) {
   const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -606,6 +659,12 @@ function LoginScreen({ onBack, onForgotPassword }: { onBack: () => void; onForgo
     try {
       await signIn(email.trim(), password);
     } catch (requestError) {
+      if (isEmailNotConfirmedError(requestError)) {
+        setPassword("");
+        onEmailConfirmationRequired(email.trim().toLowerCase());
+        return;
+      }
+
       setError(getAuthErrorMessage(requestError));
     } finally {
       setSubmitting(false);
@@ -698,6 +757,42 @@ function ForgotEmailScreen({
   );
 }
 
+function OtpCodeField({
+  code,
+  inputRef,
+  label,
+  onChange
+}: {
+  code: string;
+  inputRef: RefObject<HTMLInputElement | null>;
+  label: string;
+  onChange: (code: string) => void;
+}) {
+  return (
+    <label className="auth-redesign-otp-field">
+      <span className="sr-only">{label}</span>
+      <input
+        ref={inputRef}
+        className="auth-redesign-otp-input"
+        type="text"
+        value={code}
+        autoComplete="one-time-code"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        aria-label={label}
+        onChange={(event) => onChange(normalizeEmailOtp(event.target.value))}
+      />
+      <span className="auth-redesign-otp-cells" aria-hidden="true">
+        {Array.from({ length: SUPABASE_EMAIL_OTP_LENGTH }, (_, index) => (
+          <span className={cn(code[index] && "is-filled")} key={index}>
+            {code[index] ?? ""}
+          </span>
+        ))}
+      </span>
+    </label>
+  );
+}
+
 function ForgotCodeScreen({
   email,
   onBack
@@ -707,7 +802,9 @@ function ForgotCodeScreen({
 }) {
   const { requestPasswordReset, verifyRecoveryCode } = useAuth();
   const [code, setCode] = useState("");
-  const [secondsUntilResend, setSecondsUntilResend] = useState(60);
+  const [secondsUntilResend, setSecondsUntilResend] = useState(
+    otpResendCooldownSeconds
+  );
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -730,7 +827,7 @@ function ForgotCodeScreen({
   }, [secondsUntilResend]);
 
   async function handleVerify(): Promise<void> {
-    if (code.length !== 6) return;
+    if (code.length !== SUPABASE_EMAIL_OTP_LENGTH) return;
 
     setSubmitting(true);
     setError(null);
@@ -751,7 +848,7 @@ function ForgotCodeScreen({
 
     try {
       await requestPasswordReset(email);
-      setSecondsUntilResend(60);
+      setSecondsUntilResend(otpResendCooldownSeconds);
       setCode("");
       inputRef.current?.focus();
     } catch (requestError) {
@@ -772,25 +869,12 @@ function ForgotCodeScreen({
       <p className="auth-redesign-recovery-copy auth-redesign-recovery-copy--code">
         Si existe una cuenta asociada, te enviamos un código.
       </p>
-      <label className="auth-redesign-otp-field">
-        <span className="sr-only">Código de recuperación</span>
-        <input
-          ref={inputRef}
-          className="auth-redesign-otp-input"
-          type="text"
-          value={code}
-          autoComplete="one-time-code"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          aria-label="Código de recuperación"
-          onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-        />
-        <span className="auth-redesign-otp-cells" aria-hidden="true">
-          {Array.from({ length: 6 }, (_, index) => (
-            <span className={cn(code[index] && "is-filled")} key={index}>{code[index] ?? ""}</span>
-          ))}
-        </span>
-      </label>
+      <OtpCodeField
+        code={code}
+        inputRef={inputRef}
+        label="Código de recuperación"
+        onChange={setCode}
+      />
       <button
         className="auth-redesign-resend"
         type="button"
@@ -805,12 +889,132 @@ function ForgotCodeScreen({
       </button>
       <PrimaryButton
         className="auth-redesign-form-button auth-redesign-form-button--recovery-code auth-redesign-button--green-text"
-        disabled={submitting || code.length !== 6}
+        disabled={submitting || code.length !== SUPABASE_EMAIL_OTP_LENGTH}
         onClick={() => void handleVerify()}
       >
         {submitting ? <LoadingState label="Validando código" variant="button" /> : "Validar código"}
       </PrimaryButton>
       {error ? <p className="auth-redesign-error auth-redesign-error--recovery-code" role="alert">{error}</p> : null}
+    </AuthScreenFrame>
+  );
+}
+
+function SignupCodeScreen({
+  email,
+  onBackToLogin
+}: {
+  email: string;
+  onBackToLogin: () => void;
+}) {
+  const { resendSignupCode, verifySignupCode } = useAuth();
+  const [code, setCode] = useState("");
+  const [secondsUntilResend, setSecondsUntilResend] = useState(
+    otpResendCooldownSeconds
+  );
+  const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+
+  useEffect(() => {
+    titleRef.current?.focus();
+    inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (secondsUntilResend <= 0) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setSecondsUntilResend((current) => Math.max(0, current - 1));
+    }, 1_000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [secondsUntilResend]);
+
+  async function handleVerify(): Promise<void> {
+    if (code.length !== SUPABASE_EMAIL_OTP_LENGTH) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      await verifySignupCode(email, code);
+      setCode("");
+    } catch (verificationError) {
+      setError(getSignupCodeErrorMessage(verificationError));
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResend(): Promise<void> {
+    if (secondsUntilResend > 0 || resending) return;
+
+    setResending(true);
+    setError(null);
+
+    try {
+      await resendSignupCode(email);
+      setSecondsUntilResend(otpResendCooldownSeconds);
+      setCode("");
+      inputRef.current?.focus();
+    } catch (resendError) {
+      setError(getSignupResendErrorMessage(resendError));
+    } finally {
+      setResending(false);
+    }
+  }
+
+  return (
+    <AuthScreenFrame tone="green">
+      <CharacterBackdrop src={signUpThreeUrl} top={470} />
+      <BackButton variant="login" onClick={onBackToLogin} />
+      <BrandLogo variant="right-low" />
+      <h1
+        className="auth-redesign-title auth-redesign-title--recovery-code"
+        ref={titleRef}
+        tabIndex={-1}
+      >
+        VERIFICÁ TU CORREO
+      </h1>
+      <p className="auth-redesign-recovery-copy auth-redesign-recovery-copy--code">
+        Enviamos un código a {email}.
+      </p>
+      <OtpCodeField
+        code={code}
+        inputRef={inputRef}
+        label="Código de verificación"
+        onChange={setCode}
+      />
+      <button
+        className="auth-redesign-resend"
+        type="button"
+        disabled={secondsUntilResend > 0 || resending}
+        onClick={() => void handleResend()}
+      >
+        {secondsUntilResend > 0
+          ? `Reenviar en 00:${String(secondsUntilResend).padStart(2, "0")}`
+          : resending
+            ? "Reenviando..."
+            : "¿No te llegó? Reenviar código"}
+      </button>
+      <PrimaryButton
+        className="auth-redesign-form-button auth-redesign-form-button--recovery-code auth-redesign-button--green-text"
+        disabled={submitting || code.length !== SUPABASE_EMAIL_OTP_LENGTH}
+        onClick={() => void handleVerify()}
+      >
+        {submitting
+          ? <LoadingState label="Verificando correo" variant="button" />
+          : "Verificar correo"}
+      </PrimaryButton>
+      {error ? (
+        <p
+          className="auth-redesign-error auth-redesign-error--recovery-code"
+          role="alert"
+        >
+          {error}
+        </p>
+      ) : null}
     </AuthScreenFrame>
   );
 }
@@ -970,9 +1174,9 @@ export function RecoveredPasswordFlow({ onCancelToLogin }: { onCancelToLogin: ()
 }
 
 export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" | "login" }) {
-  const { signIn } = useAuth();
   const [step, setStep] = useState<AuthStep>(initialStep);
   const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [pendingSignupEmail, setPendingSignupEmail] = useState("");
   const [draft, setDraft] = useState<SignupDraft>(emptySignupDraft);
   const [topics, setTopics] = useState<TopicCatalogItem[]>([]);
   const [faculties, setFaculties] = useState<FacultyCatalogItem[]>([]);
@@ -1094,7 +1298,7 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
 
       const facultyId = Number(faculties[0]?.id_facultad ?? 1);
 
-      await register({
+      const registration = await register({
         email,
         password: draft.password,
         legajo: Number(draft.legajo),
@@ -1106,7 +1310,11 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
       });
 
       setCertificateVerification(null);
-      await signIn(email, draft.password);
+      setCertificateFile(null);
+      setCertificateFileName(null);
+      setDraft(emptySignupDraft);
+      setPendingSignupEmail(registration.email);
+      setStep("signup-code");
     } catch (requestError) {
       if (isCertificateVerificationError(requestError)) {
         setCertificateVerification(null);
@@ -1149,6 +1357,19 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
         <LoginScreen
           onBack={() => setStep("welcome")}
           onForgotPassword={() => setStep("forgot-email")}
+          onEmailConfirmationRequired={(email) => {
+            setPendingSignupEmail(email);
+            setStep("signup-code");
+          }}
+        />
+      )}
+      {step === "signup-code" && (
+        <SignupCodeScreen
+          email={pendingSignupEmail}
+          onBackToLogin={() => {
+            setPendingSignupEmail("");
+            setStep("login");
+          }}
         />
       )}
       {step === "forgot-email" && (

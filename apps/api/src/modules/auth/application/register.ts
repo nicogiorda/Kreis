@@ -1,27 +1,71 @@
-// CAPA APPLICATION — Caso de uso: registrar usuario
-// Orquesta el flujo de negocio del registro sin saber nada de HTTP ni de librerías externas.
-// Solo habla con los contratos del domain (IAuthProvider, IUserRepository).
-// Esta separación permite testear la lógica de negocio en aislamiento,
-// inyectando mocks de authProvider y userRepository.
-
-import { ProfileCreationError } from "../domain/auth-errors";
+import {
+  CertificateVerificationError,
+  RegistrationFinalizationError,
+  RegistrationRollbackError
+} from "../domain/auth-errors";
+import type {
+  ICertificateVerificationRepository
+} from "../domain/certificate-verification";
+import { normalizeCertificateVerificationIdentity } from "../domain/certificate-verification";
 import type { AuthUser, IAuthProvider, IUserRepository, RegisterInput } from "../domain/auth.types";
+import {
+  hashCertificateVerificationToken,
+  isCertificateVerificationTokenValid
+} from "../infrastructure/certificate-verification-token";
+
+type Clock = () => Date;
+
+const claimErrorMessages = {
+  invalid: "La validacion del certificado no es valida.",
+  expired: "La validacion del certificado vencio. Volve a cargarlo para continuar.",
+  used: "La validacion del certificado ya fue utilizada.",
+  mismatch: "Los datos no coinciden con la validacion del certificado."
+} as const;
 
 export class RegisterUseCase {
-  // Las dependencias se inyectan en el constructor para facilitar el testing
-  // y para que la capa api/ controle qué implementaciones concretas se usan.
   constructor(
     private readonly authProvider: IAuthProvider,
-    private readonly userRepository: IUserRepository
+    private readonly userRepository: IUserRepository,
+    private readonly verificationRepository: ICertificateVerificationRepository,
+    private readonly clock: Clock = () => new Date()
   ) {}
 
   async execute(input: RegisterInput): Promise<AuthUser> {
-    // Paso 1: Crear el usuario en el sistema de auth externo.
-    // Esto genera el auth_id que usaremos como FK en nuestra tabla usuario.
-    const authUser = await this.authProvider.createUser(input.email, input.password);
+    const rawToken = input.certificate_verification_token;
+
+    if (!rawToken) {
+      throw new CertificateVerificationError(
+        "certificate_verification_required",
+        "La validacion del certificado es obligatoria."
+      );
+    }
+
+    if (!isCertificateVerificationTokenValid(rawToken)) {
+      throw new CertificateVerificationError(
+        "certificate_verification_invalid",
+        claimErrorMessages.invalid
+      );
+    }
+
+    const tokenHash = hashCertificateVerificationToken(rawToken);
+    const claimedAt = this.clock();
+    const claim = await this.verificationRepository.claim({
+      ...normalizeCertificateVerificationIdentity(input),
+      tokenHash,
+      claimedAt
+    });
+
+    if (claim.status !== "claimed") {
+      const code = `certificate_verification_${claim.status}` as const;
+      throw new CertificateVerificationError(code, claimErrorMessages[claim.status]);
+    }
+
+    let authUser: Awaited<ReturnType<IAuthProvider["createUser"]>> | null = null;
+    let profileCreated = false;
 
     try {
-      // Paso 2: Crear el perfil de aplicación vinculado al auth_id.
+      authUser = await this.authProvider.createUser(input.email, input.password);
+
       await this.userRepository.createProfile(authUser.id, {
         legajo: input.legajo,
         nombre: input.nombre,
@@ -29,23 +73,45 @@ export class RegisterUseCase {
         id_facultad: input.id_facultad,
         topicos: input.topicos
       });
+      profileCreated = true;
+
+      const consumed = await this.verificationRepository.consume(
+        tokenHash,
+        claim.claimedAt,
+        this.clock()
+      );
+
+      if (!consumed) throw new RegistrationFinalizationError();
+
+      return {
+        id: authUser.id,
+        email: authUser.email ?? input.email,
+        legajo: input.legajo,
+        nombre: input.nombre,
+        apellido: input.apellido,
+        idFacultad: input.id_facultad
+      };
     } catch (error) {
-      if (error instanceof ProfileCreationError) {
-        // Rollback: si la BD falla, eliminamos el usuario de Supabase para no dejar
-        // un usuario auth "huérfano" sin perfil en nuestra aplicación.
-        await this.authProvider.deleteUser(authUser.id);
+      const rollbackResults: Promise<unknown>[] = [];
+
+      if (authUser && profileCreated) {
+        rollbackResults.push(this.userRepository.deleteProfile(authUser.id));
       }
+
+      if (authUser) {
+        rollbackResults.push(this.authProvider.deleteUser(authUser.id));
+      }
+
+      rollbackResults.push(
+        this.verificationRepository.release(tokenHash, claim.claimedAt)
+      );
+
+      const results = await Promise.allSettled(rollbackResults);
+      if (results.some((result) => result.status === "rejected")) {
+        throw new RegistrationRollbackError();
+      }
+
       throw error;
     }
-
-    return {
-      id: authUser.id,
-      email: authUser.email ?? input.email,
-      legajo: input.legajo,
-      nombre: input.nombre,
-      apellido: input.apellido,
-      idFacultad: input.id_facultad
-    };
   }
 }
-

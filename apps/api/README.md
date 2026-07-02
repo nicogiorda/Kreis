@@ -45,6 +45,12 @@ npm.cmd run typecheck:api
 
 El servidor arranca por defecto en `http://localhost:4000`.
 
+## Configuracion de verificaciones
+
+`CERTIFICATE_VERIFICATION_TTL_MINUTES` controla durante cuantos minutos puede
+usarse la credencial emitida tras validar un certificado. Es opcional y su
+valor seguro por defecto es `15`.
+
 Endpoints iniciales:
 
 ```text

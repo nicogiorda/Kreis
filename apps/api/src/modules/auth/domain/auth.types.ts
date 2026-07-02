@@ -13,7 +13,13 @@ export type RegisterInput = {
   apellido: string;
   id_facultad: number;
   topicos: number[];
+  certificate_verification_token: string;
 };
+
+export type RegisterProfileInput = Pick<
+  RegisterInput,
+  "legajo" | "nombre" | "apellido" | "id_facultad" | "topicos"
+>;
 
 // Datos necesarios para autenticar un usuario existente.
 export type LoginInput = {
@@ -46,7 +52,8 @@ export type AuthSession = {
 // Facilita hacer tests con un repositorio en memoria sin tocar la BD real.
 export interface IUserRepository {
   // Crea el perfil de aplicación vinculado al auth_id generado por el proveedor externo.
-  createProfile(authId: string, input: Omit<RegisterInput, "email" | "password">): Promise<void>;
+  createProfile(authId: string, input: RegisterProfileInput): Promise<void>;
+  deleteProfile(authId: string): Promise<void>;
 }
 
 // Contrato que debe cumplir cualquier proveedor de autenticación.

@@ -22,3 +22,41 @@ export class ProfileCreationError extends Error {
     this.name = "ProfileCreationError";
   }
 }
+
+export class ProfileDeletionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ProfileDeletionError";
+  }
+}
+
+export type CertificateVerificationErrorCode =
+  | "certificate_verification_required"
+  | "certificate_verification_invalid"
+  | "certificate_verification_expired"
+  | "certificate_verification_used"
+  | "certificate_verification_mismatch";
+
+export class CertificateVerificationError extends Error {
+  constructor(
+    public readonly code: CertificateVerificationErrorCode,
+    message: string
+  ) {
+    super(message);
+    this.name = "CertificateVerificationError";
+  }
+}
+
+export class RegistrationFinalizationError extends Error {
+  constructor(message = "No pudimos finalizar el registro.") {
+    super(message);
+    this.name = "RegistrationFinalizationError";
+  }
+}
+
+export class RegistrationRollbackError extends Error {
+  constructor(message = "El registro fallo y no pudo revertirse por completo.") {
+    super(message);
+    this.name = "RegistrationRollbackError";
+  }
+}

@@ -2,11 +2,11 @@
 // Implementa IUserRepository usando Prisma para persistir el perfil de aplicaciï¿½n.
 
 import { prisma } from "../../../core/database";
-import { ProfileCreationError } from "../domain/auth-errors";
-import type { IUserRepository, RegisterInput } from "../domain/auth.types";
+import { ProfileCreationError, ProfileDeletionError } from "../domain/auth-errors";
+import type { IUserRepository, RegisterProfileInput } from "../domain/auth.types";
 
 export class PrismaUserRepository implements IUserRepository {
-  async createProfile(authId: string, input: Omit<RegisterInput, "email" | "password">) {
+  async createProfile(authId: string, input: RegisterProfileInput): Promise<void> {
     try {
       // Usamos nested write en lugar de $transaction() interactivo.
       // $transaction(async fn) requiere una conexiÃ³n persistente que PgBouncer
@@ -35,6 +35,17 @@ export class PrismaUserRepository implements IUserRepository {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Profile creation failed";
       throw new ProfileCreationError(message);
+    }
+  }
+
+  async deleteProfile(authId: string): Promise<void> {
+    try {
+      await prisma.usuario.deleteMany({
+        where: { auth_id: authId }
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Profile deletion failed";
+      throw new ProfileDeletionError(message);
     }
   }
 }

@@ -15,6 +15,7 @@ export type NormalizedCertificateVerificationIdentity = {
 export type CreateCertificateVerificationInput =
   NormalizedCertificateVerificationIdentity & {
     tokenHash: string;
+    idFacultad: number;
     expiresAt: Date;
   };
 
@@ -25,7 +26,7 @@ export type ClaimCertificateVerificationInput =
   };
 
 export type CertificateVerificationClaimResult =
-  | { status: "claimed"; claimedAt: Date }
+  | { status: "claimed"; claimedAt: Date; idFacultad: number }
   | { status: "invalid" | "expired" | "used" | "mismatch" };
 
 export type CertificateVerificationCleanupInput = {

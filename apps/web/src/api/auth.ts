@@ -1,4 +1,4 @@
-﻿import { requestFormData, requestJson } from "./client";
+import { requestFormData, requestJson } from "./client";
 export { ApiRequestError } from "./client";
 
 export type TopicCatalogItem = {
@@ -82,8 +82,16 @@ export type CertificateVerification = {
   expires_at: string;
 };
 
+export type CertificateResolvedFaculty = {
+  id_facultad: number;
+  nombre: string;
+  sigla: string;
+  nombre_detectado: string;
+};
+
 export type CertificateClassificationResponse = {
   certificate: CertificateClassificationResult;
+  faculty?: CertificateResolvedFaculty;
   verification?: CertificateVerification;
 };
 
@@ -93,7 +101,6 @@ export type RegisterInput = {
   legajo: number;
   nombre: string;
   apellido: string;
-  id_facultad: number;
   topicos: number[];
   certificate_verification_token: string;
 };

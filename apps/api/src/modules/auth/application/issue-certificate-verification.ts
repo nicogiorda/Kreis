@@ -14,6 +14,10 @@ export type IssuedCertificateVerification = {
   expires_at: string;
 };
 
+type CertificateVerificationFaculty = {
+  idFacultad: number;
+};
+
 type Clock = () => Date;
 
 type IssueCertificateVerificationOptions = {
@@ -36,9 +40,10 @@ export class IssueCertificateVerificationUseCase {
 
   async execute(
     certificateIsValid: boolean,
-    identity: CertificateVerificationIdentity
+    identity: CertificateVerificationIdentity,
+    faculty: CertificateVerificationFaculty | null
   ): Promise<IssuedCertificateVerification | null> {
-    if (!certificateIsValid) return null;
+    if (!certificateIsValid || !faculty) return null;
 
     if (!isAllowedRegistrationEmail(identity.email, this.allowedEmailDomains)) {
       throw new RegistrationEmailDomainError();
@@ -58,6 +63,7 @@ export class IssueCertificateVerificationUseCase {
     await this.verificationRepository.create({
       ...normalizeCertificateVerificationIdentity(identity),
       tokenHash: token.tokenHash,
+      idFacultad: faculty.idFacultad,
       expiresAt
     });
 

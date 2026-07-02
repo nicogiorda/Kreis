@@ -35,12 +35,13 @@ const claimErrorMessages = {
 
 function profileMatchesRegistration(
   profile: Awaited<ReturnType<IUserRepository["findProfile"]>>,
-  input: RegisterInput
+  input: RegisterInput,
+  idFacultad: number
 ): boolean {
   return Boolean(
     profile &&
     profile.legajo === input.legajo &&
-    profile.id_facultad === input.id_facultad &&
+    profile.id_facultad === idFacultad &&
     normalizeCertificateName(profile.nombre) === normalizeCertificateName(input.nombre) &&
     normalizeCertificateName(profile.apellido) === normalizeCertificateName(input.apellido)
   );
@@ -112,7 +113,7 @@ export class RegisterUseCase {
       authUser = await this.authProvider.createUser(input.email, input.password);
       const existingProfile = await this.userRepository.findProfile(authUser.id);
 
-      if (existingProfile && !profileMatchesRegistration(existingProfile, input)) {
+      if (existingProfile && !profileMatchesRegistration(existingProfile, input, claim.idFacultad)) {
         throw new ProfileCreationError("El perfil pendiente no coincide con el registro.");
       }
 
@@ -121,7 +122,7 @@ export class RegisterUseCase {
           legajo: input.legajo,
           nombre: input.nombre,
           apellido: input.apellido,
-          id_facultad: input.id_facultad,
+          id_facultad: claim.idFacultad,
           topicos: input.topicos
         });
         profileCreated = true;
@@ -141,7 +142,7 @@ export class RegisterUseCase {
         legajo: input.legajo,
         nombre: input.nombre,
         apellido: input.apellido,
-        idFacultad: input.id_facultad
+        idFacultad: claim.idFacultad
       };
     } catch (error) {
       const rollbackResults: Promise<unknown>[] = [];

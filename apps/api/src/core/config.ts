@@ -19,6 +19,7 @@ const environmentSchema = z.object({
   GOOGLE_DOCUMENT_AI_EXTRACTOR_VERSION_ID: z.string().optional(),
   GOOGLE_DOCUMENT_AI_CERTIFICATE_CLASS: z.string().default("certificado_alumno_regular"),
   GOOGLE_DOCUMENT_AI_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.8),
+  CERTIFICATE_VERIFICATION_TTL_MINUTES: z.coerce.number().int().positive().max(60).default(15),
   GOOGLE_SERVICE_ACCOUNT_JSON: z.string().optional(),
   GOOGLE_SERVICE_ACCOUNT_JSON_BASE64: z.string().optional(),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional()

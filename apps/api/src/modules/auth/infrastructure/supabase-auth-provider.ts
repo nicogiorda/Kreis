@@ -81,7 +81,11 @@ export class SupabaseAuthProvider implements IAuthProvider {
   // Elimina un usuario del sistema de auth de Supabase.
   // Se usa como rollback cuando la creación del perfil en BD falla,
   // para no dejar usuarios huérfanos en Supabase sin perfil en nuestra BD.
-  async deleteUser(id: string) {
-    await supabaseAdmin.auth.admin.deleteUser(id);
+  async deleteUser(id: string): Promise<void> {
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
+
+    if (error) {
+      throw new AuthProviderError(error.message);
+    }
   }
 }

@@ -1,7 +1,12 @@
 import { ArrowLeft, CheckCircle, Eye, EyeSlash, Plus, X } from "@phosphor-icons/react";
 import { type ChangeEvent, type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiRequestError, classifyCertificate, listFaculties, listTopics, register } from "../../api/auth";
-import type { CertificateClassificationResult, FacultyCatalogItem, TopicCatalogItem } from "../../api/auth";
+import type {
+  CertificateClassificationResult,
+  CertificateVerification,
+  FacultyCatalogItem,
+  TopicCatalogItem
+} from "../../api/auth";
 import onboardingEventsUrl from "../../assets/auth/onboarding-events.webp";
 import signUpOneUrl from "../../assets/auth/signup-1.webp";
 import signUpTwoUrl from "../../assets/auth/signup-2.webp";
@@ -219,9 +224,25 @@ function getAuthErrorMessage(error: unknown): string {
     if (error.code === "certificate_too_large") return "El certificado no puede superar los 5 MB.";
     if (error.code === "invalid_certificate_file") return "El certificado debe ser un PDF.";
     if (error.code === "document_ai_config_error" || error.code === "document_ai_request_failed") return "No pudimos validar el certificado en este momento.";
+    if (error.code === "certificate_verification_expired") return "La validación del certificado venció. Volvé a cargarlo para continuar.";
+    if (error.code === "certificate_verification_used") return "La validación del certificado ya fue utilizada. Volvé a cargarlo para continuar.";
+    if (error.code === "certificate_verification_mismatch") return "Los datos cambiaron después de validar el certificado. Volvé a cargarlo.";
+    if (error.code === "certificate_verification_invalid" || error.code === "certificate_verification_required") {
+      return "Necesitamos validar nuevamente tu certificado para continuar.";
+    }
   }
 
   return "No pudimos conectar con el servidor. Intentá nuevamente.";
+}
+
+function isCertificateVerificationError(error: unknown): boolean {
+  return error instanceof ApiRequestError && [
+    "certificate_verification_required",
+    "certificate_verification_invalid",
+    "certificate_verification_expired",
+    "certificate_verification_used",
+    "certificate_verification_mismatch"
+  ].includes(error.code);
 }
 
 function getRecoveryRequestErrorMessage(error: unknown): string {
@@ -960,6 +981,8 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
   const [certificateFileName, setCertificateFileName] = useState<string | null>(null);
+  const [certificateVerification, setCertificateVerification] =
+    useState<CertificateVerification | null>(null);
 
   useEffect(() => {
     function preventViewportScroll(event: Event): void {
@@ -1013,10 +1036,17 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
   }, [catalogReloadKey]);
 
   function updateDraft(updates: Partial<SignupDraft>): void {
+    const invalidatesVerification =
+      ("emailUser" in updates && updates.emailUser !== draft.emailUser) ||
+      ("legajo" in updates && updates.legajo !== draft.legajo) ||
+      ("fullName" in updates && updates.fullName !== draft.fullName);
+
+    if (invalidatesVerification) setCertificateVerification(null);
     setDraft((current) => ({ ...current, ...updates }));
   }
 
   function updateCertificateFile(file: File | null): void {
+    setCertificateVerification(null);
     setCertificateFile(file);
     setCertificateFileName(file?.name ?? null);
     setSubmissionError(null);
@@ -1028,19 +1058,40 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
 
     try {
       const profile = getDraftProfile(draft);
-      const certificate = await classifyCertificate(certificateFile, {
-        legajo: Number(draft.legajo),
-        nombre: profile.nombre,
-        apellido: profile.apellido
-      });
+      const email = getSignupEmail(draft);
+      let verification = certificateVerification;
 
-      if (!certificate.valid) {
-        setSubmissionError(getInvalidCertificateMessage(certificate));
+      if (!verification) {
+        const classification = await classifyCertificate(certificateFile, {
+          email,
+          legajo: Number(draft.legajo),
+          nombre: profile.nombre,
+          apellido: profile.apellido
+        });
+
+        if (!classification.certificate.valid) {
+          setSubmissionError(getInvalidCertificateMessage(classification.certificate));
+          return;
+        }
+
+        if (!classification.verification) {
+          setSubmissionError("No pudimos emitir la validación del certificado. Intentá nuevamente.");
+          return;
+        }
+
+        verification = classification.verification;
+        setCertificateVerification(verification);
+      }
+
+      if (Date.parse(verification.expires_at) <= Date.now()) {
+        setCertificateVerification(null);
+        setCertificateFile(null);
+        setCertificateFileName(null);
+        setSubmissionError("La validación del certificado venció. Volvé a cargarlo para continuar.");
         return;
       }
 
       const facultyId = Number(faculties[0]?.id_facultad ?? 1);
-      const email = getSignupEmail(draft);
 
       await register({
         email,
@@ -1049,11 +1100,20 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
         nombre: profile.nombre,
         apellido: profile.apellido,
         id_facultad: facultyId,
-        topicos: draft.topicIds.map(Number)
+        topicos: draft.topicIds.map(Number),
+        certificate_verification_token: verification.token
       });
 
+      setCertificateVerification(null);
       await signIn(email, draft.password);
     } catch (requestError) {
+      if (isCertificateVerificationError(requestError)) {
+        setCertificateVerification(null);
+        setCertificateFile(null);
+        setCertificateFileName(null);
+        setStep("certificate");
+      }
+
       setSubmissionError(getAuthErrorMessage(requestError));
     } finally {
       setSubmitting(false);
@@ -1074,7 +1134,10 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
           error={submissionError}
           fileName={certificateFileName}
           submitting={submitting}
-          onBack={() => setStep("password")}
+          onBack={() => {
+            setCertificateVerification(null);
+            setStep("password");
+          }}
           onFileSelect={updateCertificateFile}
           onSubmit={() => {
             if (certificateFile) void handleSignup(certificateFile);

@@ -2,15 +2,24 @@ import multer from "multer";
 import rateLimit from "express-rate-limit";
 import { type NextFunction, type Request, type Response, Router } from "express";
 import { z } from "zod";
+import { config } from "../../../core/config";
+import { IssueCertificateVerificationUseCase } from "../application/issue-certificate-verification";
 import { LoginUseCase } from "../application/login";
 import { RefreshSessionUseCase } from "../application/refresh-session";
 import { RegisterUseCase } from "../application/register";
-import { AuthProviderError, ProfileCreationError } from "../domain/auth-errors";
+import {
+  AuthProviderError,
+  CertificateVerificationError,
+  ProfileCreationError,
+  RegistrationFinalizationError,
+  RegistrationRollbackError
+} from "../domain/auth-errors";
 import {
   CertificateClassifierConfigError,
   CertificateClassifierRequestError,
   processCertificatePdf
 } from "../infrastructure/document-ai-certificate-classifier";
+import { PrismaCertificateVerificationRepository } from "../infrastructure/prisma-certificate-verification-repository";
 import { PrismaUserRepository } from "../infrastructure/prisma-user-repository";
 import { SupabaseAuthProvider } from "../infrastructure/supabase-auth-provider";
 
@@ -62,10 +71,12 @@ const registerRequestSchema = z.object({
   nombre: z.string().min(1),
   apellido: z.string().min(1),
   id_facultad: z.coerce.number().int().positive(),
-  topicos: z.array(z.coerce.number().int().positive()).default([])
+  topicos: z.array(z.coerce.number().int().positive()).default([]),
+  certificate_verification_token: z.string().min(1)
 });
 
 const certificateValidationRequestSchema = z.object({
+  email: z.string().trim().email(),
   legajo: z.coerce.number().int().positive(),
   nombre: z.string().trim().min(1),
   apellido: z.string().trim().min(1)
@@ -73,7 +84,16 @@ const certificateValidationRequestSchema = z.object({
 
 const authProvider = new SupabaseAuthProvider();
 const userRepository = new PrismaUserRepository();
-const registerUseCase = new RegisterUseCase(authProvider, userRepository);
+const certificateVerificationRepository = new PrismaCertificateVerificationRepository();
+const issueCertificateVerificationUseCase = new IssueCertificateVerificationUseCase(
+  certificateVerificationRepository,
+  config.CERTIFICATE_VERIFICATION_TTL_MINUTES
+);
+const registerUseCase = new RegisterUseCase(
+  authProvider,
+  userRepository,
+  certificateVerificationRepository
+);
 const loginUseCase = new LoginUseCase(authProvider);
 const refreshSessionUseCase = new RefreshSessionUseCase(authProvider);
 
@@ -132,8 +152,15 @@ export function createAuthRouter(): Router {
       }
 
       const certificate = await processCertificatePdf(request.file.buffer, parsedBody.data);
+      const verification = await issueCertificateVerificationUseCase.execute(
+        certificate.valid,
+        parsedBody.data
+      );
 
-      response.json({ certificate });
+      response.json({
+        certificate,
+        ...(verification ? { verification } : {})
+      });
     } catch (error) {
       if (error instanceof CertificateClassifierConfigError) {
         response.status(500).json({
@@ -161,6 +188,19 @@ export function createAuthRouter(): Router {
 
   router.post("/register", async (request, response, next) => {
     try {
+      if (
+        typeof request.body?.certificate_verification_token !== "string" ||
+        request.body.certificate_verification_token.length === 0
+      ) {
+        response.status(400).json({
+          error: {
+            code: "certificate_verification_required",
+            message: "La validacion del certificado es obligatoria."
+          }
+        });
+        return;
+      }
+
       const parsedBody = registerRequestSchema.safeParse(request.body);
 
       if (!parsedBody.success) {
@@ -178,6 +218,20 @@ export function createAuthRouter(): Router {
 
       response.status(201).json({ user });
     } catch (error) {
+      if (error instanceof CertificateVerificationError) {
+        const status =
+          error.code === "certificate_verification_expired"
+            ? 410
+            : error.code === "certificate_verification_used"
+              ? 409
+              : 400;
+
+        response.status(status).json({
+          error: { code: error.code, message: error.message }
+        });
+        return;
+      }
+
       if (error instanceof AuthProviderError) {
         response.status(400).json({
           error: { code: "register_failed", message: error.message }
@@ -188,6 +242,19 @@ export function createAuthRouter(): Router {
       if (error instanceof ProfileCreationError) {
         response.status(500).json({
           error: { code: "profile_creation_failed", message: error.message }
+        });
+        return;
+      }
+
+      if (
+        error instanceof RegistrationFinalizationError ||
+        error instanceof RegistrationRollbackError
+      ) {
+        response.status(500).json({
+          error: {
+            code: "registration_finalization_failed",
+            message: "No pudimos completar el registro. Intenta nuevamente."
+          }
         });
         return;
       }

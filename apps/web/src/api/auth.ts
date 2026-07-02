@@ -71,9 +71,20 @@ export type CertificateClassificationResult = {
 };
 
 export type CertificateValidationInput = {
+  email: string;
   legajo: number;
   nombre: string;
   apellido: string;
+};
+
+export type CertificateVerification = {
+  token: string;
+  expires_at: string;
+};
+
+export type CertificateClassificationResponse = {
+  certificate: CertificateClassificationResult;
+  verification?: CertificateVerification;
 };
 
 export type RegisterInput = {
@@ -84,6 +95,7 @@ export type RegisterInput = {
   apellido: string;
   id_facultad: number;
   topicos: number[];
+  certificate_verification_token: string;
 };
 
 export async function listTopics(signal?: AbortSignal): Promise<TopicCatalogItem[]> {
@@ -96,15 +108,21 @@ export async function listFaculties(signal?: AbortSignal): Promise<FacultyCatalo
   return response.facultades;
 }
 
-export async function classifyCertificate(certificate: File, input: CertificateValidationInput): Promise<CertificateClassificationResult> {
+export async function classifyCertificate(
+  certificate: File,
+  input: CertificateValidationInput
+): Promise<CertificateClassificationResponse> {
   const formData = new FormData();
   formData.append("certificate", certificate);
+  formData.append("email", input.email);
   formData.append("legajo", String(input.legajo));
   formData.append("nombre", input.nombre);
   formData.append("apellido", input.apellido);
 
-  const response = await requestFormData<{ certificate: CertificateClassificationResult }>("/api/v1/auth/certificate/classify", formData);
-  return response.certificate;
+  return requestFormData<CertificateClassificationResponse>(
+    "/api/v1/auth/certificate/classify",
+    formData
+  );
 }
 
 export async function register(input: RegisterInput): Promise<void> {

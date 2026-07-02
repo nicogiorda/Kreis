@@ -92,14 +92,17 @@ class FakeAuthProvider implements IAuthProvider {
   readonly users = new Set<string>();
   readonly deletedUsers: string[] = [];
   failCreate = false;
+  created = true;
+  createCalls = 0;
   private nextId = 1;
 
-  async createUser(email: string): Promise<{ id: string; email: string }> {
+  async createUser(email: string): Promise<{ id: string; email: string; created: boolean }> {
+    this.createCalls += 1;
     if (this.failCreate) throw new Error("Supabase failed");
 
     const id = `auth-${this.nextId++}`;
     this.users.add(id);
-    return { id, email };
+    return { id, email, created: this.created };
   }
 
   async signIn(): Promise<AuthSession> {
@@ -120,8 +123,34 @@ class FakeUserRepository implements IUserRepository {
   readonly profiles = new Set<string>();
   readonly deletedProfiles: string[] = [];
   failCreate = false;
+  createCalls = 0;
+
+  async findProfileByLegajo(legajo: number) {
+    if (this.profiles.size === 0) return null;
+
+    return {
+      authId: "auth-1",
+      email: "student@uade.edu.ar",
+      legajo,
+      nombre: "María José",
+      apellido: "Pérez",
+      id_facultad: 5
+    };
+  }
+
+  async findProfile(authId: string) {
+    return this.profiles.has(authId)
+      ? {
+          legajo: 123456,
+          nombre: "María José",
+          apellido: "Pérez",
+          id_facultad: 5
+        }
+      : null;
+  }
 
   async createProfile(authId: string, _input: RegisterProfileInput): Promise<void> {
+    this.createCalls += 1;
     if (this.failCreate) throw new ProfileCreationError("Database failed");
     this.profiles.add(authId);
   }
@@ -334,6 +363,50 @@ describe("RegisterUseCase certificate verification", () => {
 
     expect(user.email).toBe("student@uade.edu.ar");
     expect(harness.verificationRepository.records.get(token.tokenHash)?.consumedAt).toEqual(now);
+  });
+
+  it("resumes a pending account with an existing matching profile", async () => {
+    const harness = createHarness();
+    const token = await seedVerification(harness.verificationRepository);
+    harness.authProvider.created = false;
+    harness.userRepository.profiles.add("auth-1");
+
+    await harness.useCase.execute(createRegisterInput({
+      certificate_verification_token: token.rawToken
+    }));
+
+    expect(harness.userRepository.createCalls).toBe(0);
+    expect(harness.authProvider.deletedUsers).toHaveLength(0);
+    expect(harness.verificationRepository.records.get(token.tokenHash)?.consumedAt).toEqual(now);
+  });
+
+  it("does not delete a reused pending account when profile creation fails", async () => {
+    const harness = createHarness();
+    const token = await seedVerification(harness.verificationRepository);
+    harness.authProvider.created = false;
+    harness.userRepository.failCreate = true;
+
+    await expect(harness.useCase.execute(createRegisterInput({
+      certificate_verification_token: token.rawToken
+    }))).rejects.toBeInstanceOf(ProfileCreationError);
+
+    expect(harness.authProvider.deletedUsers).toHaveLength(0);
+    expect(harness.verificationRepository.records.get(token.tokenHash)?.claimedAt).toBeNull();
+  });
+
+  it("rejects a legajo conflict before sending a signup email", async () => {
+    const harness = createHarness();
+    const input = createRegisterInput({ email: "other@uade.edu.ar" });
+    const token = await seedVerification(harness.verificationRepository, input);
+    harness.userRepository.profiles.add("auth-1");
+
+    await expect(harness.useCase.execute({
+      ...input,
+      certificate_verification_token: token.rawToken
+    })).rejects.toBeInstanceOf(ProfileCreationError);
+
+    expect(harness.authProvider.createCalls).toBe(0);
+    expect(harness.verificationRepository.records.get(token.tokenHash)?.claimedAt).toBeNull();
   });
 
   it("rejects a second registration with the same token", async () => {

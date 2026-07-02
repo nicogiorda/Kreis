@@ -235,6 +235,7 @@ function getAuthErrorMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
     if (error.code === "invalid_credentials") return "El mail o la contraseña no coinciden.";
     if (error.code === "register_failed") return "No pudimos crear la cuenta. Revisá si el mail o el legajo ya están registrados.";
+    if (error.code === "profile_creation_failed") return "El legajo o el correo ya están asociados a otra cuenta.";
     if (error.code === "validation_error") return "Revisá los datos ingresados antes de continuar.";
     if (error.code === "invalid_email_domain") return "Usá el correo universitario de una institución habilitada.";
     if (error.code === "email_confirmation_not_enabled") return "La verificación de correo no está disponible. Intentá más tarde.";

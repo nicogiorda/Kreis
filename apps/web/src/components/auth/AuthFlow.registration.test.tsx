@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiRequestError } from "../../api/auth";
@@ -8,6 +8,8 @@ const authMock = vi.hoisted(() => ({
   signIn: vi.fn(),
   requestPasswordReset: vi.fn(),
   verifyRecoveryCode: vi.fn(),
+  verifySignupCode: vi.fn(),
+  resendSignupCode: vi.fn(),
   updateRecoveredPassword: vi.fn(),
   completePasswordRecovery: vi.fn(),
   cancelPasswordRecovery: vi.fn(),
@@ -103,6 +105,7 @@ async function advanceFromProfile(user: ReturnType<typeof userEvent.setup>): Pro
 
 describe("AuthFlow certificate verification", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
     apiMock.listTopics.mockResolvedValue([
       { id_topico: "1", topico: "Tecnología" },
@@ -113,8 +116,13 @@ describe("AuthFlow certificate verification", () => {
       { id_facultad: "5", nombre: "Ingeniería" }
     ]);
     apiMock.classifyCertificate.mockResolvedValue(validCertificateResponse);
-    apiMock.register.mockResolvedValue(undefined);
+    apiMock.register.mockResolvedValue({
+      status: "pending_email_verification",
+      email: "ana@uade.edu.ar"
+    });
     authMock.signIn.mockResolvedValue(undefined);
+    authMock.verifySignupCode.mockResolvedValue(undefined);
+    authMock.resendSignupCode.mockResolvedValue(undefined);
   });
 
   it("sends email to classification and includes the issued token in register", async () => {
@@ -225,15 +233,81 @@ describe("AuthFlow certificate verification", () => {
     expect(screen.getByRole("button", { name: "Validar" })).toBeDisabled();
   });
 
-  it("keeps the normal flow working with a valid token", async () => {
+  it("opens signup verification and does not sign in with the password", async () => {
     await reachCertificateScreen();
     await submitCertificate();
 
-    await waitFor(() => {
-      expect(authMock.signIn).toHaveBeenCalledWith(
-        "ana@uade.edu.ar",
-        "secure-password"
-      );
+    expect(await screen.findByText("VERIFICÁ TU CORREO")).toBeInTheDocument();
+    expect(screen.getByText(/ana@uade.edu.ar/)).toBeInTheDocument();
+    expect(authMock.signIn).not.toHaveBeenCalled();
+  });
+
+  it("submits the complete signup code without persisting it", async () => {
+    const storageSetSpy = vi.spyOn(Storage.prototype, "setItem");
+    await reachCertificateScreen();
+    await submitCertificate();
+
+    const user = userEvent.setup();
+    await user.type(
+      await screen.findByRole("textbox", { name: "Código de verificación" }),
+      "12a34 56"
+    );
+    await user.click(screen.getByRole("button", { name: "Verificar correo" }));
+
+    expect(authMock.verifySignupCode).toHaveBeenCalledWith(
+      "ana@uade.edu.ar",
+      "123456"
+    );
+    expect(storageSetSpy).not.toHaveBeenCalledWith(
+      expect.stringMatching(/signup|otp|code/i),
+      expect.anything()
+    );
+    storageSetSpy.mockRestore();
+  });
+
+  it("shows an accessible error for an invalid signup code", async () => {
+    authMock.verifySignupCode.mockRejectedValueOnce({ code: "otp_expired" });
+    await reachCertificateScreen();
+    await submitCertificate();
+
+    const user = userEvent.setup();
+    await user.type(
+      await screen.findByRole("textbox", { name: "Código de verificación" }),
+      "123456"
+    );
+    await user.click(screen.getByRole("button", { name: "Verificar correo" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("código venció");
+  });
+
+  it("keeps signup resend disabled for sixty seconds", async () => {
+    await reachCertificateScreen();
+    vi.useFakeTimers();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Validar" }));
+      await Promise.resolve();
+      await Promise.resolve();
     });
+
+    const resendButton = screen.getByRole("button", { name: "Reenviar en 00:60" });
+    expect(resendButton).toBeDisabled();
+
+    for (let second = 0; second < 60; second += 1) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1_000);
+      });
+    }
+
+    const enabledResend = screen.getByRole("button", {
+      name: "¿No te llegó? Reenviar código"
+    });
+    expect(enabledResend).toBeEnabled();
+
+    await act(async () => {
+      fireEvent.click(enabledResend);
+    });
+    expect(authMock.resendSignupCode).toHaveBeenCalledWith("ana@uade.edu.ar");
+    vi.useRealTimers();
   });
 });

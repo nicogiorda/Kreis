@@ -7,6 +7,8 @@ const authMock = vi.hoisted(() => ({
   signIn: vi.fn(),
   requestPasswordReset: vi.fn(),
   verifyRecoveryCode: vi.fn(),
+  verifySignupCode: vi.fn(),
+  resendSignupCode: vi.fn(),
   updateRecoveredPassword: vi.fn(),
   completePasswordRecovery: vi.fn(),
   cancelPasswordRecovery: vi.fn(),
@@ -91,6 +93,20 @@ describe("AuthFlow password recovery", () => {
     await user.click(screen.getByRole("button", { name: "Enviar código" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Revisá tu conexión");
+  });
+
+  it("opens signup verification when login reports an unconfirmed email", async () => {
+    const user = userEvent.setup();
+    authMock.signIn.mockRejectedValueOnce({ code: "email_not_confirmed" });
+    render(<AuthFlow initialStep="login" />);
+
+    await user.type(screen.getByRole("textbox", { name: "Ingresa tu mail" }), "student@uade.edu.ar");
+    await user.type(screen.getByLabelText("Ingresa tu contraseña"), "secure-password");
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    expect(await screen.findByText("VERIFICÁ TU CORREO")).toBeInTheDocument();
+    expect(screen.getByText(/student@uade.edu.ar/)).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("secure-password")).not.toBeInTheDocument();
   });
 
   it("uses one real OTP input, accepts paste, and keeps only six digits", async () => {

@@ -1,6 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiRequestError } from "../api/client";
 import { AuthProvider, passwordRecoveryTtlMs } from "./AuthProvider";
 import { useAuth } from "./useAuth";
 
@@ -11,8 +12,13 @@ const supabaseAuthMock = vi.hoisted(() => ({
   signInWithPassword: vi.fn(),
   signOut: vi.fn(),
   resetPasswordForEmail: vi.fn(),
+  resend: vi.fn(),
   verifyOtp: vi.fn(),
   updateUser: vi.fn()
+}));
+
+const usersApiMock = vi.hoisted(() => ({
+  getMyProfile: vi.fn()
 }));
 
 vi.mock("../lib/supabase-browser", () => ({
@@ -20,6 +26,8 @@ vi.mock("../lib/supabase-browser", () => ({
     auth: supabaseAuthMock
   }
 }));
+
+vi.mock("../api/users", () => usersApiMock);
 
 const testSession = {
   access_token: "access-token",
@@ -52,6 +60,8 @@ function Probe() {
       <button type="button" onClick={() => void auth.continueWithoutSession()}>continue</button>
       <button type="button" onClick={() => void auth.requestPasswordReset("  STUDENT@UADE.EDU.AR ")}>request</button>
       <button type="button" onClick={() => void auth.verifyRecoveryCode("STUDENT@UADE.EDU.AR", "12a34 56").catch(() => undefined)}>verify</button>
+      <button type="button" onClick={() => void auth.verifySignupCode(" STUDENT@UADE.EDU.AR ", "12a34 56").catch(() => undefined)}>verify signup</button>
+      <button type="button" onClick={() => void auth.resendSignupCode(" STUDENT@UADE.EDU.AR ")}>resend signup</button>
       <button type="button" onClick={() => void auth.updateRecoveredPassword("new-password")}>update recovered</button>
       <button type="button" onClick={() => void auth.completePasswordRecovery()}>complete recovery</button>
       <button type="button" onClick={() => void auth.cancelPasswordRecovery()}>cancel recovery</button>
@@ -89,6 +99,7 @@ describe("AuthProvider", () => {
     supabaseAuthMock.refreshSession.mockResolvedValue({ data: { session: testSession }, error: null });
     supabaseAuthMock.signOut.mockResolvedValue({ error: null });
     supabaseAuthMock.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null });
+    supabaseAuthMock.resend.mockResolvedValue({ data: {}, error: null });
     supabaseAuthMock.verifyOtp.mockResolvedValue({
       data: { session: testSession, user: testSession.user },
       error: null
@@ -96,6 +107,10 @@ describe("AuthProvider", () => {
     supabaseAuthMock.updateUser.mockResolvedValue({
       data: { user: testSession.user },
       error: null
+    });
+    usersApiMock.getMyProfile.mockResolvedValue({
+      legajo: 123456,
+      name: "Student User"
     });
     supabaseAuthMock.onAuthStateChange.mockImplementation((callback) => {
       authStateChangeCallback = callback;
@@ -169,6 +184,51 @@ describe("AuthProvider", () => {
     const marker = JSON.parse(window.localStorage.getItem("kreis-password-recovery-active-v1") ?? "{}");
     expect(marker.active).toBe(true);
     expect(marker.expiresAt).toBeGreaterThan(Date.now());
+  });
+
+  it("verifies a signup OTP with normalized email and enters only after profile validation", async () => {
+    renderProvider();
+    await screen.findByText("anonymous");
+
+    screen.getByRole("button", { name: "verify signup" }).click();
+
+    await screen.findByText("authenticated");
+    expect(supabaseAuthMock.verifyOtp).toHaveBeenCalledWith({
+      email: "student@uade.edu.ar",
+      token: "123456",
+      type: "email"
+    });
+    expect(usersApiMock.getMyProfile).toHaveBeenCalledWith("access-token");
+  });
+
+  it("resends signup codes through the native signup flow", async () => {
+    renderProvider();
+    await screen.findByText("anonymous");
+
+    screen.getByRole("button", { name: "resend signup" }).click();
+
+    await waitFor(() => {
+      expect(supabaseAuthMock.resend).toHaveBeenCalledWith({
+        type: "signup",
+        email: "student@uade.edu.ar"
+      });
+    });
+  });
+
+  it("rejects a Supabase session that has no Kreis profile", async () => {
+    usersApiMock.getMyProfile.mockRejectedValueOnce(
+      new ApiRequestError("profile_not_found", "Missing profile", 404)
+    );
+    supabaseAuthMock.getSession.mockResolvedValueOnce({
+      data: { session: testSession },
+      error: null
+    });
+
+    renderProvider();
+
+    await screen.findByText("registration-incomplete");
+    expect(supabaseAuthMock.signOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(screen.getByTestId("session")).toHaveTextContent("none");
   });
 
   it("keeps SIGNED_IN in password recovery while recovery intent is active", async () => {

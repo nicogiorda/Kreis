@@ -1,9 +1,11 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
-import { registerAuthTokenRefresher } from "../api/client";
+import { ApiRequestError, registerAuthTokenRefresher } from "../api/client";
+import { getMyProfile } from "../api/users";
 import { supabaseBrowser } from "../lib/supabase-browser";
 import { markStartup, measureStartup, updateStartupDebug } from "../startup/startup-debug";
 import type { AuthStatus } from "./auth.types";
+import { normalizeEmailOtp } from "./email-otp";
 import { AuthContext } from "./useAuth";
 
 const legacyAuthStorageKey = "kreis-auth-session-v1";
@@ -22,6 +24,13 @@ class AuthInitializationTimeoutError extends Error {
   constructor() {
     super("No pudimos recuperar tu sesion a tiempo.");
     this.name = "AuthInitializationTimeoutError";
+  }
+}
+
+class SessionProfileValidationError extends Error {
+  constructor() {
+    super("No pudimos validar el perfil de Kreis.");
+    this.name = "SessionProfileValidationError";
   }
 }
 
@@ -125,6 +134,15 @@ function passwordRecoveryState(session: Session): AuthState {
   };
 }
 
+function registrationIncompleteState(): AuthState {
+  return {
+    status: "registration-incomplete",
+    session: null,
+    user: null,
+    error: "No pudimos completar el acceso a tu cuenta."
+  };
+}
+
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
   let timeoutId = 0;
 
@@ -145,6 +163,7 @@ function getAuthRecoveryMessage(error: unknown): string {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>(initialState);
   const initializationRun = useRef(0);
+  const profileValidationRun = useRef(0);
   const recoveryIntentRef = useRef(false);
   const recoveryExpiresAtRef = useRef<number | null>(null);
   const recoveryExpirationDetectedRef = useRef(false);
@@ -168,6 +187,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     recoveryExpirationDetectedRef.current = false;
     removePasswordRecoveryMarker();
   }, []);
+
+  const validateAuthenticatedSession = useCallback(async (session: Session): Promise<void> => {
+    const runId = profileValidationRun.current + 1;
+    profileValidationRun.current = runId;
+
+    try {
+      await getMyProfile(session.access_token);
+      if (profileValidationRun.current !== runId) return;
+
+      commitState(stateFromSession(session));
+    } catch (error) {
+      if (profileValidationRun.current !== runId) return;
+
+      if (error instanceof ApiRequestError && error.code === "profile_not_found") {
+        clearPasswordRecovery();
+        const { error: signOutError } = await supabaseBrowser.auth.signOut({
+          scope: "local"
+        });
+        if (signOutError) clearKnownSupabaseAuthStorage();
+        commitState(registrationIncompleteState());
+        throw new SessionProfileValidationError();
+      }
+
+      commitState({
+        status: "recovery-error",
+        session: null,
+        user: null,
+        error: "No pudimos validar tu cuenta en este momento."
+      });
+      throw new SessionProfileValidationError();
+    }
+  }, [clearPasswordRecovery, commitState]);
 
   const initializeSession = useCallback(async (): Promise<void> => {
     const runId = initializationRun.current + 1;
@@ -208,10 +259,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearPasswordRecovery();
       }
 
-      const nextState = stateFromSession(data.session);
-      commitState(nextState);
+      if (!data.session) {
+        commitState(stateFromSession(null));
+        return;
+      }
+
+      await validateAuthenticatedSession(data.session);
     } catch (error) {
       if (initializationRun.current !== runId) return;
+      if (error instanceof SessionProfileValidationError) return;
 
       const message = getAuthRecoveryMessage(error);
       commitState({
@@ -226,7 +282,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         measureStartup("auth-init", "auth-init-start", "auth-init-end");
       }
     }
-  }, [activatePasswordRecovery, clearPasswordRecovery, commitState]);
+  }, [
+    activatePasswordRecovery,
+    clearPasswordRecovery,
+    commitState,
+    validateAuthenticatedSession
+  ]);
 
   useEffect(() => {
     return registerAuthTokenRefresher(async () => {
@@ -242,6 +303,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data } = supabaseBrowser.auth.onAuthStateChange((event: AuthChangeEvent, session) => {
       if (event === "SIGNED_OUT") {
+        profileValidationRun.current += 1;
         clearPasswordRecovery();
         commitState(stateFromSession(null));
         return;
@@ -249,6 +311,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!session) {
         if (event === "INITIAL_SESSION") {
+          profileValidationRun.current += 1;
           clearPasswordRecovery();
           commitState(stateFromSession(null));
         }
@@ -286,20 +349,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (
         event === "INITIAL_SESSION" ||
-        event === "SIGNED_IN" ||
-        event === "TOKEN_REFRESHED" ||
-        event === "USER_UPDATED"
+        event === "SIGNED_IN"
       ) {
-        commitState(stateFromSession(session));
+        void Promise.resolve()
+          .then(() => validateAuthenticatedSession(session))
+          .catch(() => undefined);
+        return;
+      }
+
+      if (event === "TOKEN_REFRESHED" || event === "USER_UPDATED") {
+        if (stateRef.current.status === "authenticated") {
+          commitState(stateFromSession(session));
+          return;
+        }
+
+        void Promise.resolve()
+          .then(() => validateAuthenticatedSession(session))
+          .catch(() => undefined);
       }
     });
 
     return () => {
       data.subscription.unsubscribe();
     };
-  }, [activatePasswordRecovery, clearPasswordRecovery, commitState, initializeSession]);
+  }, [
+    activatePasswordRecovery,
+    clearPasswordRecovery,
+    commitState,
+    initializeSession,
+    validateAuthenticatedSession
+  ]);
 
   const signOut = useCallback(async (): Promise<void> => {
+    profileValidationRun.current += 1;
     clearPasswordRecovery();
     const { error } = await supabaseBrowser.auth.signOut({ scope: "local" });
 
@@ -314,6 +396,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOutEverywhere = useCallback(async (): Promise<void> => {
+    profileValidationRun.current += 1;
     clearPasswordRecovery();
     const { error } = await supabaseBrowser.auth.signOut({ scope: "global" });
 
@@ -324,15 +407,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string): Promise<void> => {
     clearPasswordRecovery();
-    const { data, error } = await supabaseBrowser.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabaseBrowser.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password
+    });
 
     if (error || !data.session) {
       throw error ?? new Error("No pudimos iniciar sesion.");
     }
 
-    const nextState = stateFromSession(data.session);
-    commitState(nextState);
-  }, [clearPasswordRecovery, commitState]);
+    await validateAuthenticatedSession(data.session);
+  }, [clearPasswordRecovery, validateAuthenticatedSession]);
 
   const requestPasswordReset = useCallback(async (email: string): Promise<void> => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -342,7 +427,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const verifyRecoveryCode = useCallback(async (email: string, code: string): Promise<void> => {
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedCode = code.replace(/\D/g, "").slice(0, 6);
+    const normalizedCode = normalizeEmailOtp(code);
 
     recoveryIntentRef.current = true;
     recoveryExpiresAtRef.current = persistPasswordRecoveryMarker();
@@ -360,6 +445,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     activatePasswordRecovery(data.session, recoveryExpiresAtRef.current ?? undefined);
   }, [activatePasswordRecovery, clearPasswordRecovery]);
+
+  const verifySignupCode = useCallback(async (email: string, code: string): Promise<void> => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedCode = normalizeEmailOtp(code);
+    const { data, error } = await supabaseBrowser.auth.verifyOtp({
+      email: normalizedEmail,
+      token: normalizedCode,
+      type: "email"
+    });
+
+    if (error || !data.session || !data.user) {
+      throw error ?? new Error("No pudimos verificar el correo.");
+    }
+
+    await validateAuthenticatedSession(data.session);
+  }, [validateAuthenticatedSession]);
+
+  const resendSignupCode = useCallback(async (email: string): Promise<void> => {
+    const { error } = await supabaseBrowser.auth.resend({
+      type: "signup",
+      email: email.trim().toLowerCase()
+    });
+
+    if (error) throw error;
+  }, []);
 
   const updateRecoveredPassword = useCallback(async (newPassword: string): Promise<void> => {
     if (stateRef.current.status !== "password-recovery" || !stateRef.current.session) {
@@ -380,10 +490,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     clearPasswordRecovery();
-    commitState(stateFromSession(currentState.session));
-  }, [clearPasswordRecovery, commitState]);
+    await validateAuthenticatedSession(currentState.session);
+  }, [clearPasswordRecovery, validateAuthenticatedSession]);
 
   const cancelPasswordRecovery = useCallback(async (): Promise<void> => {
+    profileValidationRun.current += 1;
     clearPasswordRecovery();
     const { error } = await supabaseBrowser.auth.signOut({ scope: "local" });
 
@@ -402,6 +513,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const continueWithoutSession = useCallback(async (): Promise<void> => {
+    profileValidationRun.current += 1;
     clearPasswordRecovery();
     await supabaseBrowser.auth.signOut({ scope: "local" }).catch(() => undefined);
     clearKnownSupabaseAuthStorage();
@@ -442,6 +554,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOutEverywhere,
       requestPasswordReset,
       verifyRecoveryCode,
+      verifySignupCode,
+      resendSignupCode,
       updateRecoveredPassword,
       completePasswordRecovery,
       cancelPasswordRecovery,
@@ -456,13 +570,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       continueWithoutSession,
       initializeSession,
       requestPasswordReset,
+      resendSignupCode,
       signIn,
       signOut,
       signOutEverywhere,
       signOutOtherDevices,
       state,
       updateRecoveredPassword,
-      verifyRecoveryCode
+      verifyRecoveryCode,
+      verifySignupCode
     ]
   );
 

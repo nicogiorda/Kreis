@@ -60,3 +60,12 @@ export class RegistrationRollbackError extends Error {
     this.name = "RegistrationRollbackError";
   }
 }
+
+export class RegistrationEmailDomainError extends Error {
+  readonly code = "invalid_email_domain";
+
+  constructor(message = "El correo debe pertenecer a una universidad habilitada.") {
+    super(message);
+    this.name = "RegistrationEmailDomainError";
+  }
+}

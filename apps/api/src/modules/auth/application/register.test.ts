@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   CertificateVerificationError,
   ProfileCreationError,
+  RegistrationEmailDomainError,
   RegistrationFinalizationError
 } from "../domain/auth-errors";
 import type {
@@ -169,7 +170,7 @@ function createHarness() {
     authProvider,
     userRepository,
     verificationRepository,
-    () => new Date(now)
+    { clock: () => new Date(now) }
   );
 
   return { verificationRepository, authProvider, userRepository, useCase };
@@ -185,7 +186,9 @@ async function expectVerificationCode(
 describe("IssueCertificateVerificationUseCase", () => {
   it("returns a token for a valid certificate", async () => {
     const repository = new InMemoryVerificationRepository();
-    const useCase = new IssueCertificateVerificationUseCase(repository, 15, () => new Date(now));
+    const useCase = new IssueCertificateVerificationUseCase(repository, 15, {
+      clock: () => new Date(now)
+    });
 
     const result = await useCase.execute(true, createRegisterInput());
 
@@ -195,7 +198,9 @@ describe("IssueCertificateVerificationUseCase", () => {
 
   it("does not issue a token for an invalid certificate", async () => {
     const repository = new InMemoryVerificationRepository();
-    const useCase = new IssueCertificateVerificationUseCase(repository, 15, () => new Date(now));
+    const useCase = new IssueCertificateVerificationUseCase(repository, 15, {
+      clock: () => new Date(now)
+    });
 
     await expect(useCase.execute(false, createRegisterInput())).resolves.toBeNull();
     expect(repository.records.size).toBe(0);
@@ -203,7 +208,9 @@ describe("IssueCertificateVerificationUseCase", () => {
 
   it("stores only the token hash", async () => {
     const repository = new InMemoryVerificationRepository();
-    const useCase = new IssueCertificateVerificationUseCase(repository, 15, () => new Date(now));
+    const useCase = new IssueCertificateVerificationUseCase(repository, 15, {
+      clock: () => new Date(now)
+    });
 
     const result = await useCase.execute(true, createRegisterInput());
     const storedHash = [...repository.records.keys()][0];
@@ -211,9 +218,32 @@ describe("IssueCertificateVerificationUseCase", () => {
     expect(storedHash).toBe(hashCertificateVerificationToken(result!.token));
     expect(storedHash).not.toBe(result!.token);
   });
+
+  it("does not issue a token for a disallowed email domain", async () => {
+    const repository = new InMemoryVerificationRepository();
+    const useCase = new IssueCertificateVerificationUseCase(repository, 15, {
+      clock: () => new Date(now)
+    });
+
+    await expect(useCase.execute(true, createRegisterInput({
+      email: "student@gmail.com"
+    }))).rejects.toBeInstanceOf(RegistrationEmailDomainError);
+    expect(repository.records.size).toBe(0);
+  });
 });
 
 describe("RegisterUseCase certificate verification", () => {
+  it("rejects a disallowed email domain before claiming the token", async () => {
+    const harness = createHarness();
+    const token = await seedVerification(harness.verificationRepository);
+
+    await expect(harness.useCase.execute(createRegisterInput({
+      email: "student@gmail.com",
+      certificate_verification_token: token.rawToken
+    }))).rejects.toBeInstanceOf(RegistrationEmailDomainError);
+    expect(harness.verificationRepository.records.get(token.tokenHash)?.claimedAt).toBeNull();
+  });
+
   it("rejects registration without a token", async () => {
     const { useCase } = createHarness();
     await expectVerificationCode(

@@ -20,6 +20,7 @@ const environmentSchema = z.object({
   GOOGLE_DOCUMENT_AI_CERTIFICATE_CLASS: z.string().default("certificado_alumno_regular"),
   GOOGLE_DOCUMENT_AI_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.8),
   CERTIFICATE_VERIFICATION_TTL_MINUTES: z.coerce.number().int().positive().max(60).default(15),
+  ALLOWED_EMAIL_DOMAINS: z.string().trim().min(1).default("uade.edu.ar"),
   GOOGLE_SERVICE_ACCOUNT_JSON: z.string().optional(),
   GOOGLE_SERVICE_ACCOUNT_JSON_BASE64: z.string().optional(),
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional()

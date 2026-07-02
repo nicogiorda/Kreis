@@ -1,5 +1,6 @@
 import {
   CertificateVerificationError,
+  RegistrationEmailDomainError,
   RegistrationFinalizationError,
   RegistrationRollbackError
 } from "../domain/auth-errors";
@@ -7,6 +8,7 @@ import type {
   ICertificateVerificationRepository
 } from "../domain/certificate-verification";
 import { normalizeCertificateVerificationIdentity } from "../domain/certificate-verification";
+import { isAllowedRegistrationEmail } from "../domain/registration-email";
 import type { AuthUser, IAuthProvider, IUserRepository, RegisterInput } from "../domain/auth.types";
 import {
   hashCertificateVerificationToken,
@@ -14,6 +16,11 @@ import {
 } from "../infrastructure/certificate-verification-token";
 
 type Clock = () => Date;
+
+type RegisterOptions = {
+  allowedEmailDomains?: ReadonlySet<string>;
+  clock?: Clock;
+};
 
 const claimErrorMessages = {
   invalid: "La validacion del certificado no es valida.",
@@ -23,14 +30,24 @@ const claimErrorMessages = {
 } as const;
 
 export class RegisterUseCase {
+  private readonly allowedEmailDomains: ReadonlySet<string>;
+  private readonly clock: Clock;
+
   constructor(
     private readonly authProvider: IAuthProvider,
     private readonly userRepository: IUserRepository,
     private readonly verificationRepository: ICertificateVerificationRepository,
-    private readonly clock: Clock = () => new Date()
-  ) {}
+    options: RegisterOptions = {}
+  ) {
+    this.allowedEmailDomains = options.allowedEmailDomains ?? new Set(["uade.edu.ar"]);
+    this.clock = options.clock ?? (() => new Date());
+  }
 
   async execute(input: RegisterInput): Promise<AuthUser> {
+    if (!isAllowedRegistrationEmail(input.email, this.allowedEmailDomains)) {
+      throw new RegistrationEmailDomainError();
+    }
+
     const rawToken = input.certificate_verification_token;
 
     if (!rawToken) {

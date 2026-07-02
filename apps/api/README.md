@@ -51,6 +51,10 @@ El servidor arranca por defecto en `http://localhost:4000`.
 usarse la credencial emitida tras validar un certificado. Es opcional y su
 valor seguro por defecto es `15`.
 
+`ALLOWED_EMAIL_DOMAINS` define los dominios habilitados para nuevos registros,
+separados por comas. Su valor por defecto es `uade.edu.ar`. Esta restriccion no
+se aplica al login de cuentas existentes.
+
 Endpoints iniciales:
 
 ```text

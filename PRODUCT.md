@@ -2,8 +2,6 @@
 
 ## Register & Login
 
-product
-
 ## Users
 
 Kreis is for university students, currently centered on UADE, who want a fast mobile way to discover campus events, join interest communities, and participate in short community conversations. They are often checking the app between classes, while planning the week, or while deciding what to do around campus with other students.

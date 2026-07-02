@@ -1,4 +1,4 @@
-import { ArrowLeft, CaretRight, Devices, Eye, EyeSlash, GearSix, Key, PencilSimple, ShieldCheck, SignOut } from "@phosphor-icons/react";
+import { ArrowLeft, CaretRight, Devices, Eye, EyeSlash, GearSix, Key, PencilSimple, ShieldCheck, SignOut, Trash } from "@phosphor-icons/react";
 import { AltArrowRight, MapPoint, UsersGroupRounded } from "@solar-icons/react";
 import { type ChangeEvent, useMemo, useRef, useState } from "react";
 import type { KreisUserProfile } from "../../api/users";
@@ -20,6 +20,7 @@ type ProfileScreenProps = {
   onToggleTheme: () => void;
   onUploadAvatar: (file: File) => Promise<void>;
   onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  onDeleteAccount: (password: string) => Promise<void>;
   onSignOutOtherDevices: () => Promise<void>;
   onSignOutEverywhere: () => Promise<void>;
   onLogout: () => void;
@@ -121,6 +122,20 @@ function getChangePasswordErrorMessage(error: unknown): string {
   return "No pudimos cambiar la contraseña. Intentá nuevamente.";
 }
 
+function getDeleteAccountErrorMessage(error: unknown): string {
+  const accountError = error as { code?: string };
+
+  if (accountError.code === "invalid_current_password") {
+    return "La contraseña actual no es correcta.";
+  }
+
+  if (accountError.code === "account_delete_rate_limited") {
+    return "Hubo demasiados intentos. Esperá unos minutos.";
+  }
+
+  return "No pudimos eliminar la cuenta. Intentá nuevamente.";
+}
+
 function SecurityPasswordField({
   autoComplete,
   label,
@@ -165,16 +180,18 @@ function AccountSecurityPanel({
   email,
   onChangePassword,
   onClose,
+  onDeleteAccount,
   onSignOutEverywhere,
   onSignOutOtherDevices
 }: {
   email?: string;
   onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   onClose: () => void;
+  onDeleteAccount: (password: string) => Promise<void>;
   onSignOutEverywhere: () => Promise<void>;
   onSignOutOtherDevices: () => Promise<void>;
 }) {
-  const [view, setView] = useState<"menu" | "change-password">("menu");
+  const [view, setView] = useState<"menu" | "change-password" | "delete-account">("menu");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -186,6 +203,9 @@ function AccountSecurityPanel({
   const [error, setError] = useState<string | null>(null);
   const [otherSessionsClosed, setOtherSessionsClosed] = useState(true);
   const [confirmEverywhere, setConfirmEverywhere] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const hasNoEdgeSpaces = newPassword === newPassword.trim();
   const formIsValid =
     currentPassword.length > 0 &&
@@ -193,6 +213,8 @@ function AccountSecurityPanel({
     newPassword !== currentPassword &&
     hasNoEdgeSpaces &&
     newPassword === confirmation;
+  const deleteFormIsValid =
+    deletePassword.length > 0 && deleteConfirmation === "ELIMINAR";
 
   function clearPasswordFields(): void {
     setCurrentPassword("");
@@ -201,6 +223,12 @@ function AccountSecurityPanel({
     setShowCurrent(false);
     setShowNew(false);
     setShowConfirmation(false);
+  }
+
+  function clearDeleteFields(): void {
+    setDeletePassword("");
+    setShowDeletePassword(false);
+    setDeleteConfirmation("");
   }
 
   async function handleChangePassword(): Promise<void> {
@@ -257,6 +285,20 @@ function AccountSecurityPanel({
     }
   }
 
+  async function handleDeleteAccount(): Promise<void> {
+    if (!deleteFormIsValid) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      await onDeleteAccount(deletePassword);
+    } catch (deleteError) {
+      setError(getDeleteAccountErrorMessage(deleteError));
+      setSubmitting(false);
+    }
+  }
+
   return (
     <section className="fixed inset-0 z-[70] overflow-y-auto bg-kreis-app-bg text-kreis-ink" aria-label="Cuenta y seguridad">
       <div className="mx-auto min-h-full w-full max-w-[430px] px-[22px] pb-[max(28px,env(safe-area-inset-bottom))] pt-[max(54px,calc(env(safe-area-inset-top)+14px))]">
@@ -264,12 +306,13 @@ function AccountSecurityPanel({
           <button
             className="grid size-[37px] place-items-center rounded-[12px] border-0 bg-kreis-event-surface p-0 text-kreis-ink"
             type="button"
-            aria-label={view === "change-password" ? "Volver a cuenta y seguridad" : "Cerrar cuenta y seguridad"}
+            aria-label={view !== "menu" ? "Volver a cuenta y seguridad" : "Cerrar cuenta y seguridad"}
             onClick={() => {
               setError(null);
               setSuccess(null);
-              if (view === "change-password") {
+              if (view !== "menu") {
                 clearPasswordFields();
+                clearDeleteFields();
                 setView("menu");
               } else {
                 onClose();
@@ -279,7 +322,11 @@ function AccountSecurityPanel({
             <ArrowLeft className="size-[21px]" aria-hidden="true" />
           </button>
           <h1 className="m-0 text-center text-[18px] font-medium leading-[22px]">
-            {view === "change-password" ? "Cambiar contraseña" : "Cuenta y seguridad"}
+            {view === "change-password"
+              ? "Cambiar contraseña"
+              : view === "delete-account"
+                ? "Eliminar mi cuenta"
+                : "Cuenta y seguridad"}
           </h1>
         </header>
 
@@ -357,8 +404,30 @@ function AccountSecurityPanel({
                 </button>
               )}
             </div>
+
+            <button
+              className="mt-3 grid min-h-[62px] w-full grid-cols-[42px_minmax(0,1fr)_20px] items-center gap-3 rounded-[18px] border border-[rgba(240,83,28,0.2)] bg-kreis-event-surface px-3 text-left text-kreis-orange"
+              type="button"
+              aria-label="Eliminar mi cuenta"
+              onClick={() => {
+                setError(null);
+                setSuccess(null);
+                setView("delete-account");
+              }}
+            >
+              <span className="grid size-[42px] place-items-center rounded-[14px] bg-kreis-app-bg">
+                <Trash className="size-[20px]" aria-hidden="true" />
+              </span>
+              <span>
+                <strong className="block text-[15px] font-medium">Eliminar mi cuenta</strong>
+                <small className="mt-0.5 block text-[12px] font-normal text-kreis-muted">
+                  Esta acción es permanente
+                </small>
+              </span>
+              <CaretRight className="size-[18px] text-kreis-muted" aria-hidden="true" />
+            </button>
           </div>
-        ) : (
+        ) : view === "change-password" ? (
           <div className="mt-8 grid gap-4">
             <p className="m-0 text-[14px] leading-[19px] text-kreis-muted">
               Para proteger tu cuenta, confirmá la contraseña que usás actualmente.
@@ -413,6 +482,50 @@ function AccountSecurityPanel({
               </button>
             ) : null}
           </div>
+        ) : (
+          <div className="mt-8 grid gap-4">
+            <div className="rounded-[18px] border border-[rgba(240,83,28,0.22)] bg-kreis-event-surface p-4">
+              <strong className="block text-[16px] font-medium text-kreis-orange">
+                Esta acción no se puede deshacer
+              </strong>
+              <p className="m-0 mt-2 text-[13px] leading-[18px] text-kreis-muted">
+                Se eliminarán tu perfil, publicaciones, comentarios, eventos,
+                comunidades y todas las sesiones asociadas.
+              </p>
+            </div>
+
+            <SecurityPasswordField
+              autoComplete="current-password"
+              label="Contraseña actual"
+              value={deletePassword}
+              visible={showDeletePassword}
+              onChange={setDeletePassword}
+              onToggle={() => setShowDeletePassword((current) => !current)}
+            />
+
+            <label className="grid gap-1.5 text-[13px] font-medium text-kreis-muted">
+              Escribí ELIMINAR para confirmar
+              <input
+                className="h-[42px] w-full rounded-[15px] border-0 bg-kreis-event-surface px-4 text-[15px] font-normal uppercase text-kreis-ink outline-none focus:ring-2 focus:ring-[rgba(240,83,28,0.22)]"
+                type="text"
+                value={deleteConfirmation}
+                autoComplete="off"
+                aria-label="Confirmación de eliminación"
+                onChange={(event) => setDeleteConfirmation(event.target.value.toUpperCase())}
+              />
+            </label>
+
+            <button
+              className="mt-2 h-[42px] rounded-[15px] border-0 bg-kreis-orange text-[15px] font-medium text-kreis-cream disabled:opacity-50"
+              type="button"
+              disabled={submitting || !deleteFormIsValid}
+              onClick={() => void handleDeleteAccount()}
+            >
+              {submitting
+                ? <LoadingState label="Eliminando cuenta" variant="button" />
+                : "Eliminar mi cuenta"}
+            </button>
+          </div>
         )}
 
         {error ? <p className="mt-5 text-center text-[13px] leading-[17px] text-kreis-orange" role="alert">{error}</p> : null}
@@ -432,6 +545,7 @@ export function ProfileScreen({
   onToggleTheme,
   onUploadAvatar,
   onChangePassword,
+  onDeleteAccount,
   onSignOutOtherDevices,
   onSignOutEverywhere,
   onLogout
@@ -639,6 +753,7 @@ export function ProfileScreen({
           email={profileEmail}
           onChangePassword={onChangePassword}
           onClose={() => setSecurityOpen(false)}
+          onDeleteAccount={onDeleteAccount}
           onSignOutEverywhere={onSignOutEverywhere}
           onSignOutOtherDevices={onSignOutOtherDevices}
         />

@@ -5,6 +5,7 @@ import { ProfileScreen } from "./ProfileScreen";
 
 function renderProfile(overrides: {
   onChangePassword?: (currentPassword: string, newPassword: string) => Promise<void>;
+  onDeleteAccount?: (password: string) => Promise<void>;
   onSignOutOtherDevices?: () => Promise<void>;
   onSignOutEverywhere?: () => Promise<void>;
 } = {}) {
@@ -19,6 +20,7 @@ function renderProfile(overrides: {
     onToggleTheme: vi.fn(),
     onUploadAvatar: vi.fn().mockResolvedValue(undefined),
     onChangePassword: overrides.onChangePassword ?? vi.fn().mockResolvedValue(undefined),
+    onDeleteAccount: overrides.onDeleteAccount ?? vi.fn().mockResolvedValue(undefined),
     onSignOutOtherDevices: overrides.onSignOutOtherDevices ?? vi.fn().mockResolvedValue(undefined),
     onSignOutEverywhere: overrides.onSignOutEverywhere ?? vi.fn().mockResolvedValue(undefined),
     onLogout: vi.fn()
@@ -94,5 +96,31 @@ describe("Profile account security", () => {
     expect(onSignOutEverywhere).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Confirmar" }));
     expect(onSignOutEverywhere).toHaveBeenCalledTimes(1);
+  });
+
+  it("requires the current password and the ELIMINAR phrase before deleting the account", async () => {
+    const onDeleteAccount = vi.fn().mockResolvedValue(undefined);
+    renderProfile({ onDeleteAccount });
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Abrir configuracion" }));
+    await user.click(screen.getByRole("button", { name: "Cuenta y seguridad" }));
+    await user.click(screen.getByRole("button", { name: "Eliminar mi cuenta" }));
+
+    const deleteButton = screen.getByRole("button", { name: "Eliminar mi cuenta" });
+    expect(deleteButton).toBeDisabled();
+
+    await user.type(
+      screen.getByLabelText("Contraseña actual", { selector: "input" }),
+      "current-password"
+    );
+    await user.type(
+      screen.getByLabelText(/confirmaci/i, { selector: "input" }),
+      "eliminar"
+    );
+    expect(deleteButton).toBeEnabled();
+
+    await user.click(deleteButton);
+    expect(onDeleteAccount).toHaveBeenCalledWith("current-password");
   });
 });

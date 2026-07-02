@@ -226,6 +226,31 @@ export async function listTopicos(): Promise<TopicoCatalogItem[]> {
   });
 }
 
+export async function findUserAccountByAuthId(authId: string): Promise<{
+  authId: string;
+  email: string;
+  legajo: number;
+} | null> {
+  const account = await prisma.usuario.findUnique({
+    where: { auth_id: authId },
+    select: {
+      auth_id: true,
+      legajo: true,
+      authUser: {
+        select: { email: true }
+      }
+    }
+  });
+
+  if (!account?.authUser.email) return null;
+
+  return {
+    authId: account.auth_id,
+    email: account.authUser.email,
+    legajo: account.legajo
+  };
+}
+
 export async function listUsersForAdministration(): Promise<AdminUserListItem[]> {
   return prisma.usuario.findMany({
     select: {

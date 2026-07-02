@@ -19,12 +19,18 @@
 //     - 200 con el perfil serializado si todo esta bien
 
 import multer from "multer";
+import rateLimit from "express-rate-limit";
 import sharp from "sharp";
 import { type NextFunction, type Request, type Response, Router } from "express";
 import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { config } from "../../../core/config";
 import { verifyAccessToken } from "../../auth/infrastructure/access-token-verifier";
-import { findUserAuthIdByLegajo, findUserProfileByAuthId, listFacultades, listTopicos, listUsersForAdministration, updateUserAvatarUrl, updateUserRol } from "../data/users-repository";
+import {
+  DeleteOwnAccountError,
+  DeleteOwnAccountUseCase
+} from "../application/delete-own-account";
+import { findUserAccountByAuthId, findUserAuthIdByLegajo, findUserProfileByAuthId, listFacultades, listTopicos, listUsersForAdministration, updateUserAvatarUrl, updateUserRol } from "../data/users-repository";
 import { serializeUserProfile } from "./serialize-user-profile";
 
 const supabaseAdmin = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
@@ -35,6 +41,46 @@ const avatarFieldName = "avatar";
 const avatarBucketName = "profile-images";
 const maxAvatarSizeBytes = 2 * 1024 * 1024;
 const allowedAvatarMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const deleteOwnAccountSchema = z.object({
+  password: z.string().min(1),
+  confirmation: z.literal("ELIMINAR")
+});
+const deleteOwnAccountRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: {
+      code: "account_delete_rate_limited",
+      message: "Demasiados intentos. Intenta nuevamente en unos minutos."
+    }
+  }
+});
+
+const deleteOwnAccountUseCase = new DeleteOwnAccountUseCase({
+  findAccount: findUserAccountByAuthId,
+  async reauthenticate(authId, email, password) {
+    const authClient = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+    const { data, error } = await authClient.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password
+    });
+
+    return !error && data.user?.id === authId;
+  },
+  async deleteAuthUser(authId) {
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(authId);
+    return !error;
+  },
+  async removeAvatar(legajo) {
+    await supabaseAdmin.storage
+      .from(avatarBucketName)
+      .remove([`profiles/${legajo}/avatar.webp`]);
+  }
+});
 
 const avatarUpload = multer({
   storage: multer.memoryStorage(),
@@ -297,6 +343,57 @@ export function createUsersRouter(): Router {
 
       response.json({ user: serializeUserProfile(updatedUser) });
     } catch (error) {
+      next(error);
+    }
+  });
+
+  router.delete("/me", deleteOwnAccountRateLimit, async (request, response, next) => {
+    try {
+      const token = getBearerToken(request.headers.authorization);
+      if (!token) {
+        response.status(401).json({
+          error: { code: "unauthorized", message: "Se requiere autenticacion" }
+        });
+        return;
+      }
+
+      const verification = await verifyAccessToken(token);
+      if (!verification.ok) {
+        response.status(verification.status).json({ error: verification.error });
+        return;
+      }
+
+      const payload = deleteOwnAccountSchema.safeParse(request.body);
+      if (!payload.success) {
+        response.status(400).json({
+          error: {
+            code: "validation_error",
+            message: "Confirma la eliminacion e ingresa tu contraseña actual."
+          }
+        });
+        return;
+      }
+
+      await deleteOwnAccountUseCase.execute(
+        verification.authId,
+        payload.data.password
+      );
+      response.status(204).send();
+    } catch (error) {
+      if (error instanceof DeleteOwnAccountError) {
+        const status =
+          error.code === "profile_not_found"
+            ? 404
+            : error.code === "invalid_current_password"
+              ? 401
+              : 502;
+
+        response.status(status).json({
+          error: { code: error.code, message: error.message }
+        });
+        return;
+      }
+
       next(error);
     }
   });

@@ -22,18 +22,34 @@ const unexpectedSession = {
 function createProvider({
   user = pendingUser,
   session = null,
-  existingUser = null
+  existingUser = null,
+  existingEmailConfirmed = false,
+  signUpError = null
 }: {
   user?: User | null;
   session?: Session | null;
   existingUser?: { id: string } | null;
+  existingEmailConfirmed?: boolean;
+  signUpError?: { code: string } | null;
 } = {}) {
   const signUp = vi.fn().mockResolvedValue({
     data: { user, session },
-    error: null
+    error: signUpError
   });
   const deleteUser = vi.fn().mockResolvedValue({
     data: { user: null },
+    error: null
+  });
+  const getUserById = vi.fn().mockResolvedValue({
+    data: {
+      user: {
+        ...pendingUser,
+        id: existingUser?.id ?? pendingUser.id,
+        email_confirmed_at: existingEmailConfirmed
+          ? "2026-07-02T12:00:00.000Z"
+          : null
+      }
+    },
     error: null
   });
   const anonClient = {
@@ -45,13 +61,13 @@ function createProvider({
   } as unknown as ConstructorParameters<typeof SupabaseAuthProvider>[0];
   const adminClient = {
     auth: {
-      admin: { deleteUser }
+      admin: { deleteUser, getUserById }
     }
   } as unknown as ConstructorParameters<typeof SupabaseAuthProvider>[1];
   const lookup = vi.fn().mockResolvedValue(existingUser);
   const provider = new SupabaseAuthProvider(anonClient, adminClient, lookup);
 
-  return { provider, signUp, deleteUser, lookup };
+  return { provider, signUp, deleteUser, getUserById, lookup };
 }
 
 describe("SupabaseAuthProvider.createUser", () => {
@@ -85,7 +101,8 @@ describe("SupabaseAuthProvider.createUser", () => {
       provider.createUser("student@uade.edu.ar", "secure-password")
     ).resolves.toEqual({
       id: "new-user",
-      email: "student@uade.edu.ar"
+      email: "student@uade.edu.ar",
+      created: true
     });
     expect(deleteUser).not.toHaveBeenCalled();
   });
@@ -101,7 +118,7 @@ describe("SupabaseAuthProvider.createUser", () => {
     expect(deleteUser).toHaveBeenCalledWith("new-user");
   });
 
-  it("never deletes a preexisting user returned through signup obfuscation", async () => {
+  it("resumes a preexisting unconfirmed user returned through signup obfuscation", async () => {
     const obfuscatedUser = {
       ...pendingUser,
       id: "obfuscated-user",
@@ -114,7 +131,11 @@ describe("SupabaseAuthProvider.createUser", () => {
 
     await expect(
       provider.createUser("student@uade.edu.ar", "secure-password")
-    ).rejects.toBeInstanceOf(AuthProviderError);
+    ).resolves.toEqual({
+      id: "existing-user",
+      email: "student@uade.edu.ar",
+      created: false
+    });
     expect(deleteUser).not.toHaveBeenCalled();
   });
 
@@ -127,6 +148,34 @@ describe("SupabaseAuthProvider.createUser", () => {
     await expect(
       provider.createUser("student@uade.edu.ar", "secure-password")
     ).rejects.toBeInstanceOf(AuthProviderError);
+    expect(deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("rejects a preexisting confirmed user without resending or deleting it", async () => {
+    const { provider, signUp, deleteUser } = createProvider({
+      existingUser: { id: "existing-user" },
+      existingEmailConfirmed: true
+    });
+
+    await expect(
+      provider.createUser("student@uade.edu.ar", "secure-password")
+    ).rejects.toBeInstanceOf(AuthProviderError);
+    expect(signUp).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("still resumes an unconfirmed account when OTP resend is rate limited", async () => {
+    const { provider, deleteUser } = createProvider({
+      existingUser: { id: "existing-user" },
+      signUpError: { code: "over_email_send_rate_limit" }
+    });
+
+    await expect(
+      provider.createUser("student@uade.edu.ar", "secure-password")
+    ).resolves.toMatchObject({
+      id: "existing-user",
+      created: false
+    });
     expect(deleteUser).not.toHaveBeenCalled();
   });
 });

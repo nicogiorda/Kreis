@@ -1,5 +1,6 @@
 import {
   CertificateVerificationError,
+  ProfileCreationError,
   RegistrationEmailDomainError,
   RegistrationFinalizationError,
   RegistrationRollbackError
@@ -7,7 +8,10 @@ import {
 import type {
   ICertificateVerificationRepository
 } from "../domain/certificate-verification";
-import { normalizeCertificateVerificationIdentity } from "../domain/certificate-verification";
+import {
+  normalizeCertificateName,
+  normalizeCertificateVerificationIdentity
+} from "../domain/certificate-verification";
 import { isAllowedRegistrationEmail } from "../domain/registration-email";
 import type { AuthUser, IAuthProvider, IUserRepository, RegisterInput } from "../domain/auth.types";
 import {
@@ -28,6 +32,19 @@ const claimErrorMessages = {
   used: "La validacion del certificado ya fue utilizada.",
   mismatch: "Los datos no coinciden con la validacion del certificado."
 } as const;
+
+function profileMatchesRegistration(
+  profile: Awaited<ReturnType<IUserRepository["findProfile"]>>,
+  input: RegisterInput
+): boolean {
+  return Boolean(
+    profile &&
+    profile.legajo === input.legajo &&
+    profile.id_facultad === input.id_facultad &&
+    normalizeCertificateName(profile.nombre) === normalizeCertificateName(input.nombre) &&
+    normalizeCertificateName(profile.apellido) === normalizeCertificateName(input.apellido)
+  );
+}
 
 export class RegisterUseCase {
   private readonly allowedEmailDomains: ReadonlySet<string>;
@@ -81,16 +98,34 @@ export class RegisterUseCase {
     let profileCreated = false;
 
     try {
-      authUser = await this.authProvider.createUser(input.email, input.password);
+      const profileWithLegajo = await this.userRepository.findProfileByLegajo(
+        input.legajo
+      );
 
-      await this.userRepository.createProfile(authUser.id, {
-        legajo: input.legajo,
-        nombre: input.nombre,
-        apellido: input.apellido,
-        id_facultad: input.id_facultad,
-        topicos: input.topicos
-      });
-      profileCreated = true;
+      if (
+        profileWithLegajo &&
+        profileWithLegajo.email !== input.email.trim().toLowerCase()
+      ) {
+        throw new ProfileCreationError("El legajo ya pertenece a otra cuenta.");
+      }
+
+      authUser = await this.authProvider.createUser(input.email, input.password);
+      const existingProfile = await this.userRepository.findProfile(authUser.id);
+
+      if (existingProfile && !profileMatchesRegistration(existingProfile, input)) {
+        throw new ProfileCreationError("El perfil pendiente no coincide con el registro.");
+      }
+
+      if (!existingProfile) {
+        await this.userRepository.createProfile(authUser.id, {
+          legajo: input.legajo,
+          nombre: input.nombre,
+          apellido: input.apellido,
+          id_facultad: input.id_facultad,
+          topicos: input.topicos
+        });
+        profileCreated = true;
+      }
 
       const consumed = await this.verificationRepository.consume(
         tokenHash,
@@ -115,7 +150,7 @@ export class RegisterUseCase {
         rollbackResults.push(this.userRepository.deleteProfile(authUser.id));
       }
 
-      if (authUser) {
+      if (authUser?.created) {
         rollbackResults.push(this.authProvider.deleteUser(authUser.id));
       }
 

@@ -29,7 +29,7 @@ type AnonAuthClient = {
 };
 type AdminAuthClient = {
   auth: {
-    admin: Pick<typeof supabaseAdmin.auth.admin, "deleteUser">;
+    admin: Pick<typeof supabaseAdmin.auth.admin, "deleteUser" | "getUserById">;
   };
 };
 type ExistingAuthUserLookup = (email: string) => Promise<{ id: string } | null>;
@@ -51,13 +51,42 @@ export class SupabaseAuthProvider implements IAuthProvider {
   async createUser(email: string, password: string) {
     const normalizedEmail = email.trim().toLowerCase();
     const existingUser = await this.existingAuthUserLookup(normalizedEmail);
+
+    if (existingUser) {
+      const { data: existingData, error: existingUserError } =
+        await this.adminClient.auth.admin.getUserById(existingUser.id);
+
+      if (
+        existingUserError ||
+        !existingData.user ||
+        existingData.user.email_confirmed_at
+      ) {
+        throw new AuthProviderError("No pudimos completar el registro.");
+      }
+
+      const { data } = await this.anonClient.auth.signUp({
+        email: normalizedEmail,
+        password
+      });
+
+      if (data.session) {
+        throw new AuthProviderError("No pudimos completar el registro.");
+      }
+
+      return {
+        id: existingUser.id,
+        email: normalizedEmail,
+        created: false
+      };
+    }
+
     const { data, error } = await this.anonClient.auth.signUp({
       email: normalizedEmail,
       password
     });
 
     const returnedObfuscatedUser = data.user?.identities?.length === 0;
-    if (error || !data.user || existingUser || returnedObfuscatedUser) {
+    if (error || !data.user || returnedObfuscatedUser) {
       throw new AuthProviderError("No pudimos completar el registro.");
     }
 
@@ -75,7 +104,8 @@ export class SupabaseAuthProvider implements IAuthProvider {
 
     return {
       id: data.user.id,
-      email: data.user.email ?? normalizedEmail
+      email: data.user.email ?? normalizedEmail,
+      created: true
     };
   }
 

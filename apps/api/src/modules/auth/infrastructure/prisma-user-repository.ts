@@ -6,6 +6,54 @@ import { ProfileCreationError, ProfileDeletionError } from "../domain/auth-error
 import type { IUserRepository, RegisterProfileInput } from "../domain/auth.types";
 
 export class PrismaUserRepository implements IUserRepository {
+  async findProfileByLegajo(legajo: number) {
+    const profile = await prisma.usuario.findUnique({
+      where: { legajo },
+      select: {
+        auth_id: true,
+        legajo: true,
+        nombre: true,
+        apellido: true,
+        id_facultad: true,
+        authUser: {
+          select: { email: true }
+        }
+      }
+    });
+
+    return profile
+      ? {
+          authId: profile.auth_id,
+          email: profile.authUser.email?.trim().toLowerCase() ?? null,
+          legajo: profile.legajo,
+          nombre: profile.nombre,
+          apellido: profile.apellido,
+          id_facultad: Number(profile.id_facultad)
+        }
+      : null;
+  }
+
+  async findProfile(authId: string) {
+    const profile = await prisma.usuario.findUnique({
+      where: { auth_id: authId },
+      select: {
+        legajo: true,
+        nombre: true,
+        apellido: true,
+        id_facultad: true
+      }
+    });
+
+    return profile
+      ? {
+          legajo: profile.legajo,
+          nombre: profile.nombre,
+          apellido: profile.apellido,
+          id_facultad: Number(profile.id_facultad)
+        }
+      : null;
+  }
+
   async createProfile(authId: string, input: RegisterProfileInput): Promise<void> {
     try {
       // Usamos nested write en lugar de $transaction() interactivo.

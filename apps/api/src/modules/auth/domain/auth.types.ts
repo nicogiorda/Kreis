@@ -21,6 +21,22 @@ export type RegisterProfileInput = Pick<
   "legajo" | "nombre" | "apellido" | "id_facultad" | "topicos"
 >;
 
+export type ExistingRegisterProfile = Pick<
+  RegisterProfileInput,
+  "legajo" | "nombre" | "apellido" | "id_facultad"
+>;
+
+export type ExistingProfileByLegajo = ExistingRegisterProfile & {
+  authId: string;
+  email: string | null;
+};
+
+export type AuthUserCreation = {
+  id: string;
+  email: string | undefined;
+  created: boolean;
+};
+
 // Datos necesarios para autenticar un usuario existente.
 export type LoginInput = {
   email: string;
@@ -53,6 +69,8 @@ export type AuthSession = {
 export interface IUserRepository {
   // Crea el perfil de aplicación vinculado al auth_id generado por el proveedor externo.
   createProfile(authId: string, input: RegisterProfileInput): Promise<void>;
+  findProfile(authId: string): Promise<ExistingRegisterProfile | null>;
+  findProfileByLegajo(legajo: number): Promise<ExistingProfileByLegajo | null>;
   deleteProfile(authId: string): Promise<void>;
 }
 
@@ -61,7 +79,7 @@ export interface IUserRepository {
 // sin tocar los casos de uso — solo se cambia la implementación en infrastructure/.
 export interface IAuthProvider {
   // Crea un usuario en el sistema de auth externo y devuelve su id generado.
-  createUser(email: string, password: string): Promise<{ id: string; email: string | undefined }>;
+  createUser(email: string, password: string): Promise<AuthUserCreation>;
 
   // Autentica con email y contraseña y devuelve la sesión activa.
   signIn(email: string, password: string): Promise<AuthSession>;

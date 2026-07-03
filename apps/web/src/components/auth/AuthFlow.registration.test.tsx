@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiRequestError } from "../../api/auth";
@@ -20,7 +20,9 @@ const apiMock = vi.hoisted(() => ({
   classifyCertificate: vi.fn(),
   listFaculties: vi.fn(),
   listTopics: vi.fn(),
-  register: vi.fn()
+  register: vi.fn(),
+  startRegistrationEmailVerification: vi.fn(),
+  verifyRegistrationEmail: vi.fn()
 }));
 
 vi.mock("../../auth/useAuth", () => ({
@@ -44,7 +46,7 @@ const validCertificateResponse = {
   }
 };
 
-async function reachCertificateScreen() {
+async function reachSignupCodeScreen() {
   const user = userEvent.setup();
   render(<AuthFlow />);
 
@@ -67,6 +69,19 @@ async function reachCertificateScreen() {
   await user.type(screen.getByRole("textbox", { name: "Nombre y Apellido" }), "Ana Pérez");
   await user.type(screen.getByRole("textbox", { name: "Mail universitario" }), "ana");
   await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+  await screen.findByRole("textbox", { name: "Código de verificación" });
+  return user;
+}
+
+async function reachCertificateScreen() {
+  const user = await reachSignupCodeScreen();
+
+  await user.type(
+    screen.getByRole("textbox", { name: "Código de verificación" }),
+    "123456"
+  );
+  await user.click(screen.getByRole("button", { name: "Verificar correo" }));
 
   await user.type(screen.getByLabelText("Ingresa una contraseña"), "secure-password");
   await user.type(screen.getByLabelText("Repita la contraseña"), "secure-password");
@@ -100,6 +115,21 @@ async function returnToProfile(user: ReturnType<typeof userEvent.setup>): Promis
 
 async function advanceFromProfile(user: ReturnType<typeof userEvent.setup>): Promise<void> {
   await user.click(screen.getByRole("button", { name: "Continuar" }));
+  await waitFor(() => {
+    expect(
+      screen.queryByRole("textbox", { name: "Código de verificación" }) ??
+        screen.queryByLabelText("Ingresa una contraseña")
+    ).toBeInTheDocument();
+  });
+
+  const codeInput = screen.queryByRole("textbox", {
+    name: "Código de verificación"
+  });
+  if (codeInput) {
+    await user.type(codeInput, "123456");
+    await user.click(screen.getByRole("button", { name: "Verificar correo" }));
+  }
+
   await user.click(screen.getByRole("button", { name: "Continuar" }));
 }
 
@@ -116,8 +146,21 @@ describe("AuthFlow certificate verification", () => {
       { id_facultad: "5", nombre: "Ingeniería" }
     ]);
     apiMock.classifyCertificate.mockResolvedValue(validCertificateResponse);
+    apiMock.startRegistrationEmailVerification.mockResolvedValue({
+      status: "email_verification_sent",
+      email: "ana@uade.edu.ar",
+      expires_at: "2099-07-02T15:00:00.000Z"
+    });
+    apiMock.verifyRegistrationEmail.mockResolvedValue({
+      status: "email_verified",
+      email: "ana@uade.edu.ar",
+      verification: {
+        token: "opaque-email-verification-token",
+        expires_at: "2099-07-02T15:30:00.000Z"
+      }
+    });
     apiMock.register.mockResolvedValue({
-      status: "pending_email_verification",
+      status: "account_created",
       email: "ana@uade.edu.ar"
     });
     authMock.signIn.mockResolvedValue(undefined);
@@ -134,9 +177,11 @@ describe("AuthFlow certificate verification", () => {
       email: "ana@uade.edu.ar",
       legajo: 123456,
       nombre: "Ana",
-      apellido: "Pérez"
+      apellido: "Pérez",
+      email_verification_token: "opaque-email-verification-token"
     });
     expect(apiMock.register).toHaveBeenCalledWith(expect.objectContaining({
+      email_verification_token: "opaque-email-verification-token",
       certificate_verification_token: "opaque-verification-token"
     }));
   }, 15_000);
@@ -164,6 +209,8 @@ describe("AuthFlow certificate verification", () => {
     await submitCertificate();
 
     await waitFor(() => expect(apiMock.classifyCertificate).toHaveBeenCalledTimes(2));
+    expect(apiMock.startRegistrationEmailVerification).toHaveBeenCalledTimes(2);
+    expect(apiMock.verifyRegistrationEmail).toHaveBeenCalledTimes(2);
   });
 
   it.each([
@@ -233,31 +280,31 @@ describe("AuthFlow certificate verification", () => {
     expect(screen.getByRole("button", { name: "Validar" })).toBeDisabled();
   });
 
-  it("opens signup verification and does not sign in with the password", async () => {
-    await reachCertificateScreen();
-    await submitCertificate();
+  it("starts email verification immediately after profile", async () => {
+    await reachSignupCodeScreen();
 
-    expect(await screen.findByText("VERIFICÁ TU CORREO")).toBeInTheDocument();
+    expect(apiMock.startRegistrationEmailVerification).toHaveBeenCalledWith(
+      "ana@uade.edu.ar"
+    );
+    expect(screen.getByText("VERIFICÁ TU CORREO")).toBeInTheDocument();
     expect(screen.getByText(/ana@uade.edu.ar/)).toBeInTheDocument();
-    expect(authMock.signIn).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText("Ingresa una contraseña")).not.toBeInTheDocument();
   });
 
-  it("submits the complete signup code without persisting it", async () => {
+  it("verifies the early code without persisting it and advances to password", async () => {
     const storageSetSpy = vi.spyOn(Storage.prototype, "setItem");
-    await reachCertificateScreen();
-    await submitCertificate();
-
-    const user = userEvent.setup();
+    const user = await reachSignupCodeScreen();
     await user.type(
-      await screen.findByRole("textbox", { name: "Código de verificación" }),
+      screen.getByRole("textbox", { name: "Código de verificación" }),
       "12a34 56"
     );
     await user.click(screen.getByRole("button", { name: "Verificar correo" }));
 
-    expect(authMock.verifySignupCode).toHaveBeenCalledWith(
+    expect(apiMock.verifyRegistrationEmail).toHaveBeenCalledWith(
       "ana@uade.edu.ar",
       "123456"
     );
+    expect(await screen.findByLabelText("Ingresa una contraseña")).toBeInTheDocument();
     expect(storageSetSpy).not.toHaveBeenCalledWith(
       expect.stringMatching(/signup|otp|code/i),
       expect.anything()
@@ -265,49 +312,64 @@ describe("AuthFlow certificate verification", () => {
     storageSetSpy.mockRestore();
   });
 
-  it("shows an accessible error for an invalid signup code", async () => {
-    authMock.verifySignupCode.mockRejectedValueOnce({ code: "otp_expired" });
-    await reachCertificateScreen();
-    await submitCertificate();
-
-    const user = userEvent.setup();
+  it("shows an accessible error for an invalid early code", async () => {
+    apiMock.verifyRegistrationEmail.mockRejectedValueOnce(
+      new ApiRequestError("email_verification_invalid", "Invalid", 400)
+    );
+    const user = await reachSignupCodeScreen();
     await user.type(
-      await screen.findByRole("textbox", { name: "Código de verificación" }),
+      screen.getByRole("textbox", { name: "Código de verificación" }),
       "123456"
     );
     await user.click(screen.getByRole("button", { name: "Verificar correo" }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("código venció");
+    expect(await screen.findByRole("alert")).toHaveTextContent("no es válido");
   });
 
-  it("keeps signup resend disabled for sixty seconds", async () => {
-    await reachCertificateScreen();
-    vi.useFakeTimers();
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Validar" }));
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
+  it("starts with signup resend disabled for sixty seconds", async () => {
+    await reachSignupCodeScreen();
     const resendButton = screen.getByRole("button", { name: "Reenviar en 00:60" });
     expect(resendButton).toBeDisabled();
+    expect(apiMock.startRegistrationEmailVerification).toHaveBeenCalledTimes(1);
+  });
 
-    for (let second = 0; second < 60; second += 1) {
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(1_000);
-      });
-    }
+  it("signs in after final registration without requesting another code", async () => {
+    await reachCertificateScreen();
+    await submitCertificate();
 
-    const enabledResend = screen.getByRole("button", {
-      name: "¿No te llegó? Reenviar código"
+    await waitFor(() =>
+      expect(authMock.signIn).toHaveBeenCalledWith(
+        "ana@uade.edu.ar",
+        "secure-password"
+      )
+    );
+    expect(apiMock.verifyRegistrationEmail).toHaveBeenCalledTimes(1);
+    expect(authMock.verifySignupCode).not.toHaveBeenCalled();
+  });
+
+  it("returns to email verification when its token expires", async () => {
+    apiMock.verifyRegistrationEmail.mockResolvedValueOnce({
+      status: "email_verified",
+      email: "ana@uade.edu.ar",
+      verification: {
+        token: "expired-email-token",
+        expires_at: "2020-01-01T00:00:00.000Z"
+      }
     });
-    expect(enabledResend).toBeEnabled();
+    const user = await reachSignupCodeScreen();
 
-    await act(async () => {
-      fireEvent.click(enabledResend);
-    });
-    expect(authMock.resendSignupCode).toHaveBeenCalledWith("ana@uade.edu.ar");
-    vi.useRealTimers();
+    await user.type(
+      screen.getByRole("textbox", { name: "Código de verificación" }),
+      "123456"
+    );
+    await user.click(screen.getByRole("button", { name: "Verificar correo" }));
+    await user.type(screen.getByLabelText("Ingresa una contraseña"), "secure-password");
+    await user.type(screen.getByLabelText("Repita la contraseña"), "secure-password");
+    await user.click(screen.getByRole("button", { name: "Continuar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "verificación del correo venció"
+    );
+    expect(screen.getByRole("textbox", { name: "Código de verificación" })).toBeInTheDocument();
   });
 });

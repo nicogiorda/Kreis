@@ -28,9 +28,21 @@ describe("parseEnvironment Redis config", () => {
     expect(config.REDIS_URL).toBeUndefined();
   });
 
-  it("requires REDIS_URL in production", () => {
+  it("requires production security and email configuration", () => {
     expect(() => parseEnvironment(createBaseEnv({ NODE_ENV: "production" }))).toThrow(
       /REDIS_URL is required in production/
+    );
+
+    const productionBase = {
+      NODE_ENV: "production",
+      REDIS_URL: "rediss://default:password@host:6379",
+      RATE_LIMIT_KEY_SECRET: "a-secure-rate-limit-secret-with-32-characters",
+      RESEND_API_KEY: "re_test",
+      REGISTRATION_EMAIL_FROM: "Kreis <registro@example.com>"
+    };
+
+    expect(parseEnvironment(createBaseEnv(productionBase))).toMatchObject(
+      productionBase
     );
   });
 
@@ -56,5 +68,11 @@ describe("parseEnvironment Redis config", () => {
       expect(message).not.toContain(secret);
       expect(message).not.toContain("default:");
     }
+  });
+
+  it("requires rate-limit secrets to contain at least 32 characters", () => {
+    expect(() =>
+      parseEnvironment(createBaseEnv({ RATE_LIMIT_KEY_SECRET: "too-short" }))
+    ).toThrow(/RATE_LIMIT_KEY_SECRET/);
   });
 });

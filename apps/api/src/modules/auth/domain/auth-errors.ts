@@ -70,11 +70,29 @@ export class RegistrationEmailDomainError extends Error {
   }
 }
 
-export class EmailConfirmationNotEnabledError extends Error {
-  readonly code = "email_confirmation_not_enabled";
+export type RegistrationEmailVerificationErrorCode =
+  | "email_verification_required"
+  | "email_verification_invalid"
+  | "email_verification_expired"
+  | "email_verification_used"
+  | "email_verification_mismatch"
+  | "email_verification_attempts_exceeded";
+
+export class RegistrationEmailVerificationError extends Error {
+  constructor(
+    public readonly code: RegistrationEmailVerificationErrorCode,
+    message: string
+  ) {
+    super(message);
+    this.name = "RegistrationEmailVerificationError";
+  }
+}
+
+export class RegistrationEmailVerificationMailerError extends Error {
+  readonly code = "registration_email_delivery_failed";
 
   constructor() {
-    super("La confirmacion de correo no esta habilitada.");
-    this.name = "EmailConfirmationNotEnabledError";
+    super("No pudimos enviar el codigo de verificacion.");
+    this.name = "RegistrationEmailVerificationMailerError";
   }
 }

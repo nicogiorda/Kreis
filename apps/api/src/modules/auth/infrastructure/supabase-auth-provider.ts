@@ -1,10 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { config } from "../../../core/config";
 import { prisma } from "../../../core/database";
-import {
-  AuthProviderError,
-  EmailConfirmationNotEnabledError
-} from "../domain/auth-errors";
+import { AuthProviderError } from "../domain/auth-errors";
 import type { AuthSession, IAuthProvider } from "../domain/auth.types";
 
 const supabaseAdmin = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
@@ -24,12 +21,15 @@ const supabaseAnon = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY,
 type AnonAuthClient = {
   auth: Pick<
     typeof supabaseAnon.auth,
-    "signUp" | "signInWithPassword" | "refreshSession"
+    "signInWithPassword" | "refreshSession"
   >;
 };
 type AdminAuthClient = {
   auth: {
-    admin: Pick<typeof supabaseAdmin.auth.admin, "deleteUser" | "getUserById">;
+    admin: Pick<
+      typeof supabaseAdmin.auth.admin,
+      "createUser" | "deleteUser"
+    >;
   };
 };
 type ExistingAuthUserLookup = (email: string) => Promise<{ id: string } | null>;
@@ -53,43 +53,17 @@ export class SupabaseAuthProvider implements IAuthProvider {
     const existingUser = await this.existingAuthUserLookup(normalizedEmail);
 
     if (existingUser) {
-      const { data: existingData, error: existingUserError } =
-        await this.adminClient.auth.admin.getUserById(existingUser.id);
-
-      if (
-        existingUserError ||
-        !existingData.user ||
-        existingData.user.email_confirmed_at
-      ) {
-        throw new AuthProviderError("No pudimos completar el registro.");
-      }
-      return {
-        id: existingUser.id,
-        email: normalizedEmail,
-        created: false
-      };
-    }
-
-    const { data, error } = await this.anonClient.auth.signUp({
-      email: normalizedEmail,
-      password
-    });
-
-    const returnedObfuscatedUser = data.user?.identities?.length === 0;
-    if (error || !data.user || returnedObfuscatedUser) {
       throw new AuthProviderError("No pudimos completar el registro.");
     }
 
-    if (data.session) {
-      const { error: rollbackError } = await this.adminClient.auth.admin.deleteUser(
-        data.user.id
-      );
+    const { data, error } = await this.adminClient.auth.admin.createUser({
+      email: normalizedEmail,
+      password,
+      email_confirm: true
+    });
 
-      if (rollbackError) {
-        throw new AuthProviderError("No pudimos completar el registro.");
-      }
-
-      throw new EmailConfirmationNotEnabledError();
+    if (error || !data.user) {
+      throw new AuthProviderError("No pudimos completar el registro.");
     }
 
     return {

@@ -5,6 +5,7 @@ import {
   CertificateVerificationError,
   ProfileCreationError,
   RegistrationEmailDomainError,
+  RegistrationEmailVerificationError,
   RegistrationFinalizationError
 } from "../domain/auth-errors";
 import type {
@@ -16,6 +17,16 @@ import type {
 } from "../domain/certificate-verification";
 import { normalizeCertificateVerificationIdentity } from "../domain/certificate-verification";
 import type {
+  IRegistrationEmailVerificationRepository,
+  RegistrationEmailClaimResult,
+  RegistrationEmailTokenStatus,
+  RegistrationEmailVerificationRecord
+} from "../domain/registration-email-verification";
+import type {
+  FinalizeRegistrationVerificationsInput,
+  IRegistrationVerificationFinalizer
+} from "../domain/registration-verification-finalizer";
+import type {
   AuthSession,
   IAuthProvider,
   IUserRepository,
@@ -26,6 +37,9 @@ import {
   createCertificateVerificationToken,
   hashCertificateVerificationToken
 } from "../infrastructure/certificate-verification-token";
+import {
+  hashRegistrationEmailVerificationToken
+} from "../infrastructure/registration-email-verification-token";
 import { IssueCertificateVerificationUseCase } from "./issue-certificate-verification";
 import { RegisterUseCase } from "./register";
 
@@ -33,6 +47,14 @@ type VerificationRecord = CreateCertificateVerificationInput & {
   claimedAt: Date | null;
   consumedAt: Date | null;
 };
+
+type EmailVerificationRecord = RegistrationEmailVerificationRecord & {
+  verificationTokenHash: string;
+};
+
+const emailVerificationRawToken = "E".repeat(43);
+const emailVerificationTokenHash =
+  hashRegistrationEmailVerificationToken(emailVerificationRawToken);
 
 class InMemoryVerificationRepository implements ICertificateVerificationRepository {
   readonly records = new Map<string, VerificationRecord>();
@@ -86,6 +108,141 @@ class InMemoryVerificationRepository implements ICertificateVerificationReposito
   }
 
   async deleteStale(_input: CertificateVerificationCleanupInput): Promise<void> {}
+}
+
+class InMemoryEmailVerificationRepository
+implements IRegistrationEmailVerificationRepository {
+  readonly records = new Map<string, EmailVerificationRecord>();
+
+  constructor() {
+    this.seed("student@uade.edu.ar");
+  }
+
+  seed(
+    email: string,
+    expiresAt = new Date(now.getTime() + 30 * 60 * 1000)
+  ): void {
+    this.records.set(emailVerificationTokenHash, {
+      id: "email-verification-1",
+      email,
+      codeHash: "unused",
+      verificationTokenHash: emailVerificationTokenHash,
+      attempts: 0,
+      expiresAt,
+      verifiedAt: new Date(now),
+      claimedAt: null,
+      consumedAt: null
+    });
+  }
+
+  async replacePending(): Promise<string> {
+    throw new Error("Not used");
+  }
+
+  async invalidate(): Promise<void> {
+    throw new Error("Not used");
+  }
+
+  async findPending(): Promise<RegistrationEmailVerificationRecord | null> {
+    throw new Error("Not used");
+  }
+
+  async incrementAttempts(): Promise<number> {
+    throw new Error("Not used");
+  }
+
+  async markVerified(): Promise<boolean> {
+    throw new Error("Not used");
+  }
+
+  async inspectToken(input: {
+    email: string;
+    verificationTokenHash: string;
+    checkedAt: Date;
+  }): Promise<RegistrationEmailTokenStatus> {
+    const record = this.records.get(input.verificationTokenHash);
+
+    if (!record || !record.verifiedAt) return "invalid";
+    if (record.email !== input.email) return "mismatch";
+    if (record.consumedAt || record.claimedAt) return "used";
+    if (record.expiresAt <= input.checkedAt) return "expired";
+
+    return "valid";
+  }
+
+  async claim(input: {
+    email: string;
+    verificationTokenHash: string;
+    claimedAt: Date;
+  }): Promise<RegistrationEmailClaimResult> {
+    const record = this.records.get(input.verificationTokenHash);
+
+    if (!record || !record.verifiedAt) return { status: "invalid" };
+    if (record.email !== input.email) return { status: "mismatch" };
+    if (record.consumedAt || record.claimedAt) return { status: "used" };
+    if (record.expiresAt <= input.claimedAt) return { status: "expired" };
+
+    record.claimedAt = input.claimedAt;
+    return { status: "claimed", claimedAt: input.claimedAt };
+  }
+
+  async consume(
+    verificationTokenHash: string,
+    claimedAt: Date,
+    consumedAt: Date
+  ): Promise<boolean> {
+    const record = this.records.get(verificationTokenHash);
+
+    if (!record || record.claimedAt?.getTime() !== claimedAt.getTime()) {
+      return false;
+    }
+
+    record.consumedAt = consumedAt;
+    return true;
+  }
+
+  async release(
+    verificationTokenHash: string,
+    claimedAt: Date
+  ): Promise<void> {
+    const record = this.records.get(verificationTokenHash);
+
+    if (
+      record?.claimedAt?.getTime() === claimedAt.getTime() &&
+      !record.consumedAt
+    ) {
+      record.claimedAt = null;
+    }
+  }
+}
+
+class InMemoryVerificationFinalizer
+implements IRegistrationVerificationFinalizer {
+  consumeSucceeds = true;
+
+  constructor(
+    private readonly certificateRepository: InMemoryVerificationRepository,
+    private readonly emailRepository: InMemoryEmailVerificationRepository
+  ) {}
+
+  async consume(
+    input: FinalizeRegistrationVerificationsInput
+  ): Promise<boolean> {
+    if (!this.consumeSucceeds) return false;
+
+    const emailConsumed = await this.emailRepository.consume(
+      input.emailVerificationTokenHash,
+      input.emailClaimedAt,
+      input.consumedAt
+    );
+    const certificateConsumed = await this.certificateRepository.consume(
+      input.certificateVerificationTokenHash,
+      input.certificateClaimedAt,
+      input.consumedAt
+    );
+
+    return emailConsumed && certificateConsumed;
+  }
 }
 
 class FakeAuthProvider implements IAuthProvider {
@@ -171,6 +328,7 @@ function createRegisterInput(overrides: Partial<RegisterInput> = {}): RegisterIn
     nombre: "María José",
     apellido: "Pérez",
     topicos: [1, 2, 3],
+    email_verification_token: emailVerificationRawToken,
     certificate_verification_token: "",
     ...overrides
   };
@@ -193,21 +351,43 @@ async function seedVerification(
 
 function createHarness() {
   const verificationRepository = new InMemoryVerificationRepository();
+  const emailVerificationRepository =
+    new InMemoryEmailVerificationRepository();
+  const verificationFinalizer = new InMemoryVerificationFinalizer(
+    verificationRepository,
+    emailVerificationRepository
+  );
   const authProvider = new FakeAuthProvider();
   const userRepository = new FakeUserRepository();
   const useCase = new RegisterUseCase(
     authProvider,
     userRepository,
     verificationRepository,
+    emailVerificationRepository,
+    verificationFinalizer,
     { clock: () => new Date(now) }
   );
 
-  return { verificationRepository, authProvider, userRepository, useCase };
+  return {
+    verificationRepository,
+    emailVerificationRepository,
+    verificationFinalizer,
+    authProvider,
+    userRepository,
+    useCase
+  };
 }
 
 async function expectVerificationCode(
   promise: Promise<unknown>,
   code: CertificateVerificationError["code"]
+): Promise<void> {
+  await expect(promise).rejects.toMatchObject({ code });
+}
+
+async function expectEmailVerificationCode(
+  promise: Promise<unknown>,
+  code: RegistrationEmailVerificationError["code"]
 ): Promise<void> {
   await expect(promise).rejects.toMatchObject({ code });
 }
@@ -262,6 +442,50 @@ describe("IssueCertificateVerificationUseCase", () => {
 });
 
 describe("RegisterUseCase certificate verification", () => {
+  it("rejects registration without an email verification token", async () => {
+    const { useCase } = createHarness();
+
+    await expectEmailVerificationCode(
+      useCase.execute(
+        createRegisterInput({ email_verification_token: "" })
+      ),
+      "email_verification_required"
+    );
+  });
+
+  it("rejects an email verification token for a different email", async () => {
+    const { useCase } = createHarness();
+
+    await expectEmailVerificationCode(
+      useCase.execute(
+        createRegisterInput({
+          email: "other@uade.edu.ar",
+          certificate_verification_token:
+            createCertificateVerificationToken().rawToken
+        })
+      ),
+      "email_verification_mismatch"
+    );
+  });
+
+  it("rejects an expired email verification token", async () => {
+    const harness = createHarness();
+    harness.emailVerificationRepository.seed(
+      "student@uade.edu.ar",
+      new Date(now.getTime() - 1)
+    );
+
+    await expectEmailVerificationCode(
+      harness.useCase.execute(
+        createRegisterInput({
+          certificate_verification_token:
+            createCertificateVerificationToken().rawToken
+        })
+      ),
+      "email_verification_expired"
+    );
+  });
+
   it("rejects a disallowed email domain before claiming the token", async () => {
     const harness = createHarness();
     const token = await seedVerification(harness.verificationRepository);
@@ -317,6 +541,7 @@ describe("RegisterUseCase certificate verification", () => {
   it("rejects a different email", async () => {
     const harness = createHarness();
     const token = await seedVerification(harness.verificationRepository);
+    harness.emailVerificationRepository.seed("other@uade.edu.ar");
     await expectVerificationCode(
       harness.useCase.execute(createRegisterInput({
         email: "other@uade.edu.ar",
@@ -363,6 +588,11 @@ describe("RegisterUseCase certificate verification", () => {
 
     expect(user.email).toBe("student@uade.edu.ar");
     expect(harness.verificationRepository.records.get(token.tokenHash)?.consumedAt).toEqual(now);
+    expect(
+      harness.emailVerificationRepository.records.get(
+        emailVerificationTokenHash
+      )?.consumedAt
+    ).toEqual(now);
   });
 
   it("resumes a pending account with an existing matching profile", async () => {
@@ -397,6 +627,7 @@ describe("RegisterUseCase certificate verification", () => {
   it("rejects a legajo conflict before sending a signup email", async () => {
     const harness = createHarness();
     const input = createRegisterInput({ email: "other@uade.edu.ar" });
+    harness.emailVerificationRepository.seed(input.email);
     const token = await seedVerification(harness.verificationRepository, input);
     harness.userRepository.profiles.add("auth-1");
 
@@ -409,15 +640,15 @@ describe("RegisterUseCase certificate verification", () => {
     expect(harness.verificationRepository.records.get(token.tokenHash)?.claimedAt).toBeNull();
   });
 
-  it("rejects a second registration with the same token", async () => {
+  it("rejects a second registration with the same verification pair", async () => {
     const harness = createHarness();
     const token = await seedVerification(harness.verificationRepository);
     const input = createRegisterInput({ certificate_verification_token: token.rawToken });
 
     await harness.useCase.execute(input);
-    await expectVerificationCode(
+    await expectEmailVerificationCode(
       harness.useCase.execute(input),
-      "certificate_verification_used"
+      "email_verification_used"
     );
   });
 
@@ -444,6 +675,11 @@ describe("RegisterUseCase certificate verification", () => {
       certificate_verification_token: token.rawToken
     }))).rejects.toThrow("Supabase failed");
     expect(harness.verificationRepository.records.get(token.tokenHash)?.claimedAt).toBeNull();
+    expect(
+      harness.emailVerificationRepository.records.get(
+        emailVerificationTokenHash
+      )?.claimedAt
+    ).toBeNull();
   });
 
   it("deletes the Supabase user and releases the claim when profile creation fails", async () => {
@@ -462,7 +698,7 @@ describe("RegisterUseCase certificate verification", () => {
   it("removes the complete account and releases the claim when final consumption fails", async () => {
     const harness = createHarness();
     const token = await seedVerification(harness.verificationRepository);
-    harness.verificationRepository.consumeSucceeds = false;
+    harness.verificationFinalizer.consumeSucceeds = false;
 
     await expect(harness.useCase.execute(createRegisterInput({
       certificate_verification_token: token.rawToken

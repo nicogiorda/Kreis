@@ -6,6 +6,14 @@ import { getRedisClient, type RedisClient } from "./redis";
 type RateLimitStore = MemoryStore | RedisStore;
 
 export const certificateRateLimitPrefix = "rl:certificate:";
+export const registrationEmailStartIpRateLimitPrefix =
+  "rl:email-verification:start:ip:";
+export const registrationEmailStartEmailRateLimitPrefix =
+  "rl:email-verification:start:email:";
+export const registrationEmailVerifyIpRateLimitPrefix =
+  "rl:email-verification:verify:ip:";
+export const registrationEmailVerifyEmailRateLimitPrefix =
+  "rl:email-verification:verify:email:";
 
 let memoryStoreWarningLogged = false;
 

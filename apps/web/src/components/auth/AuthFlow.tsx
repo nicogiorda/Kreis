@@ -8,10 +8,18 @@ import {
   useRef,
   useState
 } from "react";
-import { ApiRequestError, classifyCertificate, listTopics, register } from "../../api/auth";
+import {
+  ApiRequestError,
+  classifyCertificate,
+  listTopics,
+  register,
+  startRegistrationEmailVerification,
+  verifyRegistrationEmail
+} from "../../api/auth";
 import type {
   CertificateClassificationResult,
   CertificateVerification,
+  RegistrationEmailVerification,
   TopicCatalogItem
 } from "../../api/auth";
 import onboardingEventsUrl from "../../assets/auth/onboarding-events.webp";
@@ -237,7 +245,18 @@ function getAuthErrorMessage(error: unknown): string {
     if (error.code === "profile_creation_failed") return "El legajo o el correo ya están asociados a otra cuenta.";
     if (error.code === "validation_error") return "Revisá los datos ingresados antes de continuar.";
     if (error.code === "invalid_email_domain") return "Usá el correo universitario de una institución habilitada.";
-    if (error.code === "email_confirmation_not_enabled") return "La verificación de correo no está disponible. Intentá más tarde.";
+    if (error.code === "registration_email_delivery_failed") return "No pudimos enviar el código. Intentá nuevamente.";
+    if (error.code === "email_verification_rate_limited") return "Hubo demasiados intentos. Esperá un momento.";
+    if (error.code === "email_verification_expired") return "La verificación del correo venció. Volvé a verificar tu mail.";
+    if (error.code === "email_verification_attempts_exceeded") return "Se alcanzó el máximo de intentos. Solicitá un código nuevo.";
+    if (
+      error.code === "email_verification_invalid" ||
+      error.code === "email_verification_required" ||
+      error.code === "email_verification_mismatch" ||
+      error.code === "email_verification_used"
+    ) {
+      return "Necesitamos verificar nuevamente tu correo para continuar.";
+    }
     if (error.code === "certificate_too_large") return "El certificado no puede superar los 5 MB.";
     if (error.code === "invalid_certificate_file") return "El certificado debe ser un PDF.";
     if (error.code === "document_ai_config_error" || error.code === "document_ai_request_failed") return "No pudimos validar el certificado en este momento.";
@@ -259,6 +278,17 @@ function isCertificateVerificationError(error: unknown): boolean {
     "certificate_verification_expired",
     "certificate_verification_used",
     "certificate_verification_mismatch"
+  ].includes(error.code);
+}
+
+function isEmailVerificationError(error: unknown): boolean {
+  return error instanceof ApiRequestError && [
+    "email_verification_required",
+    "email_verification_invalid",
+    "email_verification_expired",
+    "email_verification_used",
+    "email_verification_mismatch",
+    "email_verification_attempts_exceeded"
   ].includes(error.code);
 }
 
@@ -504,14 +534,18 @@ function InterestsScreen({
 
 function ProfileScreen({
   draft,
+  error,
   onBack,
   onChange,
-  onContinue
+  onContinue,
+  submitting
 }: {
   draft: SignupDraft;
+  error: string | null;
   onBack: () => void;
   onChange: (updates: Partial<SignupDraft>) => void;
   onContinue: () => void;
+  submitting: boolean;
 }) {
   const hasFullName = draft.fullName.trim().split(/\s+/).length >= 2;
   const hasEmailUser = /^[a-z0-9._%+-]+$/i.test(draft.emailUser.trim());
@@ -541,7 +575,10 @@ function ProfileScreen({
         suffix="@uade.edu.ar"
         onChange={(emailUser) => onChange({ emailUser: emailUser.replace(/@.*$/, "") })}
       />
-      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--profile auth-redesign-button--green-text" disabled={!hasFullName || !hasEmailUser} onClick={onContinue}>Continuar</PrimaryButton>
+      {error ? <p className="auth-redesign-error auth-redesign-error--profile" role="alert">{error}</p> : null}
+      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--profile auth-redesign-button--green-text" disabled={submitting || !hasFullName || !hasEmailUser} onClick={onContinue}>
+        {submitting ? <LoadingState label="Enviando código" variant="button" /> : "Continuar"}
+      </PrimaryButton>
     </AuthScreenFrame>
   );
 }
@@ -638,10 +675,12 @@ function CertificateScreen({
 }
 
 function LoginScreen({
+  notice,
   onBack,
   onForgotPassword,
   onEmailConfirmationRequired
 }: {
+  notice?: string | null;
   onBack: () => void;
   onForgotPassword: () => void;
   onEmailConfirmationRequired: (email: string) => void;
@@ -683,6 +722,7 @@ function LoginScreen({
       <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--login auth-redesign-button--green-text" disabled={submitting || !email.trim() || password.length < 8} onClick={() => void handleLogin()}>
         {submitting ? <LoadingState label="Ingresando" variant="button" /> : "Continuar"}
       </PrimaryButton>
+      {notice && !error ? <p className="auth-redesign-notice auth-redesign-notice--login" role="status">{notice}</p> : null}
       {error ? <p className="auth-redesign-error auth-redesign-error--login" role="alert">{error}</p> : null}
     </AuthScreenFrame>
   );
@@ -901,19 +941,24 @@ function ForgotCodeScreen({
 
 function SignupCodeScreen({
   email,
-  onBackToLogin
+  initialError = null,
+  onBack,
+  onResend,
+  onVerify
 }: {
   email: string;
-  onBackToLogin: () => void;
+  initialError?: string | null;
+  onBack: () => void;
+  onResend: () => Promise<void>;
+  onVerify: (code: string) => Promise<void>;
 }) {
-  const { resendSignupCode, verifySignupCode } = useAuth();
   const [code, setCode] = useState("");
   const [secondsUntilResend, setSecondsUntilResend] = useState(
     otpResendCooldownSeconds
   );
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
 
@@ -939,7 +984,7 @@ function SignupCodeScreen({
     setError(null);
 
     try {
-      await verifySignupCode(email, code);
+      await onVerify(code);
       setCode("");
     } catch (verificationError) {
       setError(getSignupCodeErrorMessage(verificationError));
@@ -954,7 +999,7 @@ function SignupCodeScreen({
     setError(null);
 
     try {
-      await resendSignupCode(email);
+      await onResend();
       setSecondsUntilResend(otpResendCooldownSeconds);
       setCode("");
       inputRef.current?.focus();
@@ -968,7 +1013,7 @@ function SignupCodeScreen({
   return (
     <AuthScreenFrame tone="green">
       <CharacterBackdrop src={signUpThreeUrl} top={470} />
-      <BackButton variant="login" onClick={onBackToLogin} />
+      <BackButton variant="login" onClick={onBack} />
       <BrandLogo variant="right-low" />
       <h1
         className="auth-redesign-title auth-redesign-title--recovery-code"
@@ -1174,9 +1219,16 @@ export function RecoveredPasswordFlow({ onCancelToLogin }: { onCancelToLogin: ()
 }
 
 export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" | "login" }) {
+  const { resendSignupCode, signIn, verifySignupCode } = useAuth();
   const [step, setStep] = useState<AuthStep>(initialStep);
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [pendingSignupEmail, setPendingSignupEmail] = useState("");
+  const [signupCodeContext, setSignupCodeContext] = useState<
+    "registration-email-verification" | "pending-signup-confirmation"
+  >("registration-email-verification");
+  const [signupCodeInitialError, setSignupCodeInitialError] =
+    useState<string | null>(null);
+  const [loginNotice, setLoginNotice] = useState<string | null>(null);
   const [draft, setDraft] = useState<SignupDraft>(emptySignupDraft);
   const [topics, setTopics] = useState<TopicCatalogItem[]>([]);
   const [topicsStatus, setTopicsStatus] = useState<CatalogStatus>("loading");
@@ -1187,6 +1239,8 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
   const [certificateFileName, setCertificateFileName] = useState<string | null>(null);
   const [certificateVerification, setCertificateVerification] =
     useState<CertificateVerification | null>(null);
+  const [emailVerification, setEmailVerification] =
+    useState<RegistrationEmailVerification | null>(null);
 
   useEffect(() => {
     function preventViewportScroll(event: Event): void {
@@ -1236,12 +1290,21 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
   }, [catalogReloadKey]);
 
   function updateDraft(updates: Partial<SignupDraft>): void {
-    const invalidatesVerification =
-      ("emailUser" in updates && updates.emailUser !== draft.emailUser) ||
+    const emailChanged =
+      "emailUser" in updates && updates.emailUser !== draft.emailUser;
+    const universityChanged =
+      "university" in updates && updates.university !== draft.university;
+    const invalidatesCertificateVerification =
+      emailChanged ||
+      universityChanged ||
       ("legajo" in updates && updates.legajo !== draft.legajo) ||
       ("fullName" in updates && updates.fullName !== draft.fullName);
 
-    if (invalidatesVerification) setCertificateVerification(null);
+    if (emailChanged || universityChanged) {
+      setEmailVerification(null);
+      setPendingSignupEmail("");
+    }
+    if (invalidatesCertificateVerification) setCertificateVerification(null);
     setDraft((current) => ({ ...current, ...updates }));
   }
 
@@ -1252,6 +1315,76 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
     setSubmissionError(null);
   }
 
+  async function handleProfileContinue(): Promise<void> {
+    const email = getSignupEmail(draft);
+
+    if (
+      emailVerification &&
+      Date.parse(emailVerification.expires_at) > Date.now()
+    ) {
+      setSubmissionError(null);
+      setStep("password");
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmissionError(null);
+
+    try {
+      const result = await startRegistrationEmailVerification(email);
+      setEmailVerification(null);
+      setPendingSignupEmail(result.email);
+      setSignupCodeContext("registration-email-verification");
+      setSignupCodeInitialError(null);
+      setStep("signup-code");
+    } catch (requestError) {
+      setSubmissionError(getAuthErrorMessage(requestError));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleRegistrationEmailCode(
+    code: string
+  ): Promise<void> {
+    const result = await verifyRegistrationEmail(
+      pendingSignupEmail,
+      code
+    );
+
+    setEmailVerification(result.verification);
+    setSignupCodeInitialError(null);
+    setSubmissionError(null);
+    setStep("password");
+  }
+
+  async function resendRegistrationEmailCode(): Promise<void> {
+    const result = await startRegistrationEmailVerification(
+      pendingSignupEmail
+    );
+
+    setEmailVerification(null);
+    setPendingSignupEmail(result.email);
+  }
+
+  function handlePasswordContinue(): void {
+    if (
+      !emailVerification ||
+      Date.parse(emailVerification.expires_at) <= Date.now()
+    ) {
+      setEmailVerification(null);
+      setSignupCodeContext("registration-email-verification");
+      setSignupCodeInitialError(
+        "La verificación del correo venció. Volvé a verificar tu mail."
+      );
+      setStep("signup-code");
+      return;
+    }
+
+    setSubmissionError(null);
+    setStep("certificate");
+  }
+
   async function handleSignup(certificateFile: File): Promise<void> {
     setSubmitting(true);
     setSubmissionError(null);
@@ -1259,6 +1392,21 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
     try {
       const profile = getDraftProfile(draft);
       const email = getSignupEmail(draft);
+      const emailToken = emailVerification;
+
+      if (
+        !emailToken ||
+        Date.parse(emailToken.expires_at) <= Date.now()
+      ) {
+        setEmailVerification(null);
+        setSignupCodeContext("registration-email-verification");
+        setSignupCodeInitialError(
+          "La verificación del correo venció. Volvé a verificar tu mail."
+        );
+        setStep("signup-code");
+        return;
+      }
+
       let verification = certificateVerification;
 
       if (!verification) {
@@ -1266,7 +1414,8 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
           email,
           legajo: Number(draft.legajo),
           nombre: profile.nombre,
-          apellido: profile.apellido
+          apellido: profile.apellido,
+          email_verification_token: emailToken.token
         });
 
         if (!classification.certificate.valid) {
@@ -1299,16 +1448,33 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
         nombre: profile.nombre,
         apellido: profile.apellido,
         topicos: draft.topicIds.map(Number),
+        email_verification_token: emailToken.token,
         certificate_verification_token: verification.token
       });
 
+      const password = draft.password;
       setCertificateVerification(null);
+      setEmailVerification(null);
       setCertificateFile(null);
       setCertificateFileName(null);
       setDraft(emptySignupDraft);
-      setPendingSignupEmail(registration.email);
-      setStep("signup-code");
+
+      try {
+        await signIn(registration.email, password);
+      } catch {
+        setPendingSignupEmail("");
+        setLoginNotice("Cuenta creada. Ya podés iniciar sesión.");
+        setStep("login");
+      }
     } catch (requestError) {
+      if (isEmailVerificationError(requestError)) {
+        setEmailVerification(null);
+        setSignupCodeContext("registration-email-verification");
+        setSignupCodeInitialError(getAuthErrorMessage(requestError));
+        setStep("signup-code");
+        return;
+      }
+
       if (isCertificateVerificationError(requestError)) {
         setCertificateVerification(null);
         setCertificateFile(null);
@@ -1324,13 +1490,35 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
 
   return (
     <AuthShell>
-      {step === "welcome" && <WelcomeScreen onBegin={() => setStep("events")} onLogin={() => setStep("login")} />}
+      {step === "welcome" && <WelcomeScreen onBegin={() => setStep("events")} onLogin={() => {
+        setLoginNotice(null);
+        setStep("login");
+      }} />}
       {step === "events" && <OnboardingEventsScreen onBack={() => setStep("welcome")} onContinue={() => setStep("communities")} />}
       {step === "communities" && <OnboardingCommunitiesScreen onBack={() => setStep("events")} onContinue={() => setStep("university")} />}
       {step === "university" && <UniversityScreen draft={draft} onBack={() => setStep("communities")} onChange={updateDraft} onContinue={() => setStep("interests")} />}
       {step === "interests" && <InterestsScreen draft={draft} topics={topics} status={topicsStatus} onBack={() => setStep("university")} onChange={updateDraft} onContinue={() => setStep("profile")} onRetry={() => setCatalogReloadKey((current) => current + 1)} />}
-      {step === "profile" && <ProfileScreen draft={draft} onBack={() => setStep("interests")} onChange={updateDraft} onContinue={() => setStep("password")} />}
-      {step === "password" && <PasswordScreen draft={draft} onBack={() => setStep("profile")} onChange={updateDraft} onContinue={() => setStep("certificate")} />}
+      {step === "profile" && (
+        <ProfileScreen
+          draft={draft}
+          error={submissionError}
+          submitting={submitting}
+          onBack={() => setStep("interests")}
+          onChange={updateDraft}
+          onContinue={() => void handleProfileContinue()}
+        />
+      )}
+      {step === "password" && (
+        <PasswordScreen
+          draft={draft}
+          onBack={() => {
+            setSubmissionError(null);
+            setStep("profile");
+          }}
+          onChange={updateDraft}
+          onContinue={handlePasswordContinue}
+        />
+      )}
       {step === "certificate" && (
         <CertificateScreen
           error={submissionError}
@@ -1348,10 +1536,13 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
       )}
       {step === "login" && (
         <LoginScreen
+          notice={loginNotice}
           onBack={() => setStep("welcome")}
           onForgotPassword={() => setStep("forgot-email")}
           onEmailConfirmationRequired={(email) => {
             setPendingSignupEmail(email);
+            setSignupCodeContext("pending-signup-confirmation");
+            setSignupCodeInitialError(null);
             setStep("signup-code");
           }}
         />
@@ -1359,10 +1550,28 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
       {step === "signup-code" && (
         <SignupCodeScreen
           email={pendingSignupEmail}
-          onBackToLogin={() => {
+          initialError={signupCodeInitialError}
+          onBack={() => {
+            setSignupCodeInitialError(null);
+
+            if (signupCodeContext === "registration-email-verification") {
+              setStep("profile");
+              return;
+            }
+
             setPendingSignupEmail("");
             setStep("login");
           }}
+          onResend={
+            signupCodeContext === "registration-email-verification"
+              ? resendRegistrationEmailCode
+              : () => resendSignupCode(pendingSignupEmail)
+          }
+          onVerify={
+            signupCodeContext === "registration-email-verification"
+              ? handleRegistrationEmailCode
+              : (code) => verifySignupCode(pendingSignupEmail, code)
+          }
         />
       )}
       {step === "forgot-email" && (

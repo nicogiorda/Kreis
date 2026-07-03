@@ -2,6 +2,7 @@ import {
   CertificateVerificationError,
   ProfileCreationError,
   RegistrationEmailDomainError,
+  RegistrationEmailVerificationError,
   RegistrationFinalizationError,
   RegistrationRollbackError
 } from "../domain/auth-errors";
@@ -13,11 +14,21 @@ import {
   normalizeCertificateVerificationIdentity
 } from "../domain/certificate-verification";
 import { isAllowedRegistrationEmail } from "../domain/registration-email";
+import type {
+  IRegistrationEmailVerificationRepository
+} from "../domain/registration-email-verification";
+import type {
+  IRegistrationVerificationFinalizer
+} from "../domain/registration-verification-finalizer";
 import type { AuthUser, IAuthProvider, IUserRepository, RegisterInput } from "../domain/auth.types";
 import {
   hashCertificateVerificationToken,
   isCertificateVerificationTokenValid
 } from "../infrastructure/certificate-verification-token";
+import {
+  hashRegistrationEmailVerificationToken,
+  isRegistrationEmailVerificationTokenValid
+} from "../infrastructure/registration-email-verification-token";
 
 type Clock = () => Date;
 
@@ -31,6 +42,13 @@ const claimErrorMessages = {
   expired: "La validacion del certificado vencio. Volve a cargarlo para continuar.",
   used: "La validacion del certificado ya fue utilizada.",
   mismatch: "Los datos no coinciden con la validacion del certificado."
+} as const;
+
+const emailClaimErrorMessages = {
+  invalid: "La verificacion del correo no es valida.",
+  expired: "La verificacion del correo vencio. Volve a verificar tu mail.",
+  used: "La verificacion del correo ya fue utilizada.",
+  mismatch: "La verificacion no corresponde al correo ingresado."
 } as const;
 
 function profileMatchesRegistration(
@@ -55,6 +73,10 @@ export class RegisterUseCase {
     private readonly authProvider: IAuthProvider,
     private readonly userRepository: IUserRepository,
     private readonly verificationRepository: ICertificateVerificationRepository,
+    private readonly emailVerificationRepository:
+      IRegistrationEmailVerificationRepository,
+    private readonly verificationFinalizer:
+      IRegistrationVerificationFinalizer,
     options: RegisterOptions = {}
   ) {
     this.allowedEmailDomains = options.allowedEmailDomains ?? new Set(["uade.edu.ar"]);
@@ -67,6 +89,21 @@ export class RegisterUseCase {
     }
 
     const rawToken = input.certificate_verification_token;
+    const rawEmailToken = input.email_verification_token;
+
+    if (!rawEmailToken) {
+      throw new RegistrationEmailVerificationError(
+        "email_verification_required",
+        "La verificacion del correo es obligatoria."
+      );
+    }
+
+    if (!isRegistrationEmailVerificationTokenValid(rawEmailToken)) {
+      throw new RegistrationEmailVerificationError(
+        "email_verification_invalid",
+        emailClaimErrorMessages.invalid
+      );
+    }
 
     if (!rawToken) {
       throw new CertificateVerificationError(
@@ -83,22 +120,43 @@ export class RegisterUseCase {
     }
 
     const tokenHash = hashCertificateVerificationToken(rawToken);
+    const emailTokenHash =
+      hashRegistrationEmailVerificationToken(rawEmailToken);
     const claimedAt = this.clock();
-    const claim = await this.verificationRepository.claim({
-      ...normalizeCertificateVerificationIdentity(input),
-      tokenHash,
+    const emailClaim = await this.emailVerificationRepository.claim({
+      email: input.email.trim().toLowerCase(),
+      verificationTokenHash: emailTokenHash,
       claimedAt
     });
 
-    if (claim.status !== "claimed") {
-      const code = `certificate_verification_${claim.status}` as const;
-      throw new CertificateVerificationError(code, claimErrorMessages[claim.status]);
+    if (emailClaim.status !== "claimed") {
+      const code = `email_verification_${emailClaim.status}` as const;
+      throw new RegistrationEmailVerificationError(
+        code,
+        emailClaimErrorMessages[emailClaim.status]
+      );
     }
 
     let authUser: Awaited<ReturnType<IAuthProvider["createUser"]>> | null = null;
     let profileCreated = false;
+    let certificateClaimedAt: Date | null = null;
 
     try {
+      const claim = await this.verificationRepository.claim({
+        ...normalizeCertificateVerificationIdentity(input),
+        tokenHash,
+        claimedAt
+      });
+
+      if (claim.status !== "claimed") {
+        const code = `certificate_verification_${claim.status}` as const;
+        throw new CertificateVerificationError(
+          code,
+          claimErrorMessages[claim.status]
+        );
+      }
+      certificateClaimedAt = claim.claimedAt;
+
       const profileWithLegajo = await this.userRepository.findProfileByLegajo(
         input.legajo
       );
@@ -113,7 +171,10 @@ export class RegisterUseCase {
       authUser = await this.authProvider.createUser(input.email, input.password);
       const existingProfile = await this.userRepository.findProfile(authUser.id);
 
-      if (existingProfile && !profileMatchesRegistration(existingProfile, input, claim.idFacultad)) {
+      if (
+        existingProfile &&
+        !profileMatchesRegistration(existingProfile, input, claim.idFacultad)
+      ) {
         throw new ProfileCreationError("El perfil pendiente no coincide con el registro.");
       }
 
@@ -128,11 +189,13 @@ export class RegisterUseCase {
         profileCreated = true;
       }
 
-      const consumed = await this.verificationRepository.consume(
-        tokenHash,
-        claim.claimedAt,
-        this.clock()
-      );
+      const consumed = await this.verificationFinalizer.consume({
+        emailVerificationTokenHash: emailTokenHash,
+        emailClaimedAt: emailClaim.claimedAt,
+        certificateVerificationTokenHash: tokenHash,
+        certificateClaimedAt: claim.claimedAt,
+        consumedAt: this.clock()
+      });
 
       if (!consumed) throw new RegistrationFinalizationError();
 
@@ -156,8 +219,20 @@ export class RegisterUseCase {
       }
 
       rollbackResults.push(
-        this.verificationRepository.release(tokenHash, claim.claimedAt)
+        this.emailVerificationRepository.release(
+          emailTokenHash,
+          emailClaim.claimedAt
+        )
       );
+
+      if (certificateClaimedAt) {
+        rollbackResults.push(
+          this.verificationRepository.release(
+            tokenHash,
+            certificateClaimedAt
+          )
+        );
+      }
 
       const results = await Promise.allSettled(rollbackResults);
       if (results.some((result) => result.status === "rejected")) {

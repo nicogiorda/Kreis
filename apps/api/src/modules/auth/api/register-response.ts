@@ -1,13 +1,13 @@
-export type PendingEmailVerificationResponse = {
-  status: "pending_email_verification";
+export type AccountCreatedResponse = {
+  status: "account_created";
   email: string;
 };
 
-export function createPendingEmailVerificationResponse(
+export function createAccountCreatedResponse(
   email: string
-): PendingEmailVerificationResponse {
+): AccountCreatedResponse {
   return {
-    status: "pending_email_verification",
+    status: "account_created",
     email: email.trim().toLowerCase()
   };
 }

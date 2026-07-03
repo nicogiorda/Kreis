@@ -12,6 +12,7 @@ export type RegisterInput = {
   nombre: string;
   apellido: string;
   topicos: number[];
+  email_verification_token: string;
   certificate_verification_token: string;
 };
 

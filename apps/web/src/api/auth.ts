@@ -75,11 +75,29 @@ export type CertificateValidationInput = {
   legajo: number;
   nombre: string;
   apellido: string;
+  email_verification_token: string;
 };
 
 export type CertificateVerification = {
   token: string;
   expires_at: string;
+};
+
+export type RegistrationEmailVerification = {
+  token: string;
+  expires_at: string;
+};
+
+export type StartRegistrationEmailVerificationResponse = {
+  status: "email_verification_sent";
+  email: string;
+  expires_at: string;
+};
+
+export type VerifyRegistrationEmailResponse = {
+  status: "email_verified";
+  email: string;
+  verification: RegistrationEmailVerification;
 };
 
 export type CertificateResolvedFaculty = {
@@ -102,11 +120,12 @@ export type RegisterInput = {
   nombre: string;
   apellido: string;
   topicos: number[];
+  email_verification_token: string;
   certificate_verification_token: string;
 };
 
 export type RegisterResponse = {
-  status: "pending_email_verification";
+  status: "account_created";
   email: string;
 };
 
@@ -130,10 +149,39 @@ export async function classifyCertificate(
   formData.append("legajo", String(input.legajo));
   formData.append("nombre", input.nombre);
   formData.append("apellido", input.apellido);
+  formData.append(
+    "email_verification_token",
+    input.email_verification_token
+  );
 
   return requestFormData<CertificateClassificationResponse>(
     "/api/v1/auth/certificate/classify",
     formData
+  );
+}
+
+export async function startRegistrationEmailVerification(
+  email: string
+): Promise<StartRegistrationEmailVerificationResponse> {
+  return requestJson<StartRegistrationEmailVerificationResponse>(
+    "/api/v1/auth/email-verification/start",
+    {
+      method: "POST",
+      body: JSON.stringify({ email })
+    }
+  );
+}
+
+export async function verifyRegistrationEmail(
+  email: string,
+  code: string
+): Promise<VerifyRegistrationEmailResponse> {
+  return requestJson<VerifyRegistrationEmailResponse>(
+    "/api/v1/auth/email-verification/verify",
+    {
+      method: "POST",
+      body: JSON.stringify({ email, code })
+    }
   );
 }
 

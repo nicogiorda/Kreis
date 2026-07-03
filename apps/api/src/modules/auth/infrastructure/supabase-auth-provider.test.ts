@@ -1,101 +1,61 @@
 // @vitest-environment node
 
-import type { Session, User } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 import { describe, expect, it, vi } from "vitest";
-import {
-  AuthProviderError,
-  EmailConfirmationNotEnabledError
-} from "../domain/auth-errors";
+import { AuthProviderError } from "../domain/auth-errors";
 import { SupabaseAuthProvider } from "./supabase-auth-provider";
 
-const pendingUser = {
+const confirmedUser = {
   id: "new-user",
   email: "student@uade.edu.ar",
-  identities: [{ id: "identity-1" }]
+  email_confirmed_at: "2026-07-03T12:00:00.000Z"
 } as unknown as User;
 
-const unexpectedSession = {
-  access_token: "access-token",
-  user: pendingUser
-} as Session;
-
 function createProvider({
-  user = pendingUser,
-  session = null,
+  user = confirmedUser,
   existingUser = null,
-  existingEmailConfirmed = false,
-  signUpError = null
+  createError = null
 }: {
   user?: User | null;
-  session?: Session | null;
   existingUser?: { id: string } | null;
-  existingEmailConfirmed?: boolean;
-  signUpError?: { code: string } | null;
+  createError?: { message: string } | null;
 } = {}) {
-  const signUp = vi.fn().mockResolvedValue({
-    data: { user, session },
-    error: signUpError
+  const createUser = vi.fn().mockResolvedValue({
+    data: { user },
+    error: createError
   });
   const deleteUser = vi.fn().mockResolvedValue({
     data: { user: null },
     error: null
   });
-  const getUserById = vi.fn().mockResolvedValue({
-    data: {
-      user: {
-        ...pendingUser,
-        id: existingUser?.id ?? pendingUser.id,
-        email_confirmed_at: existingEmailConfirmed
-          ? "2026-07-02T12:00:00.000Z"
-          : null
-      }
-    },
-    error: null
-  });
   const anonClient = {
     auth: {
-      signUp,
       signInWithPassword: vi.fn(),
       refreshSession: vi.fn()
     }
   } as unknown as ConstructorParameters<typeof SupabaseAuthProvider>[0];
   const adminClient = {
     auth: {
-      admin: { deleteUser, getUserById }
+      admin: {
+        createUser,
+        deleteUser
+      }
     }
   } as unknown as ConstructorParameters<typeof SupabaseAuthProvider>[1];
   const lookup = vi.fn().mockResolvedValue(existingUser);
   const provider = new SupabaseAuthProvider(anonClient, adminClient, lookup);
 
-  return { provider, signUp, deleteUser, getUserById, lookup };
+  return {
+    provider,
+    createUser,
+    deleteUser,
+    lookup
+  };
 }
 
 describe("SupabaseAuthProvider.createUser", () => {
-  it("uses signUp instead of the admin create-user API for new users", async () => {
-    const { provider, signUp } = createProvider();
-
-    await provider.createUser("student@uade.edu.ar", "secure-password");
-
-    expect(signUp).toHaveBeenCalledTimes(1);
-    expect(signUp).toHaveBeenCalledWith({
-      email: "student@uade.edu.ar",
-      password: "secure-password"
-    });
-  });
-
-  it("normalizes the signup email", async () => {
-    const { provider, signUp, lookup } = createProvider();
-
-    await provider.createUser(" Student@UADE.EDU.AR ", "secure-password");
-
-    expect(lookup).toHaveBeenCalledWith("student@uade.edu.ar");
-    expect(signUp).toHaveBeenCalledWith(expect.objectContaining({
-      email: "student@uade.edu.ar"
-    }));
-  });
-
-  it("accepts a pending signup only when it has a user and no session", async () => {
-    const { provider, deleteUser } = createProvider();
+  it("creates a confirmed user through the admin API", async () => {
+    const { provider, createUser } = createProvider();
 
     await expect(
       provider.createUser("student@uade.edu.ar", "secure-password")
@@ -104,62 +64,45 @@ describe("SupabaseAuthProvider.createUser", () => {
       email: "student@uade.edu.ar",
       created: true
     });
-    expect(deleteUser).not.toHaveBeenCalled();
-  });
-
-  it("rolls back a newly created user when signup returns a session", async () => {
-    const { provider, deleteUser } = createProvider({
-      session: unexpectedSession
+    expect(createUser).toHaveBeenCalledWith({
+      email: "student@uade.edu.ar",
+      password: "secure-password",
+      email_confirm: true
     });
-
-    await expect(
-      provider.createUser("student@uade.edu.ar", "secure-password")
-    ).rejects.toBeInstanceOf(EmailConfirmationNotEnabledError);
-    expect(deleteUser).toHaveBeenCalledWith("new-user");
   });
 
-  it("resumes a preexisting unconfirmed user without resending signup", async () => {
-    const { provider, signUp, deleteUser } = createProvider({
+  it("normalizes the email before lookup and creation", async () => {
+    const { provider, createUser, lookup } = createProvider();
+
+    await provider.createUser(" Student@UADE.EDU.AR ", "secure-password");
+
+    expect(lookup).toHaveBeenCalledWith("student@uade.edu.ar");
+    expect(createUser).toHaveBeenCalledWith(
+      expect.objectContaining({ email: "student@uade.edu.ar" })
+    );
+  });
+
+  it("rejects a preexisting user without mutating it", async () => {
+    const { provider, createUser } = createProvider({
       existingUser: { id: "existing-user" }
     });
 
     await expect(
       provider.createUser("student@uade.edu.ar", "secure-password")
-    ).resolves.toEqual({
-      id: "existing-user",
-      email: "student@uade.edu.ar",
-      created: false
-    });
-    expect(signUp).not.toHaveBeenCalled();
-    expect(deleteUser).not.toHaveBeenCalled();
-  });
-
-  it("rejects a preexisting confirmed user without resending or deleting it", async () => {
-    const { provider, signUp, deleteUser } = createProvider({
-      existingUser: { id: "existing-user" },
-      existingEmailConfirmed: true
-    });
-
-    await expect(
-      provider.createUser("student@uade.edu.ar", "secure-password")
     ).rejects.toBeInstanceOf(AuthProviderError);
-    expect(signUp).not.toHaveBeenCalled();
-    expect(deleteUser).not.toHaveBeenCalled();
+    expect(createUser).not.toHaveBeenCalled();
   });
 
-  it("does not resend signup for an unconfirmed account", async () => {
-    const { provider, signUp, deleteUser } = createProvider({
-      existingUser: { id: "existing-user" },
-      signUpError: { code: "over_email_send_rate_limit" }
+  it("rejects an admin creation failure", async () => {
+    const newProvider = createProvider({
+      createError: { message: "duplicate" }
     });
 
     await expect(
-      provider.createUser("student@uade.edu.ar", "secure-password")
-    ).resolves.toMatchObject({
-      id: "existing-user",
-      created: false
-    });
-    expect(signUp).not.toHaveBeenCalled();
-    expect(deleteUser).not.toHaveBeenCalled();
+      newProvider.provider.createUser(
+        "student@uade.edu.ar",
+        "secure-password"
+      )
+    ).rejects.toBeInstanceOf(AuthProviderError);
   });
 });

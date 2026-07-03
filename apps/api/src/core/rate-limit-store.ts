@@ -1,7 +1,7 @@
 import { MemoryStore } from "express-rate-limit";
 import { RedisStore, type RedisReply } from "rate-limit-redis";
 import { config } from "./config";
-import { getRedisClient, isRedisReady } from "./redis";
+import { getRedisClient, type RedisClient } from "./redis";
 
 type RateLimitStore = MemoryStore | RedisStore;
 
@@ -13,11 +13,11 @@ function logMemoryStoreFallback(prefix: string): void {
   if (memoryStoreWarningLogged) return;
 
   memoryStoreWarningLogged = true;
-  console.warn(`[rate-limit] using MemoryStore for ${prefix}; Redis is not ready in this environment`);
+  console.warn(`[rate-limit] using MemoryStore for ${prefix}; Redis is not configured for this environment`);
 }
 
-export function createRedisRateLimitStore(prefix: string): RedisStore {
-  const client = getRedisClient();
+export function createRedisRateLimitStore(prefix: string, redisClient?: RedisClient): RedisStore {
+  const client = redisClient ?? getRedisClient();
 
   if (!client) {
     throw new Error("Redis rate limit store requires a Redis client");
@@ -33,8 +33,10 @@ export function createRedisRateLimitStore(prefix: string): RedisStore {
 }
 
 export function createRateLimitStore(prefix: string): RateLimitStore {
-  if (isRedisReady()) {
-    return createRedisRateLimitStore(prefix);
+  const client = getRedisClient();
+
+  if (client) {
+    return createRedisRateLimitStore(prefix, client);
   }
 
   if (config.NODE_ENV === "production") {

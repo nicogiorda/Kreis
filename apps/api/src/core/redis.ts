@@ -3,7 +3,7 @@ import { config } from "./config";
 
 export type RedisHealthStatus = "ready" | "disabled" | "unavailable";
 
-type RedisClient = Redis;
+export type RedisClient = Redis;
 
 let redisClient: RedisClient | null = null;
 let redisReady = false;

@@ -63,16 +63,6 @@ export class SupabaseAuthProvider implements IAuthProvider {
       ) {
         throw new AuthProviderError("No pudimos completar el registro.");
       }
-
-      const { data } = await this.anonClient.auth.signUp({
-        email: normalizedEmail,
-        password
-      });
-
-      if (data.session) {
-        throw new AuthProviderError("No pudimos completar el registro.");
-      }
-
       return {
         id: existingUser.id,
         email: normalizedEmail,

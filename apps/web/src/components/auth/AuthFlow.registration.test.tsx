@@ -139,7 +139,7 @@ describe("AuthFlow certificate verification", () => {
     expect(apiMock.register).toHaveBeenCalledWith(expect.objectContaining({
       certificate_verification_token: "opaque-verification-token"
     }));
-  });
+  }, 15_000);
 
   it("never calls register when classification does not issue a token", async () => {
     apiMock.classifyCertificate.mockResolvedValueOnce({

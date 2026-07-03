@@ -71,7 +71,7 @@ function createProvider({
 }
 
 describe("SupabaseAuthProvider.createUser", () => {
-  it("uses signUp instead of the admin create-user API", async () => {
+  it("uses signUp instead of the admin create-user API for new users", async () => {
     const { provider, signUp } = createProvider();
 
     await provider.createUser("student@uade.edu.ar", "secure-password");
@@ -118,14 +118,8 @@ describe("SupabaseAuthProvider.createUser", () => {
     expect(deleteUser).toHaveBeenCalledWith("new-user");
   });
 
-  it("resumes a preexisting unconfirmed user returned through signup obfuscation", async () => {
-    const obfuscatedUser = {
-      ...pendingUser,
-      id: "obfuscated-user",
-      identities: []
-    } as unknown as User;
-    const { provider, deleteUser } = createProvider({
-      user: obfuscatedUser,
+  it("resumes a preexisting unconfirmed user without resending signup", async () => {
+    const { provider, signUp, deleteUser } = createProvider({
       existingUser: { id: "existing-user" }
     });
 
@@ -136,18 +130,7 @@ describe("SupabaseAuthProvider.createUser", () => {
       email: "student@uade.edu.ar",
       created: false
     });
-    expect(deleteUser).not.toHaveBeenCalled();
-  });
-
-  it("never rolls back a preexisting user even if signup returns a session", async () => {
-    const { provider, deleteUser } = createProvider({
-      session: unexpectedSession,
-      existingUser: { id: "existing-user" }
-    });
-
-    await expect(
-      provider.createUser("student@uade.edu.ar", "secure-password")
-    ).rejects.toBeInstanceOf(AuthProviderError);
+    expect(signUp).not.toHaveBeenCalled();
     expect(deleteUser).not.toHaveBeenCalled();
   });
 
@@ -164,8 +147,8 @@ describe("SupabaseAuthProvider.createUser", () => {
     expect(deleteUser).not.toHaveBeenCalled();
   });
 
-  it("still resumes an unconfirmed account when OTP resend is rate limited", async () => {
-    const { provider, deleteUser } = createProvider({
+  it("does not resend signup for an unconfirmed account", async () => {
+    const { provider, signUp, deleteUser } = createProvider({
       existingUser: { id: "existing-user" },
       signUpError: { code: "over_email_send_rate_limit" }
     });
@@ -176,6 +159,7 @@ describe("SupabaseAuthProvider.createUser", () => {
       id: "existing-user",
       created: false
     });
+    expect(signUp).not.toHaveBeenCalled();
     expect(deleteUser).not.toHaveBeenCalled();
   });
 });

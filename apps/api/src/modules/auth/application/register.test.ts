@@ -65,7 +65,7 @@ class InMemoryVerificationRepository implements ICertificateVerificationReposito
     }
 
     record.claimedAt = input.claimedAt;
-    return { status: "claimed", claimedAt: input.claimedAt };
+    return { status: "claimed", claimedAt: input.claimedAt, idFacultad: record.idFacultad };
   }
 
   async consume(tokenHash: string, claimedAt: Date, consumedAt: Date): Promise<boolean> {
@@ -170,7 +170,6 @@ function createRegisterInput(overrides: Partial<RegisterInput> = {}): RegisterIn
     legajo: 123456,
     nombre: "María José",
     apellido: "Pérez",
-    id_facultad: 5,
     topicos: [1, 2, 3],
     certificate_verification_token: "",
     ...overrides
@@ -186,6 +185,7 @@ async function seedVerification(
   await repository.create({
     ...normalizeCertificateVerificationIdentity(input),
     tokenHash: token.tokenHash,
+    idFacultad: 5,
     expiresAt
   });
   return token;
@@ -219,7 +219,7 @@ describe("IssueCertificateVerificationUseCase", () => {
       clock: () => new Date(now)
     });
 
-    const result = await useCase.execute(true, createRegisterInput());
+    const result = await useCase.execute(true, createRegisterInput(), { idFacultad: 5 });
 
     expect(result?.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(result?.expires_at).toBe("2026-07-02T15:15:00.000Z");
@@ -231,7 +231,7 @@ describe("IssueCertificateVerificationUseCase", () => {
       clock: () => new Date(now)
     });
 
-    await expect(useCase.execute(false, createRegisterInput())).resolves.toBeNull();
+    await expect(useCase.execute(false, createRegisterInput(), { idFacultad: 5 })).resolves.toBeNull();
     expect(repository.records.size).toBe(0);
   });
 
@@ -241,7 +241,7 @@ describe("IssueCertificateVerificationUseCase", () => {
       clock: () => new Date(now)
     });
 
-    const result = await useCase.execute(true, createRegisterInput());
+    const result = await useCase.execute(true, createRegisterInput(), { idFacultad: 5 });
     const storedHash = [...repository.records.keys()][0];
 
     expect(storedHash).toBe(hashCertificateVerificationToken(result!.token));
@@ -256,7 +256,7 @@ describe("IssueCertificateVerificationUseCase", () => {
 
     await expect(useCase.execute(true, createRegisterInput({
       email: "student@gmail.com"
-    }))).rejects.toBeInstanceOf(RegistrationEmailDomainError);
+    }), { idFacultad: 5 })).rejects.toBeInstanceOf(RegistrationEmailDomainError);
     expect(repository.records.size).toBe(0);
   });
 });

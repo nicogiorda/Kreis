@@ -1,4 +1,5 @@
 import type { Application, Request, Response } from "express";
+import { getRedisHealthStatus } from "../core/redis";
 import { createAuthRouter } from "../modules/auth/api/routes";
 import { createCommunitiesRouter } from "../modules/communities/api/routes";
 import { createDiscoveryRouter } from "../modules/discovery/api/routes";
@@ -29,6 +30,7 @@ export function registerRoutes(app: Application): void {
       status: "ok",
       service: "kreis-api",
       uptime: process.uptime(),
+      redis: getRedisHealthStatus(),
       timestamp: new Date().toISOString()
     });
   });

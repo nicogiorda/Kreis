@@ -59,10 +59,15 @@ async function startServer(): Promise<void> {
   try {
     await connectRedis();
   } catch {
-    console.error("[startup] Redis is unavailable; Kreis API did not start");
-    process.exitCode = 1;
+    if (config.NODE_ENV === "production") {
+      console.error("[startup] Redis is unavailable; Kreis API did not start");
+      process.exitCode = 1;
+      await disconnectRedis().catch(() => undefined);
+      return;
+    }
+
+    console.warn("[startup] Redis is unavailable; continuing without Redis in this environment");
     await disconnectRedis().catch(() => undefined);
-    return;
   }
 
   const app = createApp();

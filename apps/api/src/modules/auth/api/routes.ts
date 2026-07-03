@@ -1,8 +1,8 @@
 import multer from "multer";
-import rateLimit from "express-rate-limit";
 import { type NextFunction, type Request, type Response, Router } from "express";
 import { z } from "zod";
 import { config } from "../../../core/config";
+import { certificateRateLimit } from "./certificate-rate-limit";
 import { IssueCertificateVerificationUseCase } from "../application/issue-certificate-verification";
 import { LoginUseCase } from "../application/login";
 import { RefreshSessionUseCase } from "../application/refresh-session";
@@ -47,19 +47,6 @@ const registrationEmailSchema = z
     (email) => isAllowedRegistrationEmail(email, allowedRegistrationEmailDomains),
     emailDomainErrorMessage
   );
-
-const certificateRateLimit = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 3,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    error: {
-      code: "certificate_rate_limited",
-      message: "Demasiados intentos de validacion de certificado. Intenta nuevamente en unos minutos."
-    }
-  }
-});
 
 const certificateUpload = multer({
   storage: multer.memoryStorage(),

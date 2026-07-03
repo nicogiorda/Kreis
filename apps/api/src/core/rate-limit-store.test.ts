@@ -45,7 +45,7 @@ afterEach(() => {
 });
 
 describe("rate limit store", () => {
-  it("creates RedisStore in production when Redis is ready", async () => {
+  it("creates RedisStore in production when a Redis client exists", async () => {
     const redisClient = { call: vi.fn() };
     const { module, RedisStoreMock, getRedisClient } = await importRateLimitStore({
       nodeEnv: "production",
@@ -63,7 +63,7 @@ describe("rate limit store", () => {
     expect(store).toMatchObject({ prefix: "rl:certificate:" });
   });
 
-  it("uses MemoryStore in development when Redis is not ready", async () => {
+  it("uses MemoryStore in development when Redis is not configured", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const { module, RedisStoreMock } = await importRateLimitStore({
       nodeEnv: "development",
@@ -78,7 +78,7 @@ describe("rate limit store", () => {
     expect(JSON.stringify(warnSpy.mock.calls)).not.toContain("redis://");
   });
 
-  it("uses MemoryStore in test when Redis is not ready", async () => {
+  it("uses MemoryStore in test when Redis is not configured", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const { module, RedisStoreMock } = await importRateLimitStore({
       nodeEnv: "test",
@@ -91,12 +91,12 @@ describe("rate limit store", () => {
     expect(store.constructor.name).toBe("MemoryStore");
   });
 
-  it("throws safely in production when Redis is not ready", async () => {
+  it("throws safely in production when Redis is not configured", async () => {
     const secret = "super-secret-password";
     const { module } = await importRateLimitStore({
       nodeEnv: "production",
       redisReady: false,
-      redisClient: { call: vi.fn(async () => `redis://default:${secret}@host`) }
+      redisClient: null
     });
 
     expect(() => module.createRateLimitStore(module.certificateRateLimitPrefix)).toThrow(

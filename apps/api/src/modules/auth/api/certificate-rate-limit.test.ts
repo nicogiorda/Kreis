@@ -1,20 +1,31 @@
 // @vitest-environment node
 
 import express from "express";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  certificateRateLimitLimit,
-  certificateRateLimitMessage,
-  certificateRateLimitWindowMs,
-  createCertificateRateLimit
-} from "./certificate-rate-limit";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../../core/rate-limit-store", async () => {
+  const { MemoryStore } = await import("express-rate-limit");
+
+  return {
+    certificateRateLimitPrefix: "rl:certificate:",
+    createRateLimitStore: vi.fn(() => new MemoryStore())
+  };
+});
+
+type CertificateRateLimitModule = typeof import("./certificate-rate-limit");
+
+let certificateRateLimitModule: CertificateRateLimitModule;
 
 async function createTestServer() {
   const app = express();
   app.set("trust proxy", 1);
-  app.post("/certificate/classify", createCertificateRateLimit(), (_request, response) => {
-    response.json({ ok: true });
-  });
+  app.post(
+    "/certificate/classify",
+    certificateRateLimitModule.createCertificateRateLimit(),
+    (_request, response) => {
+      response.json({ ok: true });
+    }
+  );
 
   const server = app.listen(0);
   await new Promise<void>((resolve) => server.once("listening", resolve));
@@ -36,14 +47,19 @@ async function createTestServer() {
 }
 
 describe("certificate rate limit", () => {
+  beforeEach(async () => {
+    vi.resetModules();
+    certificateRateLimitModule = await import("./certificate-rate-limit");
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   it("keeps the expected certificate limiter options", () => {
-    expect(certificateRateLimitWindowMs).toBe(15 * 60 * 1000);
-    expect(certificateRateLimitLimit).toBe(3);
-    expect(certificateRateLimitMessage).toEqual({
+    expect(certificateRateLimitModule.certificateRateLimitWindowMs).toBe(15 * 60 * 1000);
+    expect(certificateRateLimitModule.certificateRateLimitLimit).toBe(3);
+    expect(certificateRateLimitModule.certificateRateLimitMessage).toEqual({
       error: {
         code: "certificate_rate_limited",
         message: "Demasiados intentos de validacion de certificado. Intenta nuevamente en unos minutos."
@@ -63,7 +79,9 @@ describe("certificate rate limit", () => {
 
       expect(responses.slice(0, 3).map((response) => response.status)).toEqual([200, 200, 200]);
       expect(responses[3].status).toBe(429);
-      await expect(responses[3].json()).resolves.toEqual(certificateRateLimitMessage);
+      await expect(responses[3].json()).resolves.toEqual(
+        certificateRateLimitModule.certificateRateLimitMessage
+      );
     } finally {
       await server.close();
     }

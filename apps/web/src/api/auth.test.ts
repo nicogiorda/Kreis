@@ -33,7 +33,10 @@ describe("registration auth API", () => {
       );
     vi.stubGlobal("fetch", fetchMock);
 
-    await startRegistrationEmailVerification("student@uade.edu.ar");
+    await startRegistrationEmailVerification(
+      "student@uade.edu.ar",
+      123456
+    );
     await verifyRegistrationEmail("student@uade.edu.ar", "123456");
 
     expect(fetchMock.mock.calls[0][0]).toContain(
@@ -41,7 +44,10 @@ describe("registration auth API", () => {
     );
     expect(fetchMock.mock.calls[0][1]).toMatchObject({
       method: "POST",
-      body: JSON.stringify({ email: "student@uade.edu.ar" })
+      body: JSON.stringify({
+        email: "student@uade.edu.ar",
+        legajo: 123456
+      })
     });
     expect(fetchMock.mock.calls[1][0]).toContain(
       "/api/v1/auth/email-verification/verify"

@@ -1,5 +1,6 @@
 import { type Request, Router } from "express";
 import { z } from "zod";
+import { reportCreationRateLimit } from "../../../core/write-rate-limits";
 import { verifyAccessToken } from "../../auth/infrastructure/access-token-verifier";
 import {
   actualizarEstadoReporte,
@@ -153,7 +154,7 @@ function normalizeMotivo(value: unknown): string | null {
 export function createReportsRouter(): Router {
   const router = Router();
 
-  router.post("/", async (request, response, next) => {
+  router.post("/", reportCreationRateLimit, async (request, response, next) => {
     try {
       const authenticatedUser = await authenticateReportUser(request);
 

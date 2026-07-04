@@ -14,6 +14,11 @@ export const registrationEmailVerifyIpRateLimitPrefix =
   "rl:email-verification:verify:ip:";
 export const registrationEmailVerifyEmailRateLimitPrefix =
   "rl:email-verification:verify:email:";
+export const postCreationRateLimitPrefix = "rl:posts:create:";
+export const commentCreationRateLimitPrefix = "rl:comments:create:";
+export const eventCreationRateLimitPrefix = "rl:events:create:";
+export const communityCreationRateLimitPrefix = "rl:communities:create:";
+export const reportCreationRateLimitPrefix = "rl:reports:create:";
 
 let memoryStoreWarningLogged = false;
 

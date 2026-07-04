@@ -1,5 +1,6 @@
 import { type Request, Router } from "express";
 import { z } from "zod";
+import { eventCreationRateLimit } from "../../../core/write-rate-limits";
 import { verifyAccessToken } from "../../auth/infrastructure/access-token-verifier";
 import {
   createPendingEvent,
@@ -220,7 +221,7 @@ export function createEventsRouter(): Router {
       next(error);
     }
   });
-  router.post("/", async (request, response, next) => {
+  router.post("/", eventCreationRateLimit, async (request, response, next) => {
     try {
       const authenticatedUser = await authenticateEventUser(request);
 

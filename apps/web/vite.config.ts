@@ -22,21 +22,6 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,png,svg,webp,woff,woff2}"],
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.pathname.startsWith("/api/"),
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "kreis-api-v1",
-              networkTimeoutSeconds: 5,
-              expiration: {
-                maxAgeSeconds: 60 * 5,
-                maxEntries: 80
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
             urlPattern: ({ request, url }) => request.destination === "image" && !url.pathname.startsWith("/assets/"),
             handler: "StaleWhileRevalidate",
             options: {

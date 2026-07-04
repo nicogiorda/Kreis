@@ -107,7 +107,7 @@ const certificateValidationRequestSchema = z.object({
 
 const startEmailVerificationRequestSchema = z.object({
   email: registrationEmailSchema,
-  legajo: z.coerce.number().int().positive()
+  legajo: z.coerce.number().int().positive().optional()
 });
 
 const verifyEmailVerificationRequestSchema = z.object({
@@ -235,7 +235,9 @@ export function createAuthRouter(): Router {
 
         const [emailAlreadyRegistered, profileWithLegajo] = await Promise.all([
           authProvider.emailExists(parsedBody.data.email),
-          userRepository.findProfileByLegajo(parsedBody.data.legajo)
+          parsedBody.data.legajo
+            ? userRepository.findProfileByLegajo(parsedBody.data.legajo)
+            : Promise.resolve(null)
         ]);
 
         if (emailAlreadyRegistered || profileWithLegajo) {

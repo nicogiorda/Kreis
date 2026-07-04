@@ -1,5 +1,6 @@
 import { type Request, Router } from "express";
 import { z } from "zod";
+import { commentCreationRateLimit, postCreationRateLimit } from "../../../core/write-rate-limits";
 import { verifyAccessToken } from "../../auth/infrastructure/access-token-verifier";
 import {
   createPostComment,
@@ -115,7 +116,7 @@ export function createPostsRouter(): Router {
   });
 
   // ruta para crear un nuevo post en una comunidad aceptada del usuario autenticado
-  router.post("/", async (request, response, next) => {
+  router.post("/", postCreationRateLimit, async (request, response, next) => {
     try {
       const authenticatedUser = await authenticatePostUser(request);
 
@@ -276,7 +277,7 @@ export function createPostsRouter(): Router {
     }
   });
 
-  router.post("/:id/comentarios", async (request, response, next) => {
+  router.post("/:id/comentarios", commentCreationRateLimit, async (request, response, next) => {
     try {
       const parsedParams = postIdParamsSchema.safeParse(request.params);
 

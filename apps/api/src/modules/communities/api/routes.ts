@@ -16,6 +16,7 @@
 
 import { type Request, Router } from "express";
 import { z } from "zod";
+import { communityCreationRateLimit } from "../../../core/write-rate-limits";
 import { verifyAccessToken } from "../../auth/infrastructure/access-token-verifier";
 import {
   createCommunity,
@@ -137,7 +138,7 @@ export function createCommunitiesRouter(): Router {
   //   nombre      (string, requerido)
   //   descripcion (string, opcional)
   //   topicos     (number[], opcional) — ids de tópicos a vincular
-  router.post("/", async (request, response, next) => {
+  router.post("/", communityCreationRateLimit, async (request, response, next) => {
     try {
       const authResult = await authenticateUser(request);
 

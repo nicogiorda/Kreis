@@ -243,6 +243,7 @@ function getAuthErrorMessage(error: unknown): string {
     if (error.code === "invalid_credentials") return "El mail o la contraseña no coinciden.";
     if (error.code === "register_failed") return "No pudimos crear la cuenta. Revisá si el mail o el legajo ya están registrados.";
     if (error.code === "profile_creation_failed") return "El legajo o el correo ya están asociados a otra cuenta.";
+    if (error.code === "registration_already_exists") return "Este email o legajo ya están registrados.";
     if (error.code === "validation_error") return "Revisá los datos ingresados antes de continuar.";
     if (error.code === "invalid_email_domain") return "Usá el correo universitario de una institución habilitada.";
     if (error.code === "registration_email_delivery_failed") return "No pudimos enviar el código. Intentá nuevamente.";
@@ -1331,7 +1332,7 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
     setSubmissionError(null);
 
     try {
-      const result = await startRegistrationEmailVerification(email);
+      const result = await startRegistrationEmailVerification(email, Number(draft.legajo));
       setEmailVerification(null);
       setPendingSignupEmail(result.email);
       setSignupCodeContext("registration-email-verification");
@@ -1360,7 +1361,8 @@ export function AuthFlow({ initialStep = "welcome" }: { initialStep?: "welcome" 
 
   async function resendRegistrationEmailCode(): Promise<void> {
     const result = await startRegistrationEmailVerification(
-      pendingSignupEmail
+      pendingSignupEmail,
+      Number(draft.legajo)
     );
 
     setEmailVerification(null);

@@ -85,6 +85,8 @@ export interface IAuthProvider {
 
   refreshSession(refreshToken: string): Promise<AuthSession>;
 
+  emailExists(email: string): Promise<boolean>;
+
   // Elimina un usuario del sistema de auth externo.
   // Se usa para rollback si la creación del perfil de BD falla.
   deleteUser(id: string): Promise<void>;

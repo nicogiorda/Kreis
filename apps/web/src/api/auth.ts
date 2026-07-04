@@ -161,13 +161,14 @@ export async function classifyCertificate(
 }
 
 export async function startRegistrationEmailVerification(
-  email: string
+  email: string,
+  legajo: number
 ): Promise<StartRegistrationEmailVerificationResponse> {
   return requestJson<StartRegistrationEmailVerificationResponse>(
     "/api/v1/auth/email-verification/start",
     {
       method: "POST",
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ email, legajo })
     }
   );
 }

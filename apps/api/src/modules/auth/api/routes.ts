@@ -106,7 +106,8 @@ const certificateValidationRequestSchema = z.object({
 });
 
 const startEmailVerificationRequestSchema = z.object({
-  email: registrationEmailSchema
+  email: registrationEmailSchema,
+  legajo: z.coerce.number().int().positive()
 });
 
 const verifyEmailVerificationRequestSchema = z.object({
@@ -227,6 +228,21 @@ export function createAuthRouter(): Router {
               message: invalidEmailDomain
                 ? emailDomainErrorMessage
                 : "Ingresa un correo universitario valido."
+            }
+          });
+          return;
+        }
+
+        const [emailAlreadyRegistered, profileWithLegajo] = await Promise.all([
+          authProvider.emailExists(parsedBody.data.email),
+          userRepository.findProfileByLegajo(parsedBody.data.legajo)
+        ]);
+
+        if (emailAlreadyRegistered || profileWithLegajo) {
+          response.status(409).json({
+            error: {
+              code: "registration_already_exists",
+              message: "Este email o legajo ya están registrados."
             }
           });
           return;

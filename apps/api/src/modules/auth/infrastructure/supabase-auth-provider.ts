@@ -89,6 +89,13 @@ export class SupabaseAuthProvider implements IAuthProvider {
     };
   }
 
+  async emailExists(email: string): Promise<boolean> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingUser = await this.existingAuthUserLookup(normalizedEmail);
+
+    return Boolean(existingUser);
+  }
+
   async refreshSession(refreshToken: string): Promise<AuthSession> {
     const { data, error } = await this.anonClient.auth.refreshSession({
       refresh_token: refreshToken

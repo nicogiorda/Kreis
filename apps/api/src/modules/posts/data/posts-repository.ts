@@ -2,27 +2,36 @@ import { prisma } from "../../../core/database";
 
 const ACCEPTED_COMMUNITY_STATUS = "Aceptado";
 
-const postInclude = {
-  usuario: {
-    select: {
-      legajo: true,
-      nombre: true,
-      apellido: true,
-      avatar_url: true
+// El include depende del viewer porque necesitamos saber si dio like
+// (like: where legajo) ademas de la cantidad total (_count.like).
+function buildPostInclude(legajo: number) {
+  return {
+    usuario: {
+      select: {
+        legajo: true,
+        nombre: true,
+        apellido: true,
+        avatar_url: true
+      }
+    },
+    comunidad: {
+      select: {
+        id_comunidad: true,
+        nombre: true
+      }
+    },
+    like: {
+      where: { legajo },
+      select: { legajo: true }
+    },
+    _count: {
+      select: {
+        comentario: true,
+        like: true
+      }
     }
-  },
-  comunidad: {
-    select: {
-      id_comunidad: true,
-      nombre: true
-    }
-  },
-  _count: {
-    select: {
-      comentario: true
-    }
-  }
-} as const;
+  } as const;
+}
 
 export type CommunityPost = {
   id_post: bigint;
@@ -40,10 +49,17 @@ export type CommunityPost = {
     id_comunidad: bigint;
     nombre: string;
   };
+  like: Array<{ legajo: number }>;
   _count: {
     comentario: number;
+    like: number;
   };
 };
+
+export type TogglePostLikeResult =
+  | { status: "ok"; liked: boolean; likesCount: number }
+  | { status: "post_not_found" }
+  | { status: "not_community_member" };
 
 export type CreateCommunityPostResult =
   | { status: "created"; post: CommunityPost }
@@ -195,7 +211,7 @@ export async function listCommunityFeed(legajo: number): Promise<CommunityPost[]
         }
       }
     },
-    include: postInclude,
+    include: buildPostInclude(legajo),
     orderBy: {
       created_at: "desc"
     }
@@ -240,13 +256,40 @@ export async function createCommunityPost(
       id_comunidad: community.id_comunidad,
       cuerpo
     },
-    include: postInclude
+    include: buildPostInclude(legajo)
   });
 
   return {
     status: "created",
     post
   };
+}
+
+export async function togglePostLike(
+  legajo: number,
+  id_post: bigint
+): Promise<TogglePostLikeResult> {
+  const access = await findPostAccess(legajo, id_post);
+
+  if (access !== "ok") {
+    return { status: access };
+  }
+
+  const existingLike = await prisma.like.findUnique({
+    where: {
+      legajo_id_post: { legajo, id_post }
+    }
+  });
+
+  if (existingLike) {
+    await prisma.like.delete({ where: { id_like: existingLike.id_like } });
+  } else {
+    await prisma.like.create({ data: { legajo, id_post } });
+  }
+
+  const likesCount = await prisma.like.count({ where: { id_post } });
+
+  return { status: "ok", liked: !existingLike, likesCount };
 }
 
 export async function deleteCommunityPost(

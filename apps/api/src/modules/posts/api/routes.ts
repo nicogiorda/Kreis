@@ -9,7 +9,8 @@ import {
   deletePostComment,
   findUserByAuthId,
   listCommunityFeed,
-  listPostComments
+  listPostComments,
+  togglePostLike
 } from "../data/posts-repository";
 import { serializeComment } from "./serialize-comment";
 import { serializePost } from "./serialize-post";
@@ -214,6 +215,62 @@ export function createPostsRouter(): Router {
       }
 
       response.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // toggle de like: si el usuario ya dio like lo quita, si no lo crea.
+  router.post("/:id/like", async (request, response, next) => {
+    try {
+      const parsedParams = postIdParamsSchema.safeParse(request.params);
+
+      if (!parsedParams.success) {
+        response.status(400).json({
+          error: {
+            code: "validation_error",
+            message: "Invalid post id",
+            details: parsedParams.error.flatten().fieldErrors
+          }
+        });
+        return;
+      }
+
+      const authenticatedUser = await authenticatePostUser(request);
+
+      if (!authenticatedUser.ok) {
+        response.status(authenticatedUser.status).json({
+          error: authenticatedUser.error
+        });
+        return;
+      }
+
+      const result = await togglePostLike(authenticatedUser.user.legajo, parsedParams.data.id);
+
+      if (result.status === "post_not_found") {
+        response.status(404).json({
+          error: {
+            code: "post_not_found",
+            message: "Post no encontrado o su comunidad no esta aceptada"
+          }
+        });
+        return;
+      }
+
+      if (result.status === "not_community_member") {
+        response.status(403).json({
+          error: {
+            code: "not_community_member",
+            message: "Debes pertenecer a la comunidad para dar like"
+          }
+        });
+        return;
+      }
+
+      response.status(200).json({
+        liked: result.liked,
+        likesCount: result.likesCount
+      });
     } catch (error) {
       next(error);
     }

@@ -66,6 +66,7 @@ export type ActivityPost = {
   title: string;
   text: string;
   score: number;
+  likedByMe: boolean;
   comments: number;
 };
 
@@ -76,6 +77,8 @@ export type PostComment = {
   body: string;
   createdAt: string;
   isOwn: boolean;
+  likesCount: number;
+  likedByMe: boolean;
   author: {
     legajo: number;
     name: string;

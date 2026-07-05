@@ -17,6 +17,13 @@ type PostResponse = {
     nombre: string;
   };
   comentarios: number;
+  likesCount: number;
+  likedByMe: boolean;
+};
+
+export type PostLikeState = {
+  liked: boolean;
+  likesCount: number;
 };
 
 type CommentResponse = {
@@ -32,6 +39,8 @@ type CommentResponse = {
     apellido: string;
     avatar_url?: string | null;
   };
+  likesCount: number;
+  likedByMe: boolean;
   respuestas: CommentResponse[];
 };
 
@@ -80,7 +89,8 @@ function adaptPost(post: PostResponse): ActivityPost {
     time: formatPostTime(post.created_at),
     title: "Nuevo post",
     text: post.cuerpo,
-    score: 1,
+    score: post.likesCount,
+    likedByMe: post.likedByMe,
     comments: post.comentarios
   };
 }
@@ -93,6 +103,8 @@ function adaptComment(comment: CommentResponse): PostComment {
     body: comment.cuerpo,
     createdAt: comment.created_at,
     isOwn: comment.es_autor,
+    likesCount: comment.likesCount,
+    likedByMe: comment.likedByMe,
     author: {
       legajo: comment.autor.legajo,
       name: `${comment.autor.nombre} ${comment.autor.apellido}`.trim(),
@@ -133,6 +145,19 @@ export async function deletePost(postId: string, accessToken: string): Promise<v
     method: "DELETE",
     headers: bearerTokenHeaders(accessToken)
   });
+}
+
+export async function togglePostLike(
+  postId: string,
+  accessToken: string
+): Promise<PostLikeState> {
+  return requestJson<PostLikeState>(
+    `/api/v1/posts/${encodeURIComponent(postId)}/like`,
+    {
+      method: "POST",
+      headers: bearerTokenHeaders(accessToken)
+    }
+  );
 }
 
 export async function listPostComments(
@@ -187,6 +212,20 @@ export async function deletePostComment(
     `/api/v1/posts/${encodeURIComponent(postId)}/comentarios/${encodeURIComponent(commentId)}`,
     {
       method: "DELETE",
+      headers: bearerTokenHeaders(accessToken)
+    }
+  );
+}
+
+export async function togglePostCommentLike(
+  postId: string,
+  commentId: string,
+  accessToken: string
+): Promise<PostLikeState> {
+  return requestJson<PostLikeState>(
+    `/api/v1/posts/${encodeURIComponent(postId)}/comentarios/${encodeURIComponent(commentId)}/like`,
+    {
+      method: "POST",
       headers: bearerTokenHeaders(accessToken)
     }
   );

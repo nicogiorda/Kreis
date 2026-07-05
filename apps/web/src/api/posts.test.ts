@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { deletePost, deletePostComment, listPostComments, listPosts } from "./posts";
+import {
+  deletePost,
+  deletePostComment,
+  listPostComments,
+  listPosts,
+  togglePostCommentLike,
+  togglePostLike
+} from "./posts";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -25,7 +32,9 @@ describe("posts api", () => {
               nombre: "Kreis"
             },
             es_autor: true,
-            comentarios: 0
+            comentarios: 0,
+            likesCount: 7,
+            likedByMe: true
           }
         ]
       }), { status: 200 })
@@ -34,9 +43,31 @@ describe("posts api", () => {
     await expect(listPosts("token")).resolves.toMatchObject([
       {
         id: "15",
-        isOwn: true
+        isOwn: true,
+        score: 7,
+        likedByMe: true
       }
     ]);
+  });
+
+  it("toggles a post like through its authenticated route", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
+        liked: true,
+        likesCount: 8
+      }), { status: 200 })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(togglePostLike("15", "token")).resolves.toEqual({
+      liked: true,
+      likesCount: 8
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/posts/15/like"),
+      expect.objectContaining({ method: "POST" })
+    );
   });
 
   it("deletes a post through its authenticated route", async () => {
@@ -62,6 +93,8 @@ describe("posts api", () => {
             cuerpo: "Mi comentario",
             created_at: new Date().toISOString(),
             es_autor: true,
+            likesCount: 3,
+            likedByMe: true,
             autor: {
               legajo: 10,
               nombre: "Nico",
@@ -80,7 +113,9 @@ describe("posts api", () => {
       comments: [
         {
           id: "31",
-          isOwn: true
+          isOwn: true,
+          likesCount: 3,
+          likedByMe: true
         }
       ]
     });
@@ -90,6 +125,26 @@ describe("posts api", () => {
     expect(fetchMock).toHaveBeenLastCalledWith(
       expect.stringContaining("/api/v1/posts/15/comentarios/31"),
       expect.objectContaining({ method: "DELETE" })
+    );
+  });
+
+  it("toggles a comment like through its post-scoped route", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({
+        liked: false,
+        likesCount: 2
+      }), { status: 200 })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(togglePostCommentLike("15", "31", "token")).resolves.toEqual({
+      liked: false,
+      likesCount: 2
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/posts/15/comentarios/31/like"),
+      expect.objectContaining({ method: "POST" })
     );
   });
 });

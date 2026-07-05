@@ -195,6 +195,7 @@ export const initialActivity: ActivityPost[] = [
     title: "Alguien quiere armar ronda de feedback de portfolio?",
     text: "Tengo 3 pantallas de un caso para revisar y estaria bueno cruzar opiniones antes de subirlo a Behance.",
     score: 24,
+    likedByMe: false,
     comments: 8
   },
   {
@@ -208,6 +209,7 @@ export const initialActivity: ActivityPost[] = [
     title: "Dataset simple para practicar dashboards",
     text: "Subi un CSV de eventos universitarios con categorias, asistencia y horarios por si alguien quiere practicar visualizaciones.",
     score: 31,
+    likedByMe: false,
     comments: 12
   },
   {
@@ -221,6 +223,7 @@ export const initialActivity: ActivityPost[] = [
     title: "Busco dupla para validar una idea de marketplace",
     text: "La idea es entrevistar estudiantes esta semana y llegar con algo chico al pitch night.",
     score: 18,
+    likedByMe: false,
     comments: 6
   },
   {
@@ -234,6 +237,7 @@ export const initialActivity: ActivityPost[] = [
     title: "Plantilla corta para entrevistas de usuario",
     text: "Dejo una guia de 7 preguntas para quienes estan arrancando research y no saben como abrir la conversacion.",
     score: 46,
+    likedByMe: false,
     comments: 15
   },
   {
@@ -247,6 +251,7 @@ export const initialActivity: ActivityPost[] = [
     title: "Power BI o Looker Studio para empezar?",
     text: "Quiero hacer mi primer dashboard para una materia. Cual recomiendan si todavia no tengo mucha base?",
     score: 13,
+    likedByMe: false,
     comments: 19
   }
 ];

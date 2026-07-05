@@ -15,8 +15,10 @@ No es dueno de crear comunidades ni de membresias.
 
 - `GET /api/v1/posts`: feed de posts de las comunidades aceptadas a las que pertenece el usuario.
 - `POST /api/v1/posts`: crea un post en una comunidad aceptada.
+- `POST /api/v1/posts/:id/like`: agrega o quita el like del usuario autenticado.
 - `GET /api/v1/posts/:id/comentarios`: devuelve el arbol de comentarios de un post.
 - `POST /api/v1/posts/:id/comentarios`: crea un comentario raiz o una respuesta.
+- `POST /api/v1/posts/:id/comentarios/:commentId/like`: agrega o quita el like del comentario.
 
 Para publicar, el usuario debe estar autenticado y ser miembro de la comunidad.
 El body esperado es:
@@ -40,4 +42,4 @@ Para responder a un comentario:
 El backend valida que `id_padre` exista y pertenezca al mismo post. El arbol se
 arma en memoria a partir de una unica consulta plana ordenada cronologicamente.
 
-Reacciones o score siguen pendientes.
+Los listados incluyen la cantidad de likes y si el usuario autenticado dio like.

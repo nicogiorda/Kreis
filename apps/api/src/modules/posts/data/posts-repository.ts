@@ -61,6 +61,12 @@ export type TogglePostLikeResult =
   | { status: "post_not_found" }
   | { status: "not_community_member" };
 
+export type ToggleCommentLikeResult =
+  | { status: "ok"; liked: boolean; likesCount: number }
+  | { status: "post_not_found" }
+  | { status: "not_community_member" }
+  | { status: "comment_not_found" };
+
 export type CreateCommunityPostResult =
   | { status: "created"; post: CommunityPost }
   | { status: "community_not_found" }
@@ -82,6 +88,10 @@ export type PostComment = {
     nombre: string;
     apellido: string;
     avatar_url: string | null;
+  };
+  like: Array<{ legajo: number }>;
+  _count: {
+    like: number;
   };
 };
 
@@ -112,16 +122,27 @@ export type DeletePostCommentResult =
   | { status: "deleted" }
   | { status: "not_found_or_not_owner" };
 
-const commentInclude = {
-  usuario: {
-    select: {
-      legajo: true,
-      nombre: true,
-      apellido: true,
-      avatar_url: true
+function buildCommentInclude(legajo: number) {
+  return {
+    usuario: {
+      select: {
+        legajo: true,
+        nombre: true,
+        apellido: true,
+        avatar_url: true
+      }
+    },
+    like: {
+      where: { legajo },
+      select: { legajo: true }
+    },
+    _count: {
+      select: {
+        like: true
+      }
     }
-  }
-} as const;
+  } as const;
+}
 
 function buildCommentTree(comments: PostComment[]): PostCommentTree[] {
   const commentsById = new Map<bigint, PostCommentTree>();
@@ -292,6 +313,48 @@ export async function togglePostLike(
   return { status: "ok", liked: !existingLike, likesCount };
 }
 
+export async function toggleCommentLike(
+  legajo: number,
+  id_post: bigint,
+  id_comentario: bigint
+): Promise<ToggleCommentLikeResult> {
+  const access = await findPostAccess(legajo, id_post);
+
+  if (access !== "ok") {
+    return { status: access };
+  }
+
+  const comment = await prisma.comentario.findFirst({
+    where: {
+      id_comentario,
+      id_post
+    },
+    select: {
+      id_comentario: true
+    }
+  });
+
+  if (!comment) {
+    return { status: "comment_not_found" };
+  }
+
+  const existingLike = await prisma.like.findUnique({
+    where: {
+      legajo_id_comentario: { legajo, id_comentario }
+    }
+  });
+
+  if (existingLike) {
+    await prisma.like.delete({ where: { id_like: existingLike.id_like } });
+  } else {
+    await prisma.like.create({ data: { legajo, id_comentario } });
+  }
+
+  const likesCount = await prisma.like.count({ where: { id_comentario } });
+
+  return { status: "ok", liked: !existingLike, likesCount };
+}
+
 export async function deleteCommunityPost(
   legajo: number,
   id_post: bigint
@@ -322,7 +385,7 @@ export async function listPostComments(
     where: {
       id_post
     },
-    include: commentInclude,
+    include: buildCommentInclude(legajo),
     orderBy: [
       {
         created_at: "asc"
@@ -374,7 +437,7 @@ export async function createPostComment(
       cuerpo,
       id_padre
     },
-    include: commentInclude
+    include: buildCommentInclude(legajo)
   });
 
   const totalComments = await prisma.comentario.count({

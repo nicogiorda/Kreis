@@ -7,6 +7,7 @@ import type { ActivityPost, Community, ThemeMode } from "../../types";
 import { cn } from "../../utils/cn";
 import { useVisualViewport } from "../../hooks/useVisualViewport";
 import { PostComments, PostDetailCommentsLayout } from "./PostComments";
+import type { PostLikeState } from "../../api/posts";
 
 const allCommunitiesFilter = "all";
 
@@ -18,6 +19,7 @@ type CommunityPostProps = {
   onOpen?: (postId: string) => void;
   onPostDeleted: (postId: string) => void | Promise<void>;
   onCommentCountChange: (postId: string, total: number) => void;
+  onLikeToggle: (postId: string) => Promise<PostLikeState>;
 };
 
 const avatarPlaceholderTones = [
@@ -49,7 +51,7 @@ function getDetailTime(time: string): string {
   return normalized;
 }
 
-function CommunityPost({ post, accessToken, expanded = false, renderComments = true, onOpen, onPostDeleted, onCommentCountChange }: CommunityPostProps) {
+function CommunityPost({ post, accessToken, expanded = false, renderComments = true, onOpen, onPostDeleted, onCommentCountChange, onLikeToggle }: CommunityPostProps) {
   function openPost(): void {
     if (expanded) return;
     onOpen?.(post.id);
@@ -134,7 +136,9 @@ function CommunityPost({ post, accessToken, expanded = false, renderComments = t
             accessToken={accessToken}
             expanded={expanded}
             initialCount={post.comments}
+            initialLiked={post.likedByMe}
             isOwnPost={post.isOwn}
+            onLikeToggle={onLikeToggle}
             onExpand={() => onOpen?.(post.id)}
             onPostDeleted={onPostDeleted}
             postId={post.id}
@@ -200,6 +204,7 @@ type CommunitiesScreenProps = {
   onCreatePost: () => void;
   onDeletePost: (postId: string) => Promise<void>;
   onCommentCountChange: (postId: string, total: number) => void;
+  onLikeToggle: (postId: string) => Promise<PostLikeState>;
   onPostDetailChange?: (open: boolean) => void;
   onToggleTheme: () => void;
 };
@@ -213,6 +218,7 @@ export function CommunitiesScreen({
   onCreatePost,
   onDeletePost,
   onCommentCountChange,
+  onLikeToggle,
   onPostDetailChange,
   onToggleTheme
 }: CommunitiesScreenProps) {
@@ -334,7 +340,9 @@ export function CommunitiesScreen({
           postId={expandedPost.id}
           onCountChange={onCommentCountChange}
           initialCount={expandedPost.comments}
+          initialLiked={expandedPost.likedByMe}
           isOwnPost={expandedPost.isOwn}
+          onLikeToggle={onLikeToggle}
           onPostDeleted={handlePostDeleted}
           score={expandedPost.score}
         >
@@ -349,6 +357,7 @@ export function CommunitiesScreen({
                     post={expandedPost}
                     onPostDeleted={handlePostDeleted}
                     onCommentCountChange={onCommentCountChange}
+                    onLikeToggle={onLikeToggle}
                   />
                   {comments}
                 </div>
@@ -406,6 +415,7 @@ export function CommunitiesScreen({
             onPostDeleted={handlePostDeleted}
             post={post}
             onCommentCountChange={onCommentCountChange}
+            onLikeToggle={onLikeToggle}
           />
         )) : joinedCommunities.length ? (
           <EmptyState text="No hay posts en esta comunidad todavía." />

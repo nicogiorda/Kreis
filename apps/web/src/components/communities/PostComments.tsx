@@ -1,7 +1,13 @@
 import { ChatRound, Heart } from "@solar-icons/react";
 import { ArrowBendDownRight, CaretDown, DotsThree, PaperPlaneTilt } from "@phosphor-icons/react";
-import { type FormEvent, type ReactNode, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
-import { createPostComment, deletePostComment, listPostComments } from "../../api/posts";
+import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import {
+  createPostComment,
+  deletePostComment,
+  listPostComments,
+  togglePostCommentLike,
+  type PostLikeState
+} from "../../api/posts";
 import type { PostComment } from "../../types";
 import { CommentSkeletonList } from "../common/LoadingSkeleton";
 import { LoadingState } from "../common/LoadingState";
@@ -11,6 +17,7 @@ import { ReportContentSheet, type ReportTarget } from "./ReportContentSheet";
 type PostCommentsProps = {
   postId: string;
   initialCount: number;
+  initialLiked: boolean;
   score?: number;
   accessToken: string;
   expanded?: boolean;
@@ -18,6 +25,7 @@ type PostCommentsProps = {
   onExpand?: () => void;
   onPostDeleted?: (postId: string) => void | Promise<void>;
   onCountChange: (postId: string, total: number) => void;
+  onLikeToggle: (postId: string) => Promise<PostLikeState>;
 };
 
 type CommentNodeProps = {
@@ -82,9 +90,28 @@ function insertReply(
   });
 }
 
-function getCommentLikeSeed(comment: PostComment): number {
-  if (comment.replies.length) return Math.min(comment.replies.length + 1, 9);
-  return Number.parseInt(comment.id.replace(/\D/g, "").slice(-1), 10) % 3 || 1;
+function updateCommentLike(
+  comments: PostComment[],
+  commentId: string,
+  likedByMe: boolean,
+  likesCount: number
+): PostComment[] {
+  return comments.map((comment) => {
+    if (comment.id === commentId) {
+      return {
+        ...comment,
+        likedByMe,
+        likesCount
+      };
+    }
+
+    if (!comment.replies.length) return comment;
+
+    return {
+      ...comment,
+      replies: updateCommentLike(comment.replies, commentId, likedByMe, likesCount)
+    };
+  });
 }
 
 function getCommentAvatarLabel(name: string): string {
@@ -357,19 +384,20 @@ function CommentNode({
 function DetailCommentActions({
   comment,
   isReplying,
+  likePending,
   onReplyStart,
   onReplyCancel,
+  onLikeToggle,
   onReport
 }: {
   comment: PostComment;
   isReplying: boolean;
+  likePending: boolean;
   onReplyStart: (commentId: string) => void;
   onReplyCancel: () => void;
+  onLikeToggle: (comment: PostComment) => void;
   onReport: (commentId: string, isOwn: boolean) => void;
 }) {
-  const [liked, setLiked] = useState(false);
-  const likeCount = getCommentLikeSeed(comment) + (liked ? 1 : 0);
-
   return (
     <div className="mt-[7px] flex h-[27px] items-center gap-[22px] text-[12px] font-normal leading-[15px] text-kreis-muted">
       <button
@@ -383,15 +411,16 @@ function DetailCommentActions({
       <button
         className={cn(
           "inline-flex h-[27px] items-center gap-1.5 border-0 bg-transparent p-0 text-inherit shadow-none transition-colors duration-150 active:scale-95",
-          liked && "text-kreis-orange"
+          comment.likedByMe && "text-kreis-orange"
         )}
         type="button"
-        aria-label={liked ? "Quitar like del comentario" : "Dar like al comentario"}
-        aria-pressed={liked}
-        onClick={() => setLiked((current) => !current)}
+        aria-label={comment.likedByMe ? "Quitar like del comentario" : "Dar like al comentario"}
+        aria-pressed={comment.likedByMe}
+        disabled={likePending}
+        onClick={() => onLikeToggle(comment)}
       >
-        <Heart aria-hidden="true" size={16} weight={liked ? "Bold" : "Outline"} />
-        {likeCount}
+        <Heart aria-hidden="true" size={16} weight={comment.likedByMe ? "Bold" : "Outline"} />
+        {comment.likesCount}
       </button>
       <button
         className="ml-auto grid size-[27px] place-items-center border-0 bg-transparent p-0 text-inherit shadow-none"
@@ -418,8 +447,13 @@ function DetailCommentNode({
   onReplyCancel,
   onReplyBodyChange,
   onReplySubmit,
+  likePendingId,
+  onLikeToggle,
   onReport
-}: CommentNodeProps) {
+}: CommentNodeProps & {
+  likePendingId: string | null;
+  onLikeToggle: (comment: PostComment) => void;
+}) {
   const isReplying = replyingTo === comment.id;
   const hasReplies = comment.replies.length > 0;
   const indent = depth === 0 ? 0 : 18;
@@ -452,8 +486,10 @@ function DetailCommentNode({
           <DetailCommentActions
             comment={comment}
             isReplying={isReplying}
+            likePending={likePendingId === comment.id}
             onReplyStart={onReplyStart}
             onReplyCancel={onReplyCancel}
+            onLikeToggle={onLikeToggle}
             onReport={onReport}
           />
 
@@ -487,6 +523,8 @@ function DetailCommentNode({
               onReplyCancel={onReplyCancel}
               onReplyBodyChange={onReplyBodyChange}
               onReplySubmit={onReplySubmit}
+              likePendingId={likePendingId}
+              onLikeToggle={onLikeToggle}
               onReport={onReport}
             />
           ))}
@@ -498,6 +536,79 @@ function DetailCommentNode({
 
 type PostCommentThread = ReturnType<typeof usePostCommentThread>;
 
+function usePostLike({
+  postId,
+  initialCount,
+  initialLiked,
+  onLikeToggle
+}: {
+  postId: string;
+  initialCount: number;
+  initialLiked: boolean;
+  onLikeToggle: (postId: string) => Promise<PostLikeState>;
+}) {
+  const [state, setState] = useState<{
+    postId: string;
+    count: number;
+    liked: boolean;
+    pending: boolean;
+    baselineCount: number;
+    baselineLiked: boolean;
+  } | null>(null);
+  const parentHasRevalidated = state?.postId === postId &&
+    !state.pending &&
+    (initialCount !== state.baselineCount || initialLiked !== state.baselineLiked);
+  const current = state?.postId === postId && !parentHasRevalidated
+    ? state
+    : {
+        postId,
+        count: initialCount,
+        liked: initialLiked,
+        pending: false,
+        baselineCount: initialCount,
+        baselineLiked: initialLiked
+      };
+
+  const toggle = useCallback(async (): Promise<void> => {
+    if (current.pending) return;
+
+    const previousLiked = current.liked;
+    const previousCount = current.count;
+    const optimisticLiked = !previousLiked;
+    const optimisticCount = Math.max(0, previousCount + (optimisticLiked ? 1 : -1));
+
+    setState({
+      postId,
+      count: optimisticCount,
+      liked: optimisticLiked,
+      pending: true,
+      baselineCount: previousCount,
+      baselineLiked: previousLiked
+    });
+
+    try {
+      const result = await onLikeToggle(postId);
+      setState({
+        postId,
+        count: result.likesCount,
+        liked: result.liked,
+        pending: false,
+        baselineCount: previousCount,
+        baselineLiked: previousLiked
+      });
+    } catch {
+      setState(null);
+    }
+  }, [current.count, current.liked, current.pending, onLikeToggle, postId]);
+
+  return {
+    count: current.count,
+    liked: current.liked,
+    pending: current.pending,
+    toggle
+  };
+}
+
 type PostCommentThreadState = {
   postId: string;
   status: "idle" | "loading" | "ready" | "error";
@@ -507,7 +618,7 @@ type PostCommentThreadState = {
   replyBody: string;
   submitting: boolean;
   error: string | null;
-  liked: boolean;
+  likingCommentId: string | null;
 };
 
 function createInitialThreadState(postId: string): PostCommentThreadState {
@@ -520,7 +631,7 @@ function createInitialThreadState(postId: string): PostCommentThreadState {
     replyBody: "",
     submitting: false,
     error: null,
-    liked: false
+    likingCommentId: null
   };
 }
 
@@ -552,13 +663,6 @@ function usePostCommentThread({
 
   const setReplyBody = useCallback((value: string): void => {
     updateThread((current) => ({ ...current, replyBody: value }));
-  }, [updateThread]);
-
-  const setLiked = useCallback((value: SetStateAction<boolean>): void => {
-    updateThread((current) => ({
-      ...current,
-      liked: typeof value === "function" ? value(current.liked) : value
-    }));
   }, [updateThread]);
 
   const loadComments = useCallback(async (): Promise<void> => {
@@ -608,6 +712,61 @@ function usePostCommentThread({
     }));
   }
 
+  async function toggleCommentLike(comment: PostComment): Promise<void> {
+    if (currentThread.likingCommentId) return;
+
+    const optimisticLiked = !comment.likedByMe;
+    const optimisticCount = Math.max(
+      0,
+      comment.likesCount + (optimisticLiked ? 1 : -1)
+    );
+
+    updateThread((current) => ({
+      ...current,
+      likingCommentId: comment.id,
+      comments: updateCommentLike(
+        current.comments,
+        comment.id,
+        optimisticLiked,
+        optimisticCount
+      )
+    }));
+
+    try {
+      const result = await togglePostCommentLike(
+        postId,
+        comment.id,
+        accessToken
+      );
+
+      setThreadState((current) => current.postId === postId
+        ? {
+            ...current,
+            likingCommentId: null,
+            comments: updateCommentLike(
+              current.comments,
+              comment.id,
+              result.liked,
+              result.likesCount
+            )
+          }
+        : current);
+    } catch {
+      setThreadState((current) => current.postId === postId
+        ? {
+            ...current,
+            likingCommentId: null,
+            comments: updateCommentLike(
+              current.comments,
+              comment.id,
+              comment.likedByMe,
+              comment.likesCount
+            )
+          }
+        : current);
+    }
+  }
+
   async function submitComment(body: string, parentId?: string): Promise<void> {
     if (!body.trim() || !postId) return;
 
@@ -654,10 +813,10 @@ function usePostCommentThread({
     replyBody: currentThread.replyBody,
     submitting: currentThread.submitting,
     error: currentThread.error,
-    liked: currentThread.liked,
+    likingCommentId: currentThread.likingCommentId,
     setRootBody,
     setReplyBody,
-    setLiked,
+    toggleCommentLike,
     loadComments,
     startReply,
     cancelReply,
@@ -667,37 +826,34 @@ function usePostCommentThread({
 
 export function PostDetailCommentsContent({
   initialCount,
-  score,
+  postLike,
   thread,
   onReportPost,
   onReportComment
 }: {
   initialCount: number;
-  score?: number;
+  postLike: ReturnType<typeof usePostLike>;
   thread: PostCommentThread;
   onReportPost: () => void;
   onReportComment: (commentId: string, isOwn: boolean) => void;
 }) {
-  const displayedScore = typeof score === "number" ? score + (thread.liked ? 1 : 0) : undefined;
-
   return (
     <section className="mt-[12px]">
       <div className="flex h-[27px] items-center gap-[25px] text-[12px] font-normal leading-[15px] text-kreis-muted">
-        {typeof displayedScore === "number" ? (
-          <button
-            className={cn(
-              "inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-inherit shadow-none transition-colors duration-150",
-              thread.liked ? "text-kreis-orange" : "text-inherit"
-            )}
-            type="button"
-            aria-label={thread.liked ? "Quitar like" : "Dar like"}
-            aria-pressed={thread.liked}
-            onClick={() => thread.setLiked((current) => !current)}
-          >
-            <Heart aria-hidden="true" size={16} weight={thread.liked ? "Bold" : "Outline"} />
-            {displayedScore}
-          </button>
-        ) : null}
+        <button
+          className={cn(
+            "inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-inherit shadow-none transition-colors duration-150",
+            postLike.liked ? "text-kreis-orange" : "text-inherit"
+          )}
+          type="button"
+          aria-label={postLike.liked ? "Quitar like" : "Dar like"}
+          aria-pressed={postLike.liked}
+          disabled={postLike.pending}
+          onClick={() => void postLike.toggle()}
+        >
+          <Heart aria-hidden="true" size={16} weight={postLike.liked ? "Bold" : "Outline"} />
+          {postLike.count}
+        </button>
         <span className="inline-flex items-center gap-1.5">
           <ChatRound aria-hidden="true" size={16} weight="Bold" />
           {initialCount}
@@ -746,6 +902,8 @@ export function PostDetailCommentsContent({
                 onReplyStart={thread.startReply}
                 onReplyCancel={thread.cancelReply}
                 onReplyBodyChange={thread.setReplyBody}
+                likePendingId={thread.likingCommentId}
+                onLikeToggle={(comment) => void thread.toggleCommentLike(comment)}
                 onReport={onReportComment}
                 onReplySubmit={(event, parentId) => {
                   event.preventDefault();
@@ -784,23 +942,27 @@ export function PostDetailCommentComposer({
 export function PostDetailCommentsLayout({
   postId,
   initialCount,
+  initialLiked,
   score,
   accessToken,
   active,
   keyboardOpen,
   isOwnPost = false,
   onCountChange,
+  onLikeToggle,
   onPostDeleted,
   children
 }: {
   postId: string;
   initialCount: number;
+  initialLiked: boolean;
   score?: number;
   accessToken: string;
   active: boolean;
   keyboardOpen: boolean;
   isOwnPost?: boolean;
   onCountChange: (postId: string, total: number) => void;
+  onLikeToggle: (postId: string) => Promise<PostLikeState>;
   onPostDeleted?: (postId: string) => void | Promise<void>;
   children: (parts: { comments: ReactNode; composer: ReactNode }) => ReactNode;
 }) {
@@ -810,6 +972,12 @@ export function PostDetailCommentsLayout({
     accessToken,
     active,
     onCountChange
+  });
+  const postLike = usePostLike({
+    postId,
+    initialCount: score ?? 0,
+    initialLiked,
+    onLikeToggle
   });
 
   async function handleCommentDeleted(commentId: string): Promise<void> {
@@ -823,7 +991,7 @@ export function PostDetailCommentsLayout({
         comments: (
           <PostDetailCommentsContent
             initialCount={initialCount}
-            score={score}
+            postLike={postLike}
             thread={thread}
             onReportPost={() => setReportTarget({ type: "Post", id: postId })}
             onReportComment={(commentId, isOwn) => setReportTarget({
@@ -856,13 +1024,15 @@ export function PostDetailCommentsLayout({
 export function PostComments({
   postId,
   initialCount,
+  initialLiked,
   score,
   accessToken,
   expanded,
   isOwnPost = false,
   onExpand,
   onPostDeleted,
-  onCountChange
+  onCountChange,
+  onLikeToggle
 }: PostCommentsProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
@@ -873,13 +1043,17 @@ export function PostComments({
     active: open,
     onCountChange
   });
+  const postLike = usePostLike({
+    postId,
+    initialCount: score ?? 0,
+    initialLiked,
+    onLikeToggle
+  });
 
   async function handleCommentDeleted(commentId: string): Promise<void> {
     await deletePostComment(postId, commentId, accessToken);
     await thread.loadComments();
   }
-  const displayedScore = typeof score === "number" ? score + (thread.liked ? 1 : 0) : undefined;
-
   function openThread(): void {
     if (open) return;
 
@@ -897,24 +1071,23 @@ export function PostComments({
         "flex items-center gap-[25px] text-[12px] font-normal leading-[15px] text-kreis-muted",
         expanded && "h-[27px]"
       )}>
-        {typeof displayedScore === "number" ? (
-          <button
-            className={cn(
-              "inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-inherit shadow-none transition-colors duration-150",
-              thread.liked ? "text-kreis-orange" : "text-inherit"
-            )}
-            type="button"
-            aria-label={thread.liked ? "Quitar like" : "Dar like"}
-            aria-pressed={thread.liked}
-            onClick={(event) => {
-              event.stopPropagation();
-              thread.setLiked((current) => !current);
-            }}
-          >
-            <Heart aria-hidden="true" size={16} weight={thread.liked ? "Bold" : "Outline"} />
-            {displayedScore}
-          </button>
-        ) : null}
+        <button
+          className={cn(
+            "inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-inherit shadow-none transition-colors duration-150",
+            postLike.liked ? "text-kreis-orange" : "text-inherit"
+          )}
+          type="button"
+          aria-label={postLike.liked ? "Quitar like" : "Dar like"}
+          aria-pressed={postLike.liked}
+          disabled={postLike.pending}
+          onClick={(event) => {
+            event.stopPropagation();
+            void postLike.toggle();
+          }}
+        >
+          <Heart aria-hidden="true" size={16} weight={postLike.liked ? "Bold" : "Outline"} />
+          {postLike.count}
+        </button>
         <button
           className="inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-inherit shadow-none"
           type="button"
@@ -979,6 +1152,8 @@ export function PostComments({
                       onReplyStart={thread.startReply}
                       onReplyCancel={thread.cancelReply}
                       onReplyBodyChange={thread.setReplyBody}
+                      likePendingId={thread.likingCommentId}
+                      onLikeToggle={(comment) => void thread.toggleCommentLike(comment)}
                       onReport={(commentId, isOwn) => setReportTarget({
                         type: "Comentario",
                         id: commentId,

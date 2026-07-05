@@ -10,6 +10,7 @@ import {
   findUserByAuthId,
   listCommunityFeed,
   listPostComments,
+  toggleCommentLike,
   togglePostLike
 } from "../data/posts-repository";
 import { serializeComment } from "./serialize-comment";
@@ -252,6 +253,67 @@ export function createPostsRouter(): Router {
           error: {
             code: "post_not_found",
             message: "Post no encontrado o su comunidad no esta aceptada"
+          }
+        });
+        return;
+      }
+
+      if (result.status === "not_community_member") {
+        response.status(403).json({
+          error: {
+            code: "not_community_member",
+            message: "Debes pertenecer a la comunidad para dar like"
+          }
+        });
+        return;
+      }
+
+      response.status(200).json({
+        liked: result.liked,
+        likesCount: result.likesCount
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/comentarios/:commentId/like", async (request, response, next) => {
+    try {
+      const parsedParams = commentIdParamsSchema.safeParse(request.params);
+
+      if (!parsedParams.success) {
+        response.status(400).json({
+          error: {
+            code: "validation_error",
+            message: "Invalid post or comment id",
+            details: parsedParams.error.flatten().fieldErrors
+          }
+        });
+        return;
+      }
+
+      const authenticatedUser = await authenticatePostUser(request);
+
+      if (!authenticatedUser.ok) {
+        response.status(authenticatedUser.status).json({
+          error: authenticatedUser.error
+        });
+        return;
+      }
+
+      const result = await toggleCommentLike(
+        authenticatedUser.user.legajo,
+        parsedParams.data.id,
+        parsedParams.data.commentId
+      );
+
+      if (result.status === "post_not_found" || result.status === "comment_not_found") {
+        response.status(404).json({
+          error: {
+            code: result.status,
+            message: result.status === "comment_not_found"
+              ? "Comentario no encontrado en este post"
+              : "Post no encontrado o su comunidad no esta aceptada"
           }
         });
         return;

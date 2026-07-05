@@ -10,7 +10,13 @@ import {
 } from "../api/communities";
 import { createPendingEvent, getEventDetail, listAllEvents, listUpcomingEvents, toggleEventInterest as persistEventInterest } from "../api/events";
 import { uploadEventImage } from "../api/event-images";
-import { createPost as persistPost, deletePost as persistDeletePost, listPosts } from "../api/posts";
+import {
+  createPost as persistPost,
+  deletePost as persistDeletePost,
+  listPosts,
+  togglePostLike as persistPostLike,
+  type PostLikeState
+} from "../api/posts";
 import { deleteMyAccount, getMyProfile, uploadMyAvatar } from "../api/users";
 import type { KreisUserProfile } from "../api/users";
 import { AdminAccessDenied, AdminDashboard } from "../components/admin/AdminDashboard";
@@ -564,6 +570,20 @@ function AuthenticatedApp({ session }: { session: Session }) {
       : post));
   }
 
+  async function toggleCommunityPostLike(postId: string): Promise<PostLikeState> {
+    const result = await persistPostLike(postId, accessToken);
+
+    setActivity((items) => items.map((post) => post.id === postId
+      ? {
+          ...post,
+          likedByMe: result.liked,
+          score: result.likesCount
+        }
+      : post));
+
+    return result;
+  }
+
   async function deleteCommunityPost(postId: string): Promise<void> {
     await persistDeletePost(postId, accessToken);
     setActivity((items) => items.filter((post) => post.id !== postId));
@@ -757,6 +777,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
                   onCreatePost={() => openComposer("post")}
                   onDeletePost={deleteCommunityPost}
                   onCommentCountChange={updatePostCommentCount}
+                  onLikeToggle={toggleCommunityPostLike}
                   onPostDetailChange={setCommunityPostDetailOpen}
                   onToggleTheme={toggleTheme}
                 />

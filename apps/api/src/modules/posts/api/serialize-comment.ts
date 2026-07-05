@@ -13,6 +13,8 @@ export function serializeComment(comment: PostCommentTree, viewerLegajo: number)
     avatar_url: string | null;
   };
   es_autor: boolean;
+  likesCount: number;
+  likedByMe: boolean;
   respuestas: ReturnType<typeof serializeComment>[];
 } {
   return {
@@ -28,6 +30,8 @@ export function serializeComment(comment: PostCommentTree, viewerLegajo: number)
       avatar_url: comment.usuario.avatar_url
     },
     es_autor: comment.usuario.legajo === viewerLegajo,
+    likesCount: comment._count.like,
+    likedByMe: comment.like.length > 0,
     respuestas: comment.respuestas.map((reply) => serializeComment(reply, viewerLegajo))
   };
 }

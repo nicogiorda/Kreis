@@ -18,6 +18,10 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         clientsClaim: false,
         navigateFallback: "/index.html",
+        navigateFallbackDenylist: [
+          /^\/terminos(?:\/|$)/,
+          /^\/privacidad(?:\/|$)/
+        ],
         skipWaiting: false,
         globPatterns: ["**/*.{js,css,html,png,svg,webp,woff,woff2}"],
         runtimeCaching: [

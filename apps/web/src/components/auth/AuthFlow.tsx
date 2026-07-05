@@ -398,6 +398,12 @@ function WelcomeScreen({ onBegin, onLogin }: { onBegin: () => void; onLogin: () 
       <p className="auth-redesign-welcome-copy">Conecta con otros estudiantes y viví la vida universitaria que tanto soñaste.</p>
       <button className="auth-redesign-welcome-button auth-redesign-welcome-button--primary" type="button" onClick={onBegin}>Comenzar</button>
       <button className="auth-redesign-welcome-button auth-redesign-welcome-button--secondary" type="button" onClick={onLogin}>Ya tengo cuenta</button>
+      <p className="auth-redesign-welcome-legal">
+        Al continuar, aceptás nuestros{" "}
+        <a href="/terminos" target="_blank" rel="noopener noreferrer">Términos y condiciones</a>
+        {" "}y nuestra{" "}
+        <a href="/privacidad" target="_blank" rel="noopener noreferrer">Política de privacidad</a>.
+      </p>
     </AuthScreenFrame>
   );
 }

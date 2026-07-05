@@ -16,6 +16,8 @@ export function serializePost(post: CommunityPost, viewerLegajo: number) {
       nombre: post.comunidad.nombre
     },
     es_autor: post.usuario.legajo === viewerLegajo,
-    comentarios: post._count.comentario
+    comentarios: post._count.comentario,
+    likesCount: post._count.like,
+    likedByMe: post.like.length > 0
   };
 }

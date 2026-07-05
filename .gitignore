@@ -12,7 +12,8 @@ dev-server*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
+.claude
+codex.skills
 .vercel
 Kreis-Web-APP-React.code-workspace
 

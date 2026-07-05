@@ -1,0 +1,109 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  background: #f7edda;
+  color: #151515;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 0;
+  margin: 0;
+  background: #f7edda;
+}
+
+header {
+  background: #2e4b3c;
+  color: #f7edda;
+}
+
+.legal-header,
+main {
+  width: min(100% - 2rem, 46rem);
+  margin-inline: auto;
+}
+
+.legal-header {
+  display: flex;
+  min-height: 5.5rem;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.legal-header img {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.625rem;
+}
+
+.legal-brand {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+main {
+  padding-block: 3rem 4rem;
+}
+
+.legal-status {
+  display: inline-block;
+  margin: 0 0 1rem;
+  border-radius: 999px;
+  background: #f0531c;
+  color: #f7edda;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+h1 {
+  max-width: 15ch;
+  margin: 0;
+  color: #2e4b3c;
+  font-size: clamp(2rem, 8vw, 3.5rem);
+  line-height: 1;
+}
+
+.legal-updated {
+  margin: 1rem 0 2.5rem;
+  color: rgba(21, 21, 21, 0.62);
+  font-size: 0.875rem;
+}
+
+section {
+  border-top: 1px solid rgba(46, 75, 60, 0.18);
+  padding-block: 1.5rem;
+}
+
+h2 {
+  margin: 0 0 0.625rem;
+  color: #2e4b3c;
+  font-size: 1.125rem;
+}
+
+p,
+li {
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+p {
+  margin: 0;
+}
+
+ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+footer {
+  border-top: 1px solid rgba(46, 75, 60, 0.18);
+  padding-top: 1.5rem;
+  color: rgba(21, 21, 21, 0.62);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}

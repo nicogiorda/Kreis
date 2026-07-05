@@ -42,6 +42,27 @@ async function openRecoveryCodeScreen() {
   return user;
 }
 
+describe("AuthFlow legal links", () => {
+  it("opens the public legal documents outside the app", () => {
+    render(<AuthFlow />);
+
+    const termsLink = screen.getByRole("link", {
+      name: "Términos y condiciones"
+    });
+    const privacyLink = screen.getByRole("link", {
+      name: "Política de privacidad"
+    });
+
+    expect(termsLink).toHaveAttribute("href", "/terminos");
+    expect(privacyLink).toHaveAttribute("href", "/privacidad");
+
+    for (const link of [termsLink, privacyLink]) {
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    }
+  });
+});
+
 describe("AuthFlow password recovery", () => {
   beforeEach(() => {
     vi.useRealTimers();

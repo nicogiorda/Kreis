@@ -578,8 +578,12 @@ export function ProfileScreen({
 
     try {
       await onUploadAvatar(file);
-    } catch {
-      setAvatarError("No pudimos actualizar la foto.");
+    } catch (error) {
+      setAvatarError(
+        error instanceof Error
+          ? error.message
+          : "No pudimos actualizar la foto."
+      );
     } finally {
       setAvatarUploading(false);
     }
@@ -653,7 +657,7 @@ export function ProfileScreen({
             ref={avatarInputRef}
             className="hidden"
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/*"
             onChange={(event) => void handleAvatarChange(event)}
           />
           <button

@@ -1,4 +1,5 @@
 import type { KreisEvent } from "../types";
+import { compressImage } from "../utils/image-compression";
 import { adaptEvent, type EventSummary } from "./events";
 import { bearerTokenHeaders, requestFormData, requestJson } from "./client";
 
@@ -74,8 +75,14 @@ export async function getMyProfile(accessToken: string, signal?: AbortSignal): P
 }
 
 export async function uploadMyAvatar(accessToken: string, avatar: File): Promise<KreisUserProfile> {
+  const optimizedAvatar = await compressImage(avatar, {
+    maxWidth: 1024,
+    maxHeight: 1024,
+    quality: 0.82,
+    fileName: "avatar.webp"
+  });
   const formData = new FormData();
-  formData.append("avatar", avatar);
+  formData.append("avatar", optimizedAvatar);
 
   const response = await requestFormData<{ user: UserProfileResponse }>("/api/v1/users/me/avatar", formData, {
     headers: bearerTokenHeaders(accessToken)

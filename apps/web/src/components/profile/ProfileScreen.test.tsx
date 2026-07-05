@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ProfileScreen } from "./ProfileScreen";
 
 function renderProfile(overrides: {
+  onUploadAvatar?: (file: File) => Promise<void>;
   onChangePassword?: (currentPassword: string, newPassword: string) => Promise<void>;
   onDeleteAccount?: (password: string) => Promise<void>;
   onSignOutOtherDevices?: () => Promise<void>;
@@ -18,7 +19,7 @@ function renderProfile(overrides: {
     themeMode: "light" as const,
     onOpenEventDetails: vi.fn(),
     onToggleTheme: vi.fn(),
-    onUploadAvatar: vi.fn().mockResolvedValue(undefined),
+    onUploadAvatar: overrides.onUploadAvatar ?? vi.fn().mockResolvedValue(undefined),
     onChangePassword: overrides.onChangePassword ?? vi.fn().mockResolvedValue(undefined),
     onDeleteAccount: overrides.onDeleteAccount ?? vi.fn().mockResolvedValue(undefined),
     onSignOutOtherDevices: overrides.onSignOutOtherDevices ?? vi.fn().mockResolvedValue(undefined),
@@ -45,6 +46,22 @@ async function fillPasswordForm(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("Profile account security", () => {
+  it("shows the specific avatar processing error", async () => {
+    const onUploadAvatar = vi.fn().mockRejectedValue(
+      new Error("No pudimos leer el formato de esta imagen.")
+    );
+    renderProfile({ onUploadAvatar });
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Editar foto de perfil" }));
+    await user.upload(
+      document.querySelector<HTMLInputElement>('input[type="file"]')!,
+      new File(["photo"], "photo.heic", { type: "image/heic" })
+    );
+
+    expect(await screen.findByText("No pudimos leer el formato de esta imagen.")).toBeInTheDocument();
+  });
+
   it("keeps the form open and explains an incorrect current password", async () => {
     const onChangePassword = vi.fn().mockRejectedValue({ code: "invalid_credentials" });
     renderProfile({ onChangePassword });

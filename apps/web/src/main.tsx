@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router";
 import App from "./app/App";
 import { AuthProvider } from "./auth/AuthProvider";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
+import { MobileInstallGate } from "./pwa/MobileInstallGate";
 import { startServiceWorkerRegistration } from "./pwa/service-worker-updates";
 import { installGlobalStartupErrorListeners, markStartup } from "./startup/startup-debug";
 import "./styles/global.css";
@@ -24,9 +25,11 @@ createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
+        <MobileInstallGate>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </MobileInstallGate>
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>

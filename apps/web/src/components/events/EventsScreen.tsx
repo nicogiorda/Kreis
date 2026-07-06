@@ -2,6 +2,7 @@ import { MagnifyingGlass, Plus } from "@phosphor-icons/react";
 import { EmptyState } from "../common/EmptyState";
 import { ThemeToggleIcon } from "../common/Icons";
 import { EventCardSkeletonList } from "../common/LoadingSkeleton";
+import { PullToRefresh } from "../common/PullToRefresh";
 import { EventCard } from "./EventCard";
 import { EventTopicIcon } from "./EventTopicIcon";
 import type { EventLoadStatus, KreisEvent, ThemeMode } from "../../types";
@@ -19,6 +20,7 @@ type EventsScreenProps = {
   onSearchChange: (query: string) => void;
   onCreateEvent: () => void;
   onOpenEventDetails: (eventId: string) => void;
+  onRefresh: () => Promise<void>;
   onRetryEvents: () => void;
   onToggleTheme: () => void;
 };
@@ -41,6 +43,7 @@ export function EventsScreen({
   onSearchChange,
   onCreateEvent,
   onOpenEventDetails,
+  onRefresh,
   onRetryEvents,
   onToggleTheme
 }: EventsScreenProps) {
@@ -54,7 +57,8 @@ export function EventsScreen({
 
   return (
     <section className="grid min-w-0 w-full max-w-[430px] animate-[rise_220ms_ease-out] pt-[63px] sm:mx-auto" data-screen="events">
-      <div className="mb-[21px] flex h-[37px] items-center justify-end gap-[11px]">
+      <div className="module-action-rail-slot mb-[21px]">
+        <div className="module-action-rail flex items-center justify-end gap-[11px]">
         <button
           className="grid size-[37px] place-items-center rounded-[12px] border-0 bg-kreis-orange p-0 text-kreis-cream shadow-none transition-[transform,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95"
           type="button"
@@ -72,8 +76,10 @@ export function EventsScreen({
         >
           <ThemeToggleIcon themeMode={themeMode} />
         </button>
+        </div>
       </div>
 
+      <PullToRefresh onRefresh={onRefresh} label="Actualizando eventos">
       <header className="mb-[14px] text-center">
         <h1 className="m-0 text-[38px] font-black leading-[49px] tracking-normal text-kreis-ink">Eventos</h1>
       </header>
@@ -120,6 +126,7 @@ export function EventsScreen({
           </div>
         )}
       </div>
+      </PullToRefresh>
     </section>
   );
 }

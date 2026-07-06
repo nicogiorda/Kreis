@@ -3,6 +3,7 @@ import { WidgetAdd } from "@solar-icons/react";
 import { type KeyboardEvent, type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
 import { EmptyState } from "../common/EmptyState";
 import { ThemeToggleIcon } from "../common/Icons";
+import { PullToRefresh } from "../common/PullToRefresh";
 import type { ActivityPost, Community, ThemeMode } from "../../types";
 import { cn } from "../../utils/cn";
 import { useVisualViewport } from "../../hooks/useVisualViewport";
@@ -206,6 +207,7 @@ type CommunitiesScreenProps = {
   onCommentCountChange: (postId: string, total: number) => void;
   onLikeToggle: (postId: string) => Promise<PostLikeState>;
   onPostDetailChange?: (open: boolean) => void;
+  onRefresh: () => Promise<void>;
   onToggleTheme: () => void;
 };
 
@@ -220,6 +222,7 @@ export function CommunitiesScreen({
   onCommentCountChange,
   onLikeToggle,
   onPostDetailChange,
+  onRefresh,
   onToggleTheme
 }: CommunitiesScreenProps) {
   const [activeFilter, setActiveFilter] = useState(allCommunitiesFilter);
@@ -380,7 +383,8 @@ export function CommunitiesScreen({
     <section className="grid min-w-0 w-full max-w-[430px] animate-[rise_220ms_ease-out] pt-[63px] sm:mx-auto" data-screen="communities">
       <h1 className="sr-only">Comunidades</h1>
 
-      <div className="mb-[21px] flex h-[37px] items-center justify-end gap-[11px]">
+      <div className="module-action-rail-slot mb-[21px]">
+        <div className="module-action-rail flex items-center justify-end gap-[11px]">
         <button
           className="grid size-[37px] place-items-center rounded-[12px] border-0 bg-kreis-orange p-0 text-kreis-cream shadow-none transition-[transform,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95"
           type="button"
@@ -398,8 +402,10 @@ export function CommunitiesScreen({
         >
           <ThemeToggleIcon themeMode={themeMode} />
         </button>
+        </div>
       </div>
 
+      <PullToRefresh onRefresh={onRefresh} label="Actualizando comunidades">
       <CommunityFilterRail
         communities={joinedCommunities}
         activeFilter={selectedFilter}
@@ -423,6 +429,7 @@ export function CommunitiesScreen({
           <EmptyState text="Unite a una comunidad desde Inicio para ver su feed." />
         )}
       </section>
+      </PullToRefresh>
 
       <button
         className="fixed bottom-[calc(var(--nav-height)+env(safe-area-inset-bottom)+28px)] right-[max(11px,calc((100vw-430px)/2+11px))] z-40 grid size-[55px] place-items-center rounded-full border-0 bg-kreis-orange p-0 text-kreis-cream shadow-none transition-[transform,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95"

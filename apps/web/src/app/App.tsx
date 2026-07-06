@@ -450,6 +450,27 @@ function AuthenticatedApp({ session }: { session: Session }) {
     setEventReloadKey((current) => current + 1);
   }
 
+  async function refreshEvents(): Promise<void> {
+    const [nextUpcomingEvents, nextEvents] = await Promise.all([
+      listUpcomingEvents(accessToken),
+      listAllEvents(accessToken)
+    ]);
+
+    setUpcomingEvents(nextUpcomingEvents);
+    setEvents(nextEvents);
+    setEventLoadStatus("ready");
+  }
+
+  async function refreshCommunityContent(): Promise<void> {
+    const [nextCommunities, nextPosts] = await Promise.all([
+      listCommunities(accessToken),
+      listPosts(accessToken)
+    ]);
+
+    setCommunities(nextCommunities);
+    setActivity(nextPosts);
+  }
+
   function openEventDetails(eventId: string): void {
     routerNavigate(`${screenRoutes.events}/${encodeURIComponent(eventId)}`);
     scrollTop();
@@ -763,6 +784,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
                   onSearchChange={setGlobalQuery}
                   onCreateEvent={() => openComposer("event")}
                   onOpenEventDetails={openEventDetails}
+                  onRefresh={refreshEvents}
                   onRetryEvents={retryEvents}
                   onToggleTheme={toggleTheme}
                 />
@@ -779,6 +801,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
                   onCommentCountChange={updatePostCommentCount}
                   onLikeToggle={toggleCommunityPostLike}
                   onPostDetailChange={setCommunityPostDetailOpen}
+                  onRefresh={refreshCommunityContent}
                   onToggleTheme={toggleTheme}
                 />
               )}

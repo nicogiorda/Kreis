@@ -49,17 +49,6 @@ main {
   padding-block: 3rem 4rem;
 }
 
-.legal-status {
-  display: inline-block;
-  margin: 0 0 1rem;
-  border-radius: 999px;
-  background: #f0531c;
-  color: #f7edda;
-  padding: 0.4rem 0.75rem;
-  font-size: 0.8125rem;
-  font-weight: 700;
-}
-
 h1 {
   max-width: 15ch;
   margin: 0;
@@ -92,12 +81,25 @@ li {
 }
 
 p {
-  margin: 0;
+  margin: 0 0 1rem;
 }
 
 ul {
-  margin: 0;
+  margin: 0 0 1rem;
   padding-left: 1.25rem;
+}
+
+a {
+  color: #2e4b3c;
+  font-weight: 700;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+a:focus-visible {
+  border-radius: 0.2rem;
+  outline: 2px solid rgba(240, 83, 28, 0.58);
+  outline-offset: 2px;
 }
 
 footer {

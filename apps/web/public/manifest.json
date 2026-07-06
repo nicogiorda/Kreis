@@ -1,7 +1,7 @@
 {
-  "name": "Kreis | Comunidad UADE",
+  "name": "Kreis",
   "short_name": "Kreis",
-  "description": "Eventos y comunidades para estudiantes UADE.",
+  "description": "Eventos y comunidades para que estudiantes puedan conectar.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

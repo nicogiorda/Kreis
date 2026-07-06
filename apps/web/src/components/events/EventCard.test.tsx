@@ -19,28 +19,47 @@ const event: KreisEvent = {
 };
 
 describe("EventCard", () => {
-  it.each(["full", "compact"] as const)(
-    "opens the event from the complete %s card",
-    (variant) => {
-      const onOpenEventDetails = vi.fn();
+  it("opens the event from the complete full card", () => {
+    const onOpenEventDetails = vi.fn();
 
-      render(
-        <EventCard
-          event={event}
-          variant={variant}
-          onOpenEventDetails={onOpenEventDetails}
-        />
-      );
+    render(
+      <EventCard
+        event={event}
+        variant="full"
+        onOpenEventDetails={onOpenEventDetails}
+      />
+    );
 
-      const card = screen.getByRole("button", {
+    fireEvent.click(
+      screen.getByRole("button", {
         name: `Ver detalles de ${event.title}`
-      });
+      })
+    );
 
-      fireEvent.click(card);
+    expect(onOpenEventDetails).toHaveBeenCalledOnce();
+    expect(onOpenEventDetails).toHaveBeenCalledWith(event.id);
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+  });
 
-      expect(onOpenEventDetails).toHaveBeenCalledOnce();
-      expect(onOpenEventDetails).toHaveBeenCalledWith(event.id);
-      expect(screen.getAllByRole("button")).toHaveLength(1);
-    }
-  );
+  it("keeps the compact home card arrow as its entry point", () => {
+    const onOpenEventDetails = vi.fn();
+
+    render(
+      <EventCard
+        event={event}
+        variant="compact"
+        onOpenEventDetails={onOpenEventDetails}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `Ver detalles de ${event.title}`
+      })
+    );
+
+    expect(onOpenEventDetails).toHaveBeenCalledOnce();
+    expect(onOpenEventDetails).toHaveBeenCalledWith(event.id);
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+  });
 });

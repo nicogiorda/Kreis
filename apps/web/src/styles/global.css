@@ -1984,7 +1984,6 @@ html[data-theme="dark"] {
     z-index: 1;
     min-width: 0;
     background: var(--app-bg);
-    transform: translate3d(0, 0, 0);
   }
 }
 

@@ -471,6 +471,41 @@ function AuthenticatedApp({ session }: { session: Session }) {
     setActivity(nextPosts);
   }
 
+  async function refreshHomeContent(): Promise<void> {
+    const [
+      nextUpcomingEvents,
+      nextEvents,
+      nextCommunities,
+      nextProfile
+    ] = await Promise.all([
+      listUpcomingEvents(accessToken),
+      listAllEvents(accessToken),
+      listCommunities(accessToken),
+      getMyProfile(accessToken)
+    ]);
+
+    setUpcomingEvents(nextUpcomingEvents);
+    setEvents(nextEvents);
+    setCommunities(nextCommunities);
+    setUserProfile(nextProfile);
+    setEventLoadStatus("ready");
+    setProfileLoadStatus("ready");
+  }
+
+  async function refreshProfileContent(): Promise<void> {
+    const [nextProfile, nextEvents, nextCommunities] = await Promise.all([
+      getMyProfile(accessToken),
+      listAllEvents(accessToken),
+      listCommunities(accessToken)
+    ]);
+
+    setUserProfile(nextProfile);
+    setEvents(nextEvents);
+    setCommunities(nextCommunities);
+    setProfileLoadStatus("ready");
+    setEventLoadStatus("ready");
+  }
+
   function openEventDetails(eventId: string): void {
     routerNavigate(`${screenRoutes.events}/${encodeURIComponent(eventId)}`);
     scrollTop();
@@ -767,6 +802,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
                   onHomeTab={setHomeTab}
                   onOpenEvents={openEventsFromHome}
                   onOpenEventDetails={openEventDetails}
+                  onRefresh={refreshHomeContent}
                   onRetryEvents={retryEvents}
                   onToggleTheme={toggleTheme}
                   onToggleJoin={toggleJoin}
@@ -814,6 +850,7 @@ function AuthenticatedApp({ session }: { session: Session }) {
                   profileLoadStatus={profileLoadStatus}
                   themeMode={themeMode}
                   onOpenEventDetails={openEventDetails}
+                  onRefresh={refreshProfileContent}
                   onToggleTheme={toggleTheme}
                   onUploadAvatar={uploadProfileAvatar}
                   onChangePassword={changePassword}

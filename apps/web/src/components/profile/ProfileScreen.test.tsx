@@ -18,6 +18,7 @@ function renderProfile(overrides: {
     communities: [],
     themeMode: "light" as const,
     onOpenEventDetails: vi.fn(),
+    onRefresh: vi.fn().mockResolvedValue(undefined),
     onToggleTheme: vi.fn(),
     onUploadAvatar: overrides.onUploadAvatar ?? vi.fn().mockResolvedValue(undefined),
     onChangePassword: overrides.onChangePassword ?? vi.fn().mockResolvedValue(undefined),

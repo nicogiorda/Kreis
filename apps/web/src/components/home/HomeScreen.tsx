@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { CommunityCard } from "../communities/CommunityCard";
 import { EmptyState } from "../common/EmptyState";
 import { EventCardSkeletonList } from "../common/LoadingSkeleton";
+import { PullToRefresh } from "../common/PullToRefresh";
 import { EventCard } from "../events/EventCard";
 import { HeroBanner } from "./HeroBanner";
 import type { Community, EventLoadStatus, HomeTab, KreisEvent, ThemeMode } from "../../types";
@@ -65,6 +66,7 @@ type HomeScreenProps = {
   onHomeTab: (tab: HomeTab) => void;
   onOpenEvents: () => void;
   onOpenEventDetails: (eventId: string) => void;
+  onRefresh: () => Promise<void>;
   onRetryEvents: () => void;
   onToggleTheme: () => void;
   onToggleJoin: (communityId: string) => void;
@@ -80,6 +82,7 @@ export function HomeScreen({
   onHomeTab,
   onOpenEvents,
   onOpenEventDetails,
+  onRefresh,
   onRetryEvents,
   onToggleTheme,
   onToggleJoin
@@ -125,6 +128,7 @@ export function HomeScreen({
 
   return (
     <section className="grid min-h-dvh animate-[rise_220ms_ease-out] bg-[var(--app-bg)]" data-screen="home">
+      <PullToRefresh onRefresh={onRefresh} label="Actualizando inicio">
       <HeroBanner themeMode={themeMode} onToggleTheme={onToggleTheme} />
 
       <div className="relative z-[3] w-full bg-[var(--app-bg)]">
@@ -214,6 +218,7 @@ export function HomeScreen({
           </div>
         </div>
       </div>
+      </PullToRefresh>
     </section>
   );
 }

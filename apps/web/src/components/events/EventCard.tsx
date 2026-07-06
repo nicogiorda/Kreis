@@ -1,4 +1,4 @@
-import { AltArrowRight, Calendar, CameraMinimalistic, MapPoint, RoundArrowRightUp, VerifiedCheck } from "@solar-icons/react";
+import { Calendar, CameraMinimalistic, MapPoint, VerifiedCheck } from "@solar-icons/react";
 import { Meta } from "../common/Meta";
 import type { KreisEvent } from "../../types";
 
@@ -47,39 +47,39 @@ export function EventCard({ event, variant = "full", onOpenEvents, onOpenEventDe
 
   if (compact) {
     return (
-      <article className="grid min-h-[71px] overflow-hidden rounded-[21px] bg-kreis-event-surface text-kreis-ink transition-[background-color,color] duration-[260ms] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none">
-        <div className="grid min-h-[71px] grid-cols-[53px_minmax(0,1fr)_24px] items-center gap-3 px-2.5 py-[9px]">
-          <div
-            className="home-event-date-chip grid size-[53px] content-center justify-items-center rounded-[16px] bg-[var(--date-chip-bg)] text-[var(--date-chip-ink)] shadow-none transition-[background-color,color,border-color] duration-[260ms] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none"
-          >
-            <strong className="block text-[18px] leading-[18px]">{event.day}</strong>
-            <span className="block text-[11px] font-bold leading-[13px]">{event.month}</span>
-          </div>
-          <div className="grid min-w-0 content-center gap-1">
-            <h3 className="m-0 inline-flex min-w-0 items-center gap-1.5 text-[16px] font-medium leading-[19px]">
-              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{event.title}</span>
-              {officialBadge}
-            </h3>
-            <Meta
-              className="!mt-0 text-[13px] font-normal leading-[16px] text-kreis-muted"
-              items={locationMeta}
-            />
-          </div>
-          <button
-            className="grid size-6 place-items-center rounded-full border-0 bg-transparent p-0 text-kreis-muted shadow-none transition-[color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-95"
-            type="button"
-            aria-label={`Ver detalles de ${event.title}`}
-            onClick={openDetails}
-          >
-            <AltArrowRight className="size-[18px]" weight="Outline" aria-hidden="true" />
-          </button>
+      <button
+        className="grid min-h-[71px] w-full grid-cols-[53px_minmax(0,1fr)] items-center gap-3 overflow-hidden rounded-[21px] border-0 bg-kreis-event-surface px-2.5 py-[9px] text-left font-[inherit] text-kreis-ink shadow-none transition-[background-color,color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] [-webkit-tap-highlight-color:transparent] active:scale-[0.99] motion-reduce:transition-none"
+        type="button"
+        aria-label={`Ver detalles de ${event.title}`}
+        onClick={openDetails}
+      >
+        <div
+          className="home-event-date-chip grid size-[53px] content-center justify-items-center rounded-[16px] bg-[var(--date-chip-bg)] text-[var(--date-chip-ink)] shadow-none transition-[background-color,color,border-color] duration-[260ms] ease-[cubic-bezier(0.25,1,0.5,1)] motion-reduce:transition-none"
+        >
+          <strong className="block text-[18px] leading-[18px]">{event.day}</strong>
+          <span className="block text-[11px] font-bold leading-[13px]">{event.month}</span>
         </div>
-      </article>
+        <div className="grid min-w-0 content-center gap-1">
+          <h3 className="m-0 inline-flex min-w-0 items-center gap-1.5 text-[16px] font-medium leading-[19px]">
+            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{event.title}</span>
+            {officialBadge}
+          </h3>
+          <Meta
+            className="!mt-0 text-[13px] font-normal leading-[16px] text-kreis-muted"
+            items={locationMeta}
+          />
+        </div>
+      </button>
     );
   }
 
   return (
-    <article className="grid h-[160px] min-w-0 content-start overflow-hidden rounded-[17px] bg-kreis-event-surface pt-2 text-kreis-ink transition-[background-color,color] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none">
+    <button
+      className="grid h-[160px] w-full min-w-0 content-start overflow-hidden rounded-[17px] border-0 bg-kreis-event-surface p-0 pt-2 text-left font-[inherit] text-kreis-ink shadow-none transition-[background-color,color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] [-webkit-tap-highlight-color:transparent] active:scale-[0.99] motion-reduce:transition-none"
+      type="button"
+      aria-label={`Ver detalles de ${event.title}`}
+      onClick={openDetails}
+    >
       <div className="event-photo-placeholder relative mx-[9px] h-[72px] overflow-hidden rounded-[12px]">
         {event.imageUrl ? (
           <img className="absolute inset-0 size-full object-cover" src={event.imageUrl} alt="" loading="lazy" decoding="async" />
@@ -88,19 +88,11 @@ export function EventCard({ event, variant = "full", onOpenEvents, onOpenEventDe
         )}
       </div>
       <div className="grid min-h-0 content-start gap-[3px] px-[9px] pb-2.5 pt-[9px]">
-        <div className="flex min-w-0 items-center justify-between gap-1.5">
+        <div className="flex min-w-0 items-center gap-1.5">
           <h3 className="m-0 inline-flex min-w-0 flex-1 items-center gap-1 text-[14px] font-medium leading-[17px] text-kreis-ink">
             <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{event.title}</span>
             {officialBadge}
           </h3>
-          <button
-            className="grid size-5 flex-none place-items-center border-0 bg-transparent p-0 text-kreis-green shadow-none [-webkit-tap-highlight-color:transparent]"
-            type="button"
-            aria-label={`Expandir informacion de ${event.title}`}
-            onClick={openDetails}
-          >
-            <RoundArrowRightUp className="size-5" weight="Bold" aria-hidden="true" />
-          </button>
         </div>
         <p className="m-0 inline-flex min-w-0 items-center gap-1 text-[13px] font-normal leading-[16px] text-kreis-muted">
           <MapPoint className="size-[12px] flex-none" weight="Outline" aria-hidden="true" />
@@ -111,7 +103,7 @@ export function EventCard({ event, variant = "full", onOpenEvents, onOpenEventDe
           <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{eventDateLabel}</span>
         </p>
       </div>
-    </article>
+    </button>
   );
 }
 

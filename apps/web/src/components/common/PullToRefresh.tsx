@@ -88,7 +88,12 @@ export function PullToRefresh({
       clearSettleTimer();
       setVisualOffset(0, true, "idle");
       settleTimerRef.current = window.setTimeout(() => {
+        contentElement.style.transition = "";
+        contentElement.style.transform = "";
         contentElement.style.willChange = "";
+        indicatorElement.style.transition = "";
+        indicatorElement.style.opacity = "";
+        indicatorElement.style.transform = "";
         indicatorElement.style.willChange = "";
         settleTimerRef.current = null;
       }, settleDurationMs);
@@ -235,7 +240,7 @@ export function PullToRefresh({
         ref={indicatorRef}
         className="pull-to-refresh__indicator"
         data-state="idle"
-        role="status"
+        role={refreshing ? "status" : undefined}
         aria-live="polite"
       >
         <span aria-hidden="true" />

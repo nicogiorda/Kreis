@@ -6,6 +6,7 @@ import type { Community, KreisEvent, ThemeMode } from "../../types";
 import { cn } from "../../utils/cn";
 import { ThemeToggleIcon } from "../common/Icons";
 import { LoadingState } from "../common/LoadingState";
+import { PullToRefresh } from "../common/PullToRefresh";
 
 type ProfileTab = "created-events" | "interested-events" | "communities";
 
@@ -17,6 +18,7 @@ type ProfileScreenProps = {
   communities: Community[];
   themeMode: ThemeMode;
   onOpenEventDetails: (eventId: string) => void;
+  onRefresh: () => Promise<void>;
   onToggleTheme: () => void;
   onUploadAvatar: (file: File) => Promise<void>;
   onChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
@@ -542,6 +544,7 @@ export function ProfileScreen({
   communities,
   themeMode,
   onOpenEventDetails,
+  onRefresh,
   onToggleTheme,
   onUploadAvatar,
   onChangePassword,
@@ -591,6 +594,7 @@ export function ProfileScreen({
 
   return (
     <section className="mx-auto w-full max-w-[357px] animate-[rise_220ms_ease-out] pb-6 pt-[max(64px,calc(env(safe-area-inset-top)+12px))] text-kreis-ink" data-screen="profile">
+      <PullToRefresh onRefresh={onRefresh} label="Actualizando perfil">
       <div className="relative flex h-[37px] items-center justify-between">
         <h1 className="m-0 text-[18px] font-medium leading-[15px] text-kreis-ink">Mi Perfil</h1>
         <button
@@ -762,6 +766,7 @@ export function ProfileScreen({
           onSignOutOtherDevices={onSignOutOtherDevices}
         />
       ) : null}
+      </PullToRefresh>
     </section>
   );
 }

@@ -83,10 +83,10 @@ describe("PullToRefresh", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Actualizando eventos");
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(500);
+      await vi.advanceTimersByTimeAsync(700);
     });
 
     expect(indicator).toHaveAttribute("data-state", "idle");
-    expect(content.style.transform).toBe("translate3d(0, 0px, 0)");
+    expect(content.style.transform).toBe("");
   });
 });

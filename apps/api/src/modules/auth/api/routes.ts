@@ -3,6 +3,7 @@ import { type NextFunction, type Request, type Response, Router } from "express"
 import { z } from "zod";
 import { config } from "../../../core/config";
 import { certificateRateLimit } from "./certificate-rate-limit";
+import { loginRateLimits } from "./login-rate-limit";
 import {
   registrationEmailStartRateLimits,
   registrationEmailVerifyRateLimits
@@ -583,7 +584,7 @@ export function createAuthRouter(): Router {
     }
   });
 
-  router.post("/login", async (request, response, next) => {
+  router.post("/login", ...loginRateLimits, async (request, response, next) => {
     try {
       const parsedBody = loginRequestSchema.safeParse(request.body);
 

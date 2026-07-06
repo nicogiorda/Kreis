@@ -19,6 +19,8 @@ export const commentCreationRateLimitPrefix = "rl:comments:create:";
 export const eventCreationRateLimitPrefix = "rl:events:create:";
 export const communityCreationRateLimitPrefix = "rl:communities:create:";
 export const reportCreationRateLimitPrefix = "rl:reports:create:";
+export const loginIpRateLimitPrefix = "rl:login:ip:";
+export const loginEmailRateLimitPrefix = "rl:login:email:";
 
 let memoryStoreWarningLogged = false;
 

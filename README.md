@@ -1,56 +1,110 @@
 # Kreis
 
-PWA React + Vite + TypeScript con API Express en Node.js para prototipar la experiencia de Kreis.
+Kreis es una PWA pensada para la vida universitaria: eventos, comunidades, publicaciones y herramientas de perfil en una experiencia mobile-first.
+
+El proyecto combina un frontend React/Vite instalable como app y una API Node.js/Express organizada como monolito modular.
+
+## Stack
+
+- React 19 + TypeScript
+- Vite + vite-plugin-pwa
+- Tailwind CSS 4 + CSS modular por superficie
+- Node.js + Express
+- Prisma + PostgreSQL
+- Supabase Auth y Storage
+- Vitest + Testing Library
+- ESLint + Prettier
 
 ## Estructura
 
 ```text
 apps/
-  web/                  PWA React/Vite: src, public, manifest, icons
-  api/                  API Express como monolito modular Node.js
+  web/                  PWA React/Vite
+  api/                  API Express
 packages/
-  shared/               Contratos TypeScript compartidos
+  shared/               Contratos compartidos
 infra/
-  database/             Migraciones, schema, seeds y fixtures
-docs/
-  architecture/         Decisiones tecnicas y limites de modulos
-  design/               Direccion visual del producto
-  product/              Contexto de producto
-  updates/              Registros fechados de implementacion y deploy
-  brand-assets/         Originales y exports de marca que no se importan en runtime
-codex-skills/           Skills locales del proyecto
+  database/             Migraciones, schema y fixtures
 ```
 
-## Web PWA
+## Requisitos
 
-La app instalable vive en `apps/web`. Ahi estan `index.html`, `public/manifest.json`, iconos PWA, assets runtime y todo el frontend. El service worker se genera con `vite-plugin-pwa` desde `apps/web/vite.config.ts`.
+- Node.js compatible con las dependencias del proyecto
+- npm
+- PostgreSQL/Supabase configurado
+- Variables de entorno locales basadas en `.env.example`
 
-## API
+## Configuración Local
 
-La API vive en `apps/api`. La direccion recomendada es Node.js + TypeScript + Express. Next.js solo conviene si se migra tambien el frontend desde Vite a Next; no hace falta instalarlo para tener un backend modular.
+1. Instalar dependencias:
+
+```bash
+npm install
+```
+
+2. Crear el archivo `.env` desde `.env.example` y completar los valores locales.
+
+3. Generar Prisma Client:
+
+```bash
+npm run db:generate
+```
+
+4. Levantar frontend:
+
+```bash
+npm run dev
+```
+
+5. Levantar API:
+
+```bash
+npm run dev:api
+```
+
+Por defecto, el frontend corre con Vite y la API usa `API_PORT` desde `.env`.
 
 ## Comandos
 
 ```bash
-npm.cmd run dev
-npm.cmd run dev:api
-npm.cmd run lint
-npm.cmd run format:check
-npm.cmd run test
-npm.cmd run typecheck
-npm.cmd run typecheck:api
-npm.cmd run build
-npm.cmd run preview
+npm run dev
+npm run dev:api
+npm run build
+npm run lint
+npm run test
+npm run typecheck
+npm run typecheck:web
+npm run typecheck:api
+npm run format:check
 ```
 
-Para probar desde el celular en la misma red Wi-Fi:
+Para probar la PWA desde un celular en la misma red:
 
 ```bash
-npm.cmd run dev -- --host 0.0.0.0
+npm run dev -- --host 0.0.0.0
 ```
 
-La guia de ownership de carpetas esta en `docs/architecture/project-structure.md`.
+## Variables de Entorno
 
-Para incorporar nuevos colaboradores, usar `docs/onboarding/repo-handbook.md` o la version imprimible `docs/onboarding/repo-handbook.html`.
+El repositorio incluye `.env.example` con placeholders. No se deben commitear archivos `.env` reales.
 
-El registro tecnico de la integracion de auth, eventos y deploy del 31 de mayo de 2026 esta en `docs/updates/2026-05-31-auth-events-deploy.md`.
+Variables principales:
+
+- `DATABASE_URL`
+- `DIRECT_URL`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_ANON_KEY`
+- `REDIS_URL`
+- `RATE_LIMIT_KEY_SECRET`
+- `RESEND_API_KEY`
+- `REGISTRATION_EMAIL_FROM`
+- `ALLOWED_EMAIL_DOMAINS`
+
+## Seguridad
+
+Este repositorio no debe contener secretos, tokens de sesión, certificados privados ni dumps de base de datos. Las credenciales se manejan por variables de entorno locales o por el proveedor de deploy.
+
+## Deploy
+
+El frontend PWA está preparado para Vercel. La API puede ejecutarse como servicio Node.js usando las variables de entorno correspondientes.

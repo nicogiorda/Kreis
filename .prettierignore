@@ -2,5 +2,7 @@ node_modules
 dist
 .vercel
 codex-skills
+.claude
+docs
 dev-server*.log
 package-lock.json

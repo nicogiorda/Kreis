@@ -12,12 +12,15 @@ dev-server*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.claude
+.claude/
+codex-skills/
 codex.skills
+CLAUDE.md
+skills-lock.json
 .vercel
 Kreis-Web-APP-React.code-workspace
 
 /generated/prisma
 /.agents
-docs/presentations/
+docs/
 .env*.local

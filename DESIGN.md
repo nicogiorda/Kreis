@@ -75,7 +75,7 @@ Motion should be brief and product-serving.
 
 ## Assets
 
-Runtime brand assets live in `apps/web/src/assets/brand/`. Source brand exports live in `docs/brand-assets/`.
+Runtime brand assets live in `apps/web/src/assets/brand/`. Source brand exports should stay outside the public repository unless they are needed by the app.
 
 The home banner uses separate light and dark WebP images. Keep those images as first-screen signals and avoid dark overlays, blur crops, or stock-like atmospheric substitutions.
 

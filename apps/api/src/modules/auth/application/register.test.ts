@@ -270,6 +270,10 @@ class FakeAuthProvider implements IAuthProvider {
     throw new Error("Not used");
   }
 
+  async emailExists(): Promise<boolean> {
+    return false;
+  }
+
   async deleteUser(id: string): Promise<void> {
     this.users.delete(id);
     this.deletedUsers.push(id);

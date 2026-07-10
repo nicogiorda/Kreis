@@ -1,5 +1,11 @@
 # Kreis
 
+[![CI](https://github.com/nicogiorda/Kreis/actions/workflows/ci.yml/badge.svg)](https://github.com/nicogiorda/Kreis/actions/workflows/ci.yml)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111)
+![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)
+![License](https://img.shields.io/badge/license-proprietary-f0531c)
+
 Kreis es una PWA pensada para la vida universitaria: eventos, comunidades, publicaciones y herramientas de perfil en una experiencia mobile-first.
 
 El proyecto combina un frontend React/Vite instalable como app y una API Node.js/Express organizada como monolito modular.

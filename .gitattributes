@@ -1,0 +1,15 @@
+# Normalize line endings across environments.
+* text=auto eol=lf
+
+# Keep binary assets out of GitHub language statistics.
+apps/web/src/assets/** linguist-vendored
+apps/web/public/event-images/** linguist-vendored
+apps/web/public/icons/** linguist-vendored
+
+# Treat generated dependency metadata as generated.
+package-lock.json linguist-generated=true
+
+# Public legal pages are project documentation, not application language mix.
+apps/web/public/terminos/** linguist-documentation
+apps/web/public/privacidad/** linguist-documentation
+apps/web/public/legal.css linguist-documentation

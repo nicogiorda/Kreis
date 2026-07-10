@@ -105,6 +105,12 @@ Variables principales:
 
 Este repositorio no debe contener secretos, tokens de sesión, certificados privados ni dumps de base de datos. Las credenciales se manejan por variables de entorno locales o por el proveedor de deploy.
 
+Para reportar vulnerabilidades, seguí las indicaciones de `SECURITY.md`.
+
+## Licencia
+
+Código propietario. Todos los derechos reservados. Ver `LICENSE`.
+
 ## Deploy
 
 El frontend PWA está preparado para Vercel. La API puede ejecutarse como servicio Node.js usando las variables de entorno correspondientes.

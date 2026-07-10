@@ -284,7 +284,8 @@ describe("AuthFlow certificate verification", () => {
     await reachSignupCodeScreen();
 
     expect(apiMock.startRegistrationEmailVerification).toHaveBeenCalledWith(
-      "ana@uade.edu.ar"
+      "ana@uade.edu.ar",
+      123456
     );
     expect(screen.getByText("VERIFICÁ TU CORREO")).toBeInTheDocument();
     expect(screen.getByText(/ana@uade.edu.ar/)).toBeInTheDocument();

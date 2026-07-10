@@ -16,6 +16,7 @@ yarn-error.log*
 codex-skills/
 codex.skills
 CLAUDE.md
+PRODUCT.md
 skills-lock.json
 .vercel
 Kreis-Web-APP-React.code-workspace

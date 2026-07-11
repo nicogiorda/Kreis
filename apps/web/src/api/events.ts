@@ -81,7 +81,8 @@ function getEventTone(category: string): EventTone {
 export function adaptEvent(event: EventSummary): KreisEvent {
   const startDate = new Date(event.fecha_inicio);
   const day = getDatePart(startDate, "day");
-  const month = getDatePart(startDate, "month").replace(".", "").toUpperCase();
+  const rawMonth = getDatePart(startDate, "month").replace(".", "").toUpperCase();
+  const month = rawMonth === "SEPT" ? "SEP" : rawMonth;
   const weekday = getDatePart(startDate, "weekday").replace(".", "");
   const topics = event.topicos.map((topic) => ({
     id: topic.id_topico,

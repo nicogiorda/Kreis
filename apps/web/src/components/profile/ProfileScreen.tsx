@@ -302,7 +302,7 @@ function AccountSecurityPanel({
   }
 
   return (
-    <section className="fixed inset-0 z-[70] overflow-y-auto bg-kreis-app-bg text-kreis-ink" aria-label="Cuenta y seguridad">
+    <section className="fixed inset-0 z-[70] overflow-y-auto bg-kreis-app-bg text-kreis-ink" data-pull-to-refresh-ignore="true" aria-label="Cuenta y seguridad">
       <div className="mx-auto min-h-full w-full max-w-[430px] px-[22px] pb-[max(28px,env(safe-area-inset-bottom))] pt-[max(54px,calc(env(safe-area-inset-top)+14px))]">
         <header className="grid grid-cols-[37px_minmax(0,1fr)_37px] items-center">
           <button

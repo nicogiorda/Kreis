@@ -146,7 +146,7 @@ export function PullToRefresh({
       const target = event.target;
       if (
         target instanceof Element &&
-        target.closest("button, input, textarea, select, a")
+        target.closest("button, input, textarea, select, a, [data-pull-to-refresh-ignore=\"true\"]")
       ) {
         return;
       }

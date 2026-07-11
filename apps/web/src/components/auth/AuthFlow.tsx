@@ -56,6 +56,15 @@ type AuthStep =
 type CatalogStatus = "loading" | "ready" | "error";
 const otpResendCooldownSeconds = 60;
 
+const certificateValidationMessages = [
+  "Cargando certificado...",
+  "Validando formato del archivo...",
+  "Leyendo los datos del certificado...",
+  "Comparando la información ingresada...",
+  "Confirmando que sea una constancia válida..."
+];
+const certificateValidationMessageIntervalMs = 2_400;
+
 type SignupDraft = {
   university: string;
   legajo: string;
@@ -635,6 +644,24 @@ function CertificateScreen({
   onSubmit: () => void;
 }) {
   const [guideOpen, setGuideOpen] = useState(false);
+  const [progressMessageIndex, setProgressMessageIndex] = useState(0);
+  const progressMessage = certificateValidationMessages[progressMessageIndex];
+
+  useEffect(() => {
+    if (!submitting) {
+      setProgressMessageIndex(0);
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setProgressMessageIndex((current) =>
+        Math.min(current + 1, certificateValidationMessages.length - 1)
+      );
+    }, certificateValidationMessageIntervalMs);
+
+    return () => window.clearInterval(intervalId);
+  }, [submitting]);
+
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>): void {
     onFileSelect(event.target.files?.[0] ?? null);
@@ -652,7 +679,10 @@ function CertificateScreen({
       <label className="auth-redesign-certificate-upload">
         <input className="auth-redesign-file-input" type="file" accept="application/pdf" disabled={submitting} onChange={handleFileChange} />
         {submitting ? (
-          <LoadingState label="Validando certificado" variant="button" />
+          <>
+            <LoadingState label={progressMessage} variant="button" />
+            <span className="auth-redesign-upload-copy auth-redesign-upload-copy--loading">{progressMessage}</span>
+          </>
         ) : (
           <>
             <span className="auth-redesign-upload-plus" aria-hidden="true"><Plus weight="regular" /></span>
@@ -663,7 +693,7 @@ function CertificateScreen({
       <button className="auth-redesign-certificate-help" type="button" onClick={() => setGuideOpen(true)}>¿No sabes donde encontrarlo?</button>
       {error ? <p className="auth-redesign-error auth-redesign-error--certificate">{error}</p> : null}
       <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--certificate auth-redesign-button--green-text" disabled={submitting || !fileName} onClick={onSubmit}>
-        {submitting ? <LoadingState label="Validando certificado" variant="button" /> : "Validar"}
+        {submitting ? <LoadingState label={progressMessage} variant="button" /> : "Validar"}
       </PrimaryButton>
       {guideOpen ? (
         <section className="auth-redesign-certificate-guide" role="dialog" aria-modal="true" aria-label="Como descargar tu certificado">

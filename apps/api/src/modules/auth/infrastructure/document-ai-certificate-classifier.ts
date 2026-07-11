@@ -254,7 +254,42 @@ function normalizeComparableText(value: string): string {
     .replace(/\s+/g, " ");
 }
 
-function namesMatch(expected: CertificateExpectedUser, actualName: string | null): boolean {
+function textTokens(value: string): string[] {
+  return normalizeComparableText(value).split(" ").filter(Boolean);
+}
+
+function levenshteinDistance(left: string, right: string): number {
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+
+  for (let leftIndex = 0; leftIndex < left.length; leftIndex += 1) {
+    const current = [leftIndex + 1];
+
+    for (let rightIndex = 0; rightIndex < right.length; rightIndex += 1) {
+      const substitutionCost = left[leftIndex] === right[rightIndex] ? 0 : 1;
+      current[rightIndex + 1] = Math.min(
+        current[rightIndex] + 1,
+        previous[rightIndex + 1] + 1,
+        previous[rightIndex] + substitutionCost
+      );
+    }
+
+    previous.splice(0, previous.length, ...current);
+  }
+
+  return previous[right.length];
+}
+
+function tokenMatches(expectedToken: string, actualToken: string, options: { allowPrefix: boolean }): boolean {
+  if (expectedToken === actualToken) return true;
+
+  if (options.allowPrefix && expectedToken.length >= 4 && actualToken.startsWith(expectedToken)) {
+    return true;
+  }
+
+  return expectedToken.length >= 5 && actualToken.length >= 5 && levenshteinDistance(expectedToken, actualToken) <= 1;
+}
+
+export function namesMatch(expected: CertificateExpectedUser, actualName: string | null): boolean {
   if (!actualName) return false;
 
   const actual = normalizeComparableText(actualName);
@@ -263,8 +298,22 @@ function namesMatch(expected: CertificateExpectedUser, actualName: string | null
 
   if (actual === expectedForward || actual === expectedReverse) return true;
 
-  const actualTokens = new Set(actual.split(" ").filter(Boolean));
-  return expectedForward.split(" ").filter(Boolean).every((token) => actualTokens.has(token));
+  const actualTokens = textTokens(actualName);
+  const expectedNameTokens = textTokens(expected.nombre);
+  const expectedSurnameTokens = textTokens(expected.apellido);
+
+  if (actualTokens.length === 0 || expectedNameTokens.length === 0 || expectedSurnameTokens.length === 0) {
+    return false;
+  }
+
+  const nameMatches = expectedNameTokens.every((expectedToken) =>
+    actualTokens.some((actualToken) => tokenMatches(expectedToken, actualToken, { allowPrefix: true }))
+  );
+  const surnameMatches = expectedSurnameTokens.every((expectedToken) =>
+    actualTokens.some((actualToken) => tokenMatches(expectedToken, actualToken, { allowPrefix: false }))
+  );
+
+  return nameMatches && surnameMatches;
 }
 
 function extractYear(...values: Array<string | null | undefined>): string | null {

@@ -648,10 +648,7 @@ function CertificateScreen({
   const progressMessage = certificateValidationMessages[progressMessageIndex];
 
   useEffect(() => {
-    if (!submitting) {
-      setProgressMessageIndex(0);
-      return;
-    }
+    if (!submitting) return;
 
     const intervalId = window.setInterval(() => {
       setProgressMessageIndex((current) =>
@@ -662,9 +659,13 @@ function CertificateScreen({
     return () => window.clearInterval(intervalId);
   }, [submitting]);
 
-
   function handleFileChange(event: ChangeEvent<HTMLInputElement>): void {
     onFileSelect(event.target.files?.[0] ?? null);
+  }
+
+  function handleSubmit(): void {
+    setProgressMessageIndex(0);
+    onSubmit();
   }
 
   return (
@@ -692,7 +693,7 @@ function CertificateScreen({
       </label>
       <button className="auth-redesign-certificate-help" type="button" onClick={() => setGuideOpen(true)}>¿No sabes donde encontrarlo?</button>
       {error ? <p className="auth-redesign-error auth-redesign-error--certificate">{error}</p> : null}
-      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--certificate auth-redesign-button--green-text" disabled={submitting || !fileName} onClick={onSubmit}>
+      <PrimaryButton className="auth-redesign-form-button auth-redesign-form-button--certificate auth-redesign-button--green-text" disabled={submitting || !fileName} onClick={handleSubmit}>
         {submitting ? <LoadingState label={progressMessage} variant="button" /> : "Validar"}
       </PrimaryButton>
       {guideOpen ? (

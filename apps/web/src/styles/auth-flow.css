@@ -1171,6 +1171,15 @@
     white-space: nowrap;
   }
 
+  .auth-redesign-upload-copy--loading {
+    top: 96px;
+    width: 84%;
+    font-size: 13px;
+    line-height: 17px;
+    white-space: normal;
+  }
+
+
   .auth-redesign-certificate-help {
     position: absolute;
     top: calc(37.79% + 162px);

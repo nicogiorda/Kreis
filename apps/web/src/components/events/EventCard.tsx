@@ -18,7 +18,8 @@ const monthLabels: Record<string, string> = {
   JUN: "Junio",
   JUL: "Julio",
   AGO: "Agosto",
-  SEP: "Sept",
+  SEP: "Septiembre",
+  SEPT: "Septiembre",
   OCT: "Oct",
   NOV: "Nov",
   DIC: "Dic"

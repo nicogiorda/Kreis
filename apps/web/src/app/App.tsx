@@ -32,6 +32,8 @@ import { ServiceWorkerUpdateBanner } from "../components/common/ServiceWorkerUpd
 import { StartupDebugPanel } from "../components/common/StartupDebugPanel";
 import { ViewportDebugPanel } from "../components/common/ViewportDebugPanel";
 import { HomeScreen } from "../components/home/HomeScreen";
+import { DesktopHomeAside } from "../components/home/DesktopHomeAside";
+import { DesktopAppShell } from "../components/layout/DesktopAppShell";
 import { BottomNav } from "../components/navigation/BottomNav";
 import { Header } from "../components/navigation/Header";
 import { ProfileScreen } from "../components/profile/ProfileScreen";
@@ -768,9 +770,26 @@ function AuthenticatedApp({ session }: { session: Session }) {
 
   return (
     <>
-      <div
+      <DesktopAppShell
+        screen={screen}
+        onNavigate={navigate}
+        aside={!isEventDetail && screen === "home" ? (
+          <DesktopHomeAside
+            events={homeEvents}
+            eventLoadStatus={eventLoadStatus}
+            communities={visibleCommunities}
+            homeTab={homeTab}
+            onNavigateToCommunities={() => navigate("communities")}
+            onOpenEventDetails={openEventDetails}
+            onOpenEvents={openEventsFromHome}
+            onRetryEvents={retryEvents}
+            onToggleJoin={toggleJoin}
+          />
+        ) : undefined}
+      >
+        <div
           className={cn(
-            "app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden md:px-6",
+            "app-shell mx-auto min-h-screen min-h-dvh w-[min(100%,1120px)] overflow-x-hidden md:px-6 lg:px-0 lg:pb-0",
             hideBottomNav ? "pb-0" : "pb-[var(--bottom-nav-clearance)]"
           )}
       >
@@ -876,9 +895,9 @@ function AuthenticatedApp({ session }: { session: Session }) {
               onCreateEvent={createEvent}
               onCreatePost={createPost}
             />
-      </div>
+        </div>
+      </DesktopAppShell>
       {!hideBottomNav && <BottomNav screen={screen} onNavigate={navigate} />}
     </>
   );
 }
-

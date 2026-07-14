@@ -10,6 +10,7 @@ import { installGlobalStartupErrorListeners, markStartup } from "./startup/start
 import "./styles/global.css";
 import "./styles/auth-flow.css";
 import "./styles/admin.css";
+import "./styles/desktop.css";
 
 markStartup("app-script-start");
 installGlobalStartupErrorListeners();

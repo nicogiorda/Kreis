@@ -1,0 +1,237 @@
+@media (min-width: 64rem) {
+  .desktop-app-shell {
+    display: grid;
+    width: 100%;
+    max-width: 96rem;
+    min-height: 100dvh;
+    margin-inline: auto;
+    grid-template-columns: minmax(12.5rem, 13.5rem) minmax(0, 1fr);
+    align-items: start;
+    gap: 1.25rem;
+    padding: 1rem;
+  }
+
+  .desktop-app-shell .app-shell {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-inline: 0;
+    overflow-x: clip;
+  }
+
+  .desktop-sidebar {
+    position: sticky;
+    top: 1rem;
+    min-width: 0;
+    height: calc(100dvh - 2rem);
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    background: var(--norfolk-green);
+    padding: 1.5rem 0.875rem;
+    color: var(--cream-icon);
+  }
+
+  .desktop-sidebar-brand {
+    display: flex;
+    min-height: 3rem;
+    align-items: center;
+    gap: 0.75rem;
+    padding-inline: 0.75rem;
+  }
+
+  .desktop-sidebar-brand img {
+    width: 2.125rem;
+    height: 2.125rem;
+    flex: none;
+    object-fit: contain;
+  }
+
+  .desktop-sidebar-brand span {
+    color: var(--cream-icon);
+    font-size: 1.75rem;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .desktop-sidebar-nav {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 2.5rem;
+  }
+
+  .desktop-sidebar-link {
+    display: grid;
+    min-width: 0;
+    min-height: 3rem;
+    grid-template-columns: 1.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+    border: 0;
+    border-radius: var(--radius-small);
+    background: transparent;
+    padding: 0 0.875rem;
+    color: rgba(247, 237, 218, 0.66);
+    text-align: left;
+    box-shadow: none;
+    transition:
+      background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .desktop-sidebar-link span {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .desktop-sidebar-link.is-active {
+    background: var(--fiery-glow);
+    color: var(--cream-icon);
+  }
+
+  .desktop-sidebar-link:active {
+    transform: scale(0.98);
+  }
+
+  .home-screen {
+    min-height: 0;
+    background: transparent;
+  }
+
+  .home-screen .pull-to-refresh__content {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .home-screen .home-hero-banner {
+    height: clamp(17rem, 29vw, 21rem);
+    border-radius: var(--radius-card);
+  }
+
+  .home-screen .home-mode-button {
+    top: 1rem;
+    right: 1rem;
+  }
+
+  .home-screen .home-panel-surface {
+    min-height: 0;
+    background: transparent;
+    padding-top: 0;
+  }
+
+  .home-screen .home-switch-rail {
+    width: min(100%, 24rem);
+  }
+
+  .home-screen .home-content-rail {
+    width: 100%;
+    margin-top: 1.5rem;
+  }
+
+  .home-screen .home-events-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .home-screen .home-community-shelf-track {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+    padding-inline: 0;
+    scroll-snap-type: none;
+  }
+
+  .home-screen .home-community-shelf-pair {
+    min-width: 0;
+    scroll-snap-align: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .desktop-sidebar-link:not(.is-active):hover {
+      background: rgba(247, 237, 218, 0.1);
+      color: var(--cream-icon);
+    }
+  }
+}
+
+@media (min-width: 80rem) {
+  .desktop-app-shell--with-aside {
+    grid-template-columns: minmax(12.5rem, 13.5rem) minmax(0, 1fr) minmax(17.5rem, 19rem);
+    gap: 1.5rem;
+    padding: 1.5rem;
+  }
+
+  .desktop-app-shell--with-aside .desktop-sidebar {
+    top: 1.5rem;
+    height: calc(100dvh - 3rem);
+  }
+
+  .desktop-app-aside {
+    position: sticky;
+    top: 1.5rem;
+    min-width: 0;
+    max-height: calc(100dvh - 3rem);
+    overflow-y: auto;
+    border-left: 1px solid var(--line);
+    padding-left: 1.25rem;
+    scrollbar-width: thin;
+  }
+
+  .desktop-home-aside-section {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .desktop-home-aside-heading {
+    display: flex;
+    min-width: 0;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .desktop-home-aside-heading > div {
+    min-width: 0;
+  }
+
+  .desktop-home-aside-kicker {
+    display: block;
+    color: var(--fiery-glow);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .desktop-home-aside-heading h2 {
+    margin: 0.375rem 0 0;
+    color: var(--ink);
+    font-size: 1.125rem;
+    font-weight: 500;
+    line-height: 1.15;
+  }
+
+  .desktop-home-aside-heading button {
+    flex: none;
+    border: 0;
+    background: transparent;
+    padding: 0.25rem 0;
+    color: var(--fiery-glow);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1;
+    box-shadow: none;
+  }
+
+  .desktop-home-aside-list {
+    display: grid;
+    min-width: 0;
+    gap: 0.625rem;
+  }
+}

@@ -33,9 +33,9 @@ function CommunityShelf({ title, communities, onToggleJoin }: CommunityShelfProp
   return (
     <section className="grid gap-2.5" aria-label={title}>
       <h3 className="m-0 text-base font-medium leading-[1.1] text-kreis-ink">{title}</h3>
-      <div className="grid auto-cols-[clamp(280px,84vw,360px)] grid-flow-col gap-3 overflow-x-auto px-0.5 pb-3 pt-px [scroll-snap-type:x_proximity] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="home-community-shelf-track grid auto-cols-[clamp(280px,84vw,360px)] grid-flow-col gap-3 overflow-x-auto px-0.5 pb-3 pt-px [scroll-snap-type:x_proximity] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {pairItems(communities).map((pair) => (
-          <div className="grid content-start gap-[9px] [scroll-snap-align:start]" key={pair.map((community) => community.id).join("-")}>
+          <div className="home-community-shelf-pair grid content-start gap-[9px] [scroll-snap-align:start]" key={pair.map((community) => community.id).join("-")}>
             {pair.map((community) => (
               <CommunityCard community={community} key={community.id} onToggleJoin={onToggleJoin} />
             ))}
@@ -127,7 +127,7 @@ export function HomeScreen({
   }, [homeTab]);
 
   return (
-    <section className="grid min-h-dvh animate-[rise_220ms_ease-out] bg-[var(--app-bg)]" data-screen="home">
+    <section className="home-screen grid min-h-dvh animate-[rise_220ms_ease-out] bg-[var(--app-bg)]" data-screen="home">
       <PullToRefresh onRefresh={onRefresh} label="Actualizando inicio">
       <HeroBanner themeMode={themeMode} onToggleTheme={onToggleTheme} />
 
@@ -174,7 +174,7 @@ export function HomeScreen({
                       Ver más
                     </button>
                   </div>
-                  <div className="grid gap-[10px]">
+                  <div className="home-events-list grid gap-[10px]">
                     {events.length ? events.map((event) => (
                       <EventCard
                         event={event}
